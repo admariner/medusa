@@ -1,9 +1,8 @@
 import {
   ContainerRegistrationKeys,
   MedusaError,
-  remoteQueryObjectFromString,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 
 export const validateVariantPriceLinksStepId = "validate-variant-price-links"
 /**
@@ -28,13 +27,11 @@ export const validateVariantPriceLinksStep = createStep(
       .filter(Boolean)
       .flat(1)
 
-    const variantPricingLinkQuery = remoteQueryObjectFromString({
+    const links = await remoteQuery({
       entryPoint: "product_variant_price_set",
       fields: ["variant_id", "price_set_id"],
-      variables: { variant_id: variantIds, take: null },
+      variables: { variant_id: variantIds },
     })
-
-    const links = await remoteQuery(variantPricingLinkQuery)
     const variantPriceSetMap: Record<string, string> = {}
 
     for (const link of links) {

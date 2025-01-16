@@ -1,6 +1,5 @@
 export const defaultAdminExchangeFields = [
   "id",
-  "type",
   "order_id",
   "return_id",
   "display_id",
@@ -17,7 +16,7 @@ export const defaultAdminDetailsExchangeFields = [
 ]
 
 export const retrieveTransformQueryConfig = {
-  defaultFields: defaultAdminDetailsExchangeFields,
+  defaults: defaultAdminDetailsExchangeFields,
   isList: false,
 }
 

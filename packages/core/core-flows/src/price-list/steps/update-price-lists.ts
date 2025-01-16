@@ -2,14 +2,14 @@ import {
   IPricingModuleService,
   UpdatePriceListDTO,
   UpdatePriceListWorkflowInputDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
-  ModuleRegistrationName,
+  Modules,
   buildPriceListRules,
   convertItemResponseToUpdateRequest,
   getSelectsAndRelationsFromObjectArray,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const updatePriceListsStepId = "update-price-lists"
 /**
@@ -19,7 +19,7 @@ export const updatePriceListsStep = createStep(
   updatePriceListsStepId,
   async (data: UpdatePriceListDTO[], { container }) => {
     const pricingModule = container.resolve<IPricingModuleService>(
-      ModuleRegistrationName.PRICING
+      Modules.PRICING
     )
 
     const { dataBeforeUpdate, selects, relations } = await getDataBeforeUpdate(
@@ -42,7 +42,7 @@ export const updatePriceListsStep = createStep(
 
     const { dataBeforeUpdate, selects, relations } = revertInput
     const pricingModule = container.resolve<IPricingModuleService>(
-      ModuleRegistrationName.PRICING
+      Modules.PRICING
     )
 
     await pricingModule.updatePriceLists(

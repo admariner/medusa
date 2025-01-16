@@ -4,8 +4,6 @@ import {
   PropertyMetadata,
   PropertyType,
 } from "@medusajs/types"
-import { MikroOrmBigNumberProperty } from "../../../dal"
-import { generateEntityId, isDefined } from "../../../common"
 import {
   ArrayType,
   BeforeCreate,
@@ -14,8 +12,12 @@ import {
   PrimaryKey,
   Property,
   Utils,
+  t as mikroOrmType,
 } from "@mikro-orm/core"
+import { generateEntityId, isDefined } from "../../../common"
+import { MikroOrmBigNumberProperty } from "../../../dal"
 import { PrimaryKeyModifier } from "../../properties/primary-key"
+import { applyEntityIndexes } from "../mikro-orm/apply-indexes"
 
 /**
  * DML entity data types to PostgreSQL data types via
@@ -31,6 +33,8 @@ const COLUMN_TYPES: {
   dateTime: "timestamptz",
   number: "integer",
   bigNumber: "numeric",
+  float: "real",
+  serial: "number",
   text: "text",
   json: "jsonb",
   array: "array",
@@ -50,6 +54,8 @@ const PROPERTY_TYPES: {
   dateTime: "date",
   number: "number",
   bigNumber: "number",
+  float: "number",
+  serial: "number",
   text: "string",
   json: "any",
   array: "string[]",
@@ -64,7 +70,8 @@ const PROPERTY_TYPES: {
 const SPECIAL_PROPERTIES: {
   [propertyName: string]: (
     MikroORMEntity: EntityConstructor<any>,
-    field: PropertyMetadata
+    field: PropertyMetadata,
+    tableName: string
   ) => void
 } = {
   created_at: (MikroORMEntity, field) => {
@@ -72,6 +79,7 @@ const SPECIAL_PROPERTIES: {
       columnType: "timestamptz",
       type: "date",
       nullable: false,
+      fieldName: field.fieldName,
       defaultRaw: "now()",
       onCreate: () => new Date(),
     })(MikroORMEntity.prototype, field.fieldName)
@@ -81,10 +89,26 @@ const SPECIAL_PROPERTIES: {
       columnType: "timestamptz",
       type: "date",
       nullable: false,
+      fieldName: field.fieldName,
       defaultRaw: "now()",
       onCreate: () => new Date(),
       onUpdate: () => new Date(),
     })(MikroORMEntity.prototype, field.fieldName)
+  },
+  deleted_at: (MikroORMEntity, field, tableName) => {
+    Property({
+      columnType: "timestamptz",
+      type: "date",
+      nullable: true,
+      fieldName: field.fieldName,
+    })(MikroORMEntity.prototype, field.fieldName)
+
+    applyEntityIndexes(MikroORMEntity, tableName, [
+      {
+        on: ["deleted_at"],
+        where: "deleted_at IS NULL",
+      },
+    ])
   },
 }
 
@@ -93,37 +117,49 @@ const SPECIAL_PROPERTIES: {
  */
 export function defineProperty(
   MikroORMEntity: EntityConstructor<any>,
-  propertyName: string,
-  property: PropertyType<any>
+  property: PropertyType<any>,
+  { tableName, propertyName }: { tableName: string; propertyName: string }
 ) {
   const field = property.parse(propertyName)
   /**
    * Here we initialize nullable properties with a null value
    */
-  if (field.nullable) {
-    Object.defineProperty(MikroORMEntity.prototype, field.fieldName, {
-      value: null,
-      configurable: true,
-      enumerable: true,
-      writable: true,
-    })
+  if (isDefined(field.defaultValue) || field.nullable) {
+    const defaultValueSetterHookName = `${field.fieldName}_setDefaultValueOnBeforeCreate`
+    MikroORMEntity.prototype[defaultValueSetterHookName] = function () {
+      if (isDefined(field.defaultValue) && this[propertyName] === undefined) {
+        this[propertyName] = field.defaultValue
+        return
+      }
+
+      if (field.nullable && this[propertyName] === undefined) {
+        this[propertyName] = null
+        return
+      }
+    }
+    BeforeCreate()(MikroORMEntity.prototype, defaultValueSetterHookName)
   }
 
-  if (SPECIAL_PROPERTIES[field.fieldName]) {
-    SPECIAL_PROPERTIES[field.fieldName](MikroORMEntity, field)
+  if (field.computed) {
     return
   }
 
-  /**
-   * Defining an big number property
-   * A big number property always comes with a raw_{{ fieldName }} column
-   * where the config of the bigNumber is set.
-   * The `raw_` field is generated during DML schema generation as a json
-   * dataType.
-   */
+  if (SPECIAL_PROPERTIES[field.fieldName]) {
+    SPECIAL_PROPERTIES[field.fieldName](MikroORMEntity, field, tableName)
+    return
+  }
+
   if (field.dataType.name === "bigNumber") {
+    /**
+     * Defining an big number property
+     * A big number property always comes with a raw_{{ fieldName }} column
+     * where the config of the bigNumber is set.
+     * The `raw_` field is generated during DML schema generation as a json
+     * dataType.
+     */
     MikroOrmBigNumberProperty({
       nullable: field.nullable,
+      fieldName: field.fieldName,
       /**
        * MikroORM does not ignore undefined values for default when generating
        * the database schema SQL. Conditionally add it here to prevent undefined
@@ -138,6 +174,7 @@ export function defineProperty(
   if (field.dataType.name === "array") {
     Property({
       type: ArrayType,
+      fieldName: field.fieldName,
       nullable: field.nullable,
       /**
        * MikroORM does not ignore undefined values for default when generating
@@ -157,6 +194,7 @@ export function defineProperty(
     Enum({
       items: () => field.dataType.options!.choices,
       nullable: field.nullable,
+      fieldName: field.fieldName,
       type: Utils.getObjectType(field.dataType.options!.choices[0]),
       /**
        * MikroORM does not ignore undefined values for default when generating
@@ -173,17 +211,16 @@ export function defineProperty(
    * Defining an id property
    */
   if (field.dataType.name === "id") {
-    const IdDecorator = PrimaryKeyModifier.isPrimaryKeyModifier(property)
-      ? PrimaryKey({
-          columnType: "text",
-          type: "string",
-          nullable: false,
-        })
-      : Property({
-          columnType: "text",
-          type: "string",
-          nullable: false,
-        })
+    const Prop = PrimaryKeyModifier.isPrimaryKeyModifier(property)
+      ? PrimaryKey
+      : Property
+
+    const IdDecorator = Prop({
+      columnType: "text",
+      type: "string",
+      nullable: false,
+      fieldName: field.fieldName,
+    })
 
     IdDecorator(MikroORMEntity.prototype, field.fieldName)
 
@@ -208,6 +245,70 @@ export function defineProperty(
   }
 
   /**
+   * Handling JSON property separately to stringify its default value
+   */
+  if (field.dataType.name === "json") {
+    Property({
+      columnType: "jsonb",
+      type: "any",
+      nullable: field.nullable,
+      fieldName: field.fieldName,
+      /**
+       * MikroORM does not ignore undefined values for default when generating
+       * the database schema SQL. Conditionally add it here to prevent undefined
+       * from being set as default value in SQL.
+       */
+      ...(isDefined(field.defaultValue) && {
+        default: JSON.stringify(field.defaultValue),
+      }),
+    })(MikroORMEntity.prototype, field.fieldName)
+    return
+  }
+
+  /**
+   * Handling serial property separately to set the column type
+   */
+  if (field.dataType.name === "serial") {
+    const Prop = PrimaryKeyModifier.isPrimaryKeyModifier(property)
+      ? PrimaryKey
+      : Property
+
+    Prop({
+      columnType: "serial",
+      type: mikroOrmType.integer,
+      nullable: true,
+      fieldName: field.fieldName,
+      serializer: Number,
+    })(MikroORMEntity.prototype, field.fieldName)
+    return
+  }
+
+  /**
+   * Handling serial property separately to set the column type
+   */
+  if (field.dataType.name === "float") {
+    Property({
+      columnType: "real",
+      type: "number",
+      nullable: field.nullable,
+      fieldName: field.fieldName,
+      /**
+       * Applying number serializer to convert value back to a
+       * JavaScript number
+       */
+      serializer: Number,
+      /**
+       * MikroORM does not ignore undefined values for default when generating
+       * the database schema SQL. Conditionally add it here to prevent undefined
+       * from being set as default value in SQL.
+       */
+      ...(isDefined(field.defaultValue) && { default: field.defaultValue }),
+    })(MikroORMEntity.prototype, field.fieldName)
+
+    return
+  }
+
+  /**
    * Define rest of properties
    */
   const columnType = COLUMN_TYPES[field.dataType.name]
@@ -221,6 +322,7 @@ export function defineProperty(
       columnType,
       type: propertyType,
       nullable: false,
+      fieldName: field.fieldName,
     })(MikroORMEntity.prototype, field.fieldName)
 
     return
@@ -230,6 +332,7 @@ export function defineProperty(
     columnType,
     type: propertyType,
     nullable: field.nullable,
+    fieldName: field.fieldName,
     /**
      * MikroORM does not ignore undefined values for default when generating
      * the database schema SQL. Conditionally add it here to prevent undefined

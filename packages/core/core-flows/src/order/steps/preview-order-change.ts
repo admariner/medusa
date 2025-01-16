@@ -1,6 +1,11 @@
-import { IOrderModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import { IOrderModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
+
+/**
+ * The ID of the order to retrieve its preview.
+ */
+export type PreviewOrderChangeStepInput = string
 
 export const previewOrderChangeStepId = "preview-order-change"
 /**
@@ -8,10 +13,8 @@ export const previewOrderChangeStepId = "preview-order-change"
  */
 export const previewOrderChangeStep = createStep(
   previewOrderChangeStepId,
-  async (orderId: string, { container }) => {
-    const service = container.resolve<IOrderModuleService>(
-      ModuleRegistrationName.ORDER
-    )
+  async (orderId: PreviewOrderChangeStepInput, { container }) => {
+    const service = container.resolve<IOrderModuleService>(Modules.ORDER)
 
     const preview = await service.previewOrderChange(orderId)
 

@@ -1,8 +1,10 @@
 import { ContainerRegistrationKeys, Modules } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import {
   adminHeaders,
   createAdminUser,
+  generatePublishableKey,
+  generateStoreHeaders,
 } from "../../../../helpers/create-admin-user"
 
 jest.setTimeout(30000)
@@ -12,10 +14,13 @@ medusaIntegrationTestRunner({
     let region1
     let region2
     let container
+    let storeHeaders
 
     beforeEach(async () => {
       container = getContainer()
       await createAdminUser(dbConnection, adminHeaders, container)
+      const publishableKey = await generatePublishableKey(container)
+      storeHeaders = generateStoreHeaders({ publishableKey })
 
       region1 = (
         await api.post(
@@ -50,9 +55,17 @@ medusaIntegrationTestRunner({
         expect(response.data.regions).toEqual([
           expect.objectContaining({
             name: "United Kingdom",
+            id: region1.id,
+            currency_code: "gbp",
+            automatic_taxes: region1.automatic_taxes,
+            countries: [],
           }),
           expect.objectContaining({
             name: "United States",
+            id: region2.id,
+            currency_code: "usd",
+            automatic_taxes: region2.automatic_taxes,
+            countries: [],
           }),
         ])
       })
@@ -111,7 +124,8 @@ medusaIntegrationTestRunner({
         )
 
         let response = await api.get(
-          `/store/regions/${region1.id}?fields=*payment_providers`
+          `/store/regions/${region1.id}?fields=*payment_providers`,
+          storeHeaders
         )
 
         expect(response.status).toEqual(200)
@@ -125,7 +139,8 @@ medusaIntegrationTestRunner({
         ])
 
         response = await api.get(
-          `/store/regions/${region1.id}?fields=*payment_providers`
+          `/store/regions/${region1.id}?fields=*payment_providers`,
+          storeHeaders
         )
 
         expect(response.status).toEqual(200)

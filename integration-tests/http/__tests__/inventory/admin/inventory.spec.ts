@@ -1,4 +1,4 @@
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import {
   adminHeaders,
   createAdminUser,
@@ -12,7 +12,7 @@ medusaIntegrationTestRunner({
     let inventoryItem2
     let stockLocation1
     let stockLocation2
-
+    let stockLocation3
     beforeEach(async () => {
       await createAdminUser(dbConnection, adminHeaders, getContainer())
 
@@ -22,6 +22,10 @@ medusaIntegrationTestRunner({
 
       stockLocation2 = (
         await api.post(`/admin/stock-locations`, { name: "loc2" }, adminHeaders)
+      ).data.stock_location
+
+      stockLocation3 = (
+        await api.post(`/admin/stock-locations`, { name: "loc3" }, adminHeaders)
       ).data.stock_location
 
       inventoryItem1 = (
@@ -122,28 +126,170 @@ medusaIntegrationTestRunner({
         })
       })
 
-      describe("POST /admin/inventory-items/:id/location-levels/batch", () => {
+      describe("POST /admin/inventory-items/location-levels/batch", () => {
+        let locationLevel1
+        let locationLevel2
+
         beforeEach(async () => {
-          await api.post(
-            `/admin/inventory-items/${inventoryItem1.id}/location-levels`,
+          const seed = await api.post(
+            `/admin/inventory-items/${inventoryItem1.id}/location-levels/batch`,
             {
-              location_id: stockLocation1.id,
-              stocked_quantity: 10,
+              create: [
+                {
+                  location_id: stockLocation1.id,
+                  stocked_quantity: 0,
+                },
+                {
+                  location_id: stockLocation2.id,
+                  stocked_quantity: 10,
+                },
+              ],
             },
             adminHeaders
           )
+
+          locationLevel1 = seed.data.created[0]
+          locationLevel2 = seed.data.created[1]
+        })
+
+        it("should batch update the inventory levels", async () => {
+          const result = await api.post(
+            `/admin/inventory-items/location-levels/batch`,
+            {
+              update: [
+                {
+                  location_id: stockLocation1.id,
+                  inventory_item_id: inventoryItem1.id,
+                  stocked_quantity: 10,
+                },
+                {
+                  location_id: stockLocation2.id,
+                  inventory_item_id: inventoryItem1.id,
+                  stocked_quantity: 20,
+                },
+              ],
+            },
+            adminHeaders
+          )
+
+          expect(result.status).toEqual(200)
+          expect(result.data).toEqual(
+            expect.objectContaining({
+              updated: expect.arrayContaining([
+                expect.objectContaining({
+                  location_id: stockLocation1.id,
+                  inventory_item_id: inventoryItem1.id,
+                  stocked_quantity: 10,
+                }),
+                expect.objectContaining({
+                  location_id: stockLocation2.id,
+                  inventory_item_id: inventoryItem1.id,
+                  stocked_quantity: 20,
+                }),
+              ]),
+            })
+          )
+        })
+
+        it("should batch create the inventory levels", async () => {
+          const result = await api.post(
+            `/admin/inventory-items/location-levels/batch`,
+            {
+              create: [
+                {
+                  location_id: stockLocation3.id,
+                  inventory_item_id: inventoryItem1.id,
+                  stocked_quantity: 10,
+                },
+              ],
+            },
+            adminHeaders
+          )
+
+          expect(result.status).toEqual(200)
+          expect(result.data).toEqual(
+            expect.objectContaining({
+              created: expect.arrayContaining([
+                expect.objectContaining({
+                  location_id: stockLocation3.id,
+                  inventory_item_id: inventoryItem1.id,
+                  stocked_quantity: 10,
+                }),
+              ]),
+            })
+          )
+        })
+
+        it("should batch delete the inventory levels when stocked quantity is 0 and force is false", async () => {
+          const result = await api.post(
+            `/admin/inventory-items/location-levels/batch`,
+            { delete: [locationLevel1.id] },
+            adminHeaders
+          )
+
+          expect(result.status).toEqual(200)
+          expect(result.data).toEqual(
+            expect.objectContaining({
+              deleted: [locationLevel1.id],
+            })
+          )
+        })
+
+        it("should not delete the inventory levels when stocked quantity is greater than 0 and force is false", async () => {
+          const error = await api
+            .post(
+              `/admin/inventory-items/location-levels/batch`,
+              { delete: [locationLevel2.id] },
+              adminHeaders
+            )
+            .catch((e) => e)
+
+          expect(error.response.status).toEqual(400)
+          expect(error.response.data).toEqual({
+            type: "not_allowed",
+            message: `Cannot remove Inventory Levels for ${stockLocation2.id} because there are stocked items at the locations. Use force flag to delete anyway.`,
+          })
+        })
+
+        it("should delete the inventory levels when stocked quantity is greater than 0 and force is true", async () => {
+          const result = await api.post(
+            `/admin/inventory-items/location-levels/batch`,
+            { delete: [locationLevel2.id], force: true },
+            adminHeaders
+          )
+
+          expect(result.status).toEqual(200)
+          expect(result.data).toEqual(
+            expect.objectContaining({
+              deleted: [locationLevel2.id],
+            })
+          )
+        })
+      })
+
+      describe("POST /admin/inventory-items/:id/location-levels/batch", () => {
+        let locationLevel1
+
+        beforeEach(async () => {
+          const seed = await api.post(
+            `/admin/inventory-items/${inventoryItem1.id}/location-levels`,
+            {
+              location_id: stockLocation1.id,
+              stocked_quantity: 0,
+            },
+            adminHeaders
+          )
+
+          locationLevel1 = seed.data.inventory_item.location_levels[0]
         })
 
         it("should delete an inventory location level and create a new one", async () => {
           const result = await api.post(
             `/admin/inventory-items/${inventoryItem1.id}/location-levels/batch`,
             {
-              create: [
-                {
-                  location_id: "location_2",
-                },
-              ],
-              delete: [stockLocation1.id],
+              create: [{ location_id: "location_2" }],
+              delete: [locationLevel1.id],
+              force: true,
             },
             adminHeaders
           )
@@ -157,6 +303,60 @@ medusaIntegrationTestRunner({
           expect(levelsListResult.status).toEqual(200)
           expect(levelsListResult.data.inventory_levels).toHaveLength(1)
         })
+
+        it("should not delete an inventory location level when there is stocked items without force", async () => {
+          await api.post(
+            `/admin/inventory-items/${inventoryItem1.id}/location-levels/${stockLocation1.id}`,
+            { stocked_quantity: 10 },
+            adminHeaders
+          )
+
+          const { response } = await api
+            .post(
+              `/admin/inventory-items/${inventoryItem1.id}/location-levels/batch`,
+              { delete: [locationLevel1.id] },
+              adminHeaders
+            )
+            .catch((e) => e)
+
+          expect(response.status).toEqual(400)
+          expect(response.data).toEqual({
+            type: "not_allowed",
+            message: `Cannot remove Inventory Levels for ${stockLocation1.id} because there are stocked items at the locations. Use force flag to delete anyway.`,
+          })
+        })
+
+        it("should successfully add an inventory location", async () => {
+          await api.post(
+            `/admin/inventory-items/${inventoryItem1.id}/location-levels/${stockLocation1.id}`,
+            { stocked_quantity: 10 },
+            adminHeaders
+          )
+
+          await api.post(
+            `/admin/inventory-items/${inventoryItem1.id}/location-levels/batch`,
+            { create: [{ location_id: stockLocation2.id }] },
+            adminHeaders
+          )
+
+          const {
+            data: { inventory_levels: inventoryLevels },
+          } = await api.get(
+            `/admin/inventory-items/${inventoryItem1.id}/location-levels`,
+            adminHeaders
+          )
+
+          expect(inventoryLevels).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({
+                location_id: stockLocation1.id,
+              }),
+              expect.objectContaining({
+                location_id: stockLocation2.id,
+              }),
+            ])
+          )
+        })
       })
 
       describe("DELETE /admin/inventory-items/:id/location-levels/:id", () => {
@@ -165,7 +365,7 @@ medusaIntegrationTestRunner({
             `/admin/inventory-items/${inventoryItem1.id}/location-levels`,
             {
               location_id: stockLocation1.id,
-              stocked_quantity: 10,
+              stocked_quantity: 0,
             },
             adminHeaders
           )
@@ -187,6 +387,12 @@ medusaIntegrationTestRunner({
         })
 
         it("should fail delete an inventory location level with reservations", async () => {
+          await api.post(
+            `/admin/inventory-items/${inventoryItem1.id}/location-levels/${stockLocation1.id}`,
+            { stocked_quantity: 10 },
+            adminHeaders
+          )
+
           await api.post(
             `/admin/reservations`,
             {
@@ -622,11 +828,6 @@ medusaIntegrationTestRunner({
           ).data.reservation
 
           await api.delete(
-            `/admin/inventory-items/${inventoryItem1.id}/location-levels/${item.location_levels[0].id}`,
-            adminHeaders
-          )
-
-          await api.delete(
             `/admin/reservations/${reservation.id}`,
             adminHeaders
           )
@@ -639,7 +840,7 @@ medusaIntegrationTestRunner({
           expect(response.data.inventory_item).toEqual(
             expect.objectContaining({
               id: inventoryItem1.id,
-              stocked_quantity: 10,
+              stocked_quantity: 20,
               reserved_quantity: 1,
             })
           )
@@ -731,7 +932,7 @@ medusaIntegrationTestRunner({
       })
 
       describe("DELETE /admin/inventory-items/:id", () => {
-        it("should remove associated levels and reservations when deleting an inventory item", async () => {
+        it("should throw if inventory item with reservations is being removed", async () => {
           await api.post(
             `/admin/inventory-items/${inventoryItem1.id}/location-levels`,
             {
@@ -770,30 +971,16 @@ medusaIntegrationTestRunner({
           ).data
           expect(levelsResponse.count).toEqual(1)
 
-          const res = await api.delete(
-            `/admin/inventory-items/${inventoryItem1.id}`,
-            adminHeaders
+          const res = await api
+            .delete(`/admin/inventory-items/${inventoryItem1.id}`, adminHeaders)
+            .catch((err) => {
+              return err.response
+            })
+
+          expect(res.status).toEqual(400)
+          expect(res.data.message).toEqual(
+            `Cannot remove following inventory item(s) since they have reservations: [${inventoryItem1.id}].`
           )
-
-          expect(res.status).toEqual(200)
-
-          const reservationsResponseAfterDelete = (
-            await api.get(
-              `/admin/reservations?location_id[]=${stockLocation1.id}`,
-              adminHeaders
-            )
-          ).data
-
-          expect(reservationsResponseAfterDelete.count).toEqual(0)
-
-          const levelsResponseAfterDelete = (
-            await api.get(
-              `/admin/inventory-items/${inventoryItem1.id}/location-levels?location_id[]=${stockLocation1.id}`,
-              adminHeaders
-            )
-          ).data
-
-          expect(levelsResponseAfterDelete.count).toEqual(0)
         })
 
         it("should remove the product variant associations when deleting an inventory item", async () => {
@@ -802,9 +989,11 @@ medusaIntegrationTestRunner({
               "/admin/products",
               {
                 title: "product 1",
+                options: [{ title: "size", values: ["large"] }],
                 variants: [
                   {
                     title: "variant 1",
+                    options: { size: "large" },
                     prices: [{ currency_code: "usd", amount: 100 }],
                     inventory_items: [
                       {

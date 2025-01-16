@@ -1,13 +1,12 @@
-import { RemoteLink } from "@medusajs/modules-sdk"
-import { RemoteQueryFunction } from "@medusajs/types"
-import { createStep, StepResponse } from "@medusajs/workflows-sdk"
+import { Link } from "@medusajs/framework/modules-sdk"
+import { RemoteQueryFunction } from "@medusajs/framework/types"
+import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 import {
   ContainerRegistrationKeys,
   LINKS,
   Modules,
   promiseAll,
-  remoteQueryObjectFromString,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 
 export type SetShippingOptionsPriceSetsStepInput = {
   id: string
@@ -28,16 +27,13 @@ async function getCurrentShippingOptionPriceSetsLinks(
   shippingOptionIds: string[],
   { remoteQuery }: { remoteQuery: RemoteQueryFunction }
 ): Promise<LinkItems> {
-  const query = remoteQueryObjectFromString({
+  const shippingOptionPriceSetLinks = (await remoteQuery({
     service: LINKS.ShippingOptionPriceSet,
     variables: {
       filters: { shipping_option_id: shippingOptionIds },
-      take: null,
     },
     fields: ["shipping_option_id", "price_set_id"],
-  })
-
-  const shippingOptionPriceSetLinks = (await remoteQuery(query)) as {
+  } as any)) as {
     shipping_option_id: string
     price_set_id: string
   }[]
@@ -74,9 +70,7 @@ export const setShippingOptionsPriceSetsStep = createStep(
       return
     }
 
-    const remoteLink = container.resolve<RemoteLink>(
-      ContainerRegistrationKeys.REMOTE_LINK
-    )
+    const remoteLink = container.resolve<Link>(ContainerRegistrationKeys.LINK)
     const remoteQuery = container.resolve<RemoteQueryFunction>(
       ContainerRegistrationKeys.REMOTE_QUERY
     )
@@ -156,9 +150,7 @@ export const setShippingOptionsPriceSetsStep = createStep(
       return
     }
 
-    const remoteLink = container.resolve<RemoteLink>(
-      ContainerRegistrationKeys.REMOTE_LINK
-    )
+    const remoteLink = container.resolve<Link>(ContainerRegistrationKeys.LINK)
 
     const promises: Promise<unknown[]>[] = []
 

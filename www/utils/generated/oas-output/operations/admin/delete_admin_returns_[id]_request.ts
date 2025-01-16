@@ -20,7 +20,7 @@
  *     label: cURL
  *     source: |-
  *       curl -X DELETE '{backend_url}/admin/returns/{id}/request' \
- *       -H 'x-medusa-access-token: {api_token}'
+ *       -H 'Authorization: Bearer {access_token}'
  * tags:
  *   - Returns
  * responses:
@@ -30,7 +30,7 @@
  *       application/json:
  *         schema:
  *           type: object
- *           description: SUMMARY
+ *           description: The deletion's details.
  *           required:
  *             - id
  *             - object

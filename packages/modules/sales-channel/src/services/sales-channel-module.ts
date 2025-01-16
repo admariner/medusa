@@ -3,13 +3,15 @@ import {
   CreateSalesChannelDTO,
   DAL,
   FilterableSalesChannelProps,
+  InferEntityType,
   InternalModuleDeclaration,
   ISalesChannelModuleService,
+  ModuleJoinerConfig,
   ModulesSdkTypes,
   SalesChannelDTO,
   UpdateSalesChannelDTO,
   UpsertSalesChannelDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
   InjectManager,
   InjectTransactionManager,
@@ -17,10 +19,11 @@ import {
   MedusaContext,
   MedusaService,
   promiseAll,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 
 import { SalesChannel } from "@models"
 import { UpdateSalesChanneInput } from "@types"
+import { joinerConfig } from "../joinfer-config"
 
 type InjectedDependencies = {
   baseRepository: DAL.RepositoryService
@@ -34,7 +37,9 @@ export default class SalesChannelModuleService
   implements ISalesChannelModuleService
 {
   protected baseRepository_: DAL.RepositoryService
-  protected readonly salesChannelService_: ModulesSdkTypes.IMedusaInternalService<SalesChannel>
+  protected readonly salesChannelService_: ModulesSdkTypes.IMedusaInternalService<
+    InferEntityType<typeof SalesChannel>
+  >
 
   constructor(
     { baseRepository, salesChannelService }: InjectedDependencies,
@@ -44,6 +49,10 @@ export default class SalesChannelModuleService
     super(...arguments)
     this.baseRepository_ = baseRepository
     this.salesChannelService_ = salesChannelService
+  }
+
+  __joinerConfig(): ModuleJoinerConfig {
+    return joinerConfig
   }
 
   // @ts-expect-error
@@ -56,7 +65,7 @@ export default class SalesChannelModuleService
     sharedContext?: Context
   ): Promise<SalesChannelDTO>
 
-  @InjectManager("baseRepository_")
+  @InjectManager()
   async createSalesChannels(
     data: CreateSalesChannelDTO | CreateSalesChannelDTO[],
     @MedusaContext() sharedContext: Context = {}
@@ -73,11 +82,11 @@ export default class SalesChannelModuleService
     )
   }
 
-  @InjectTransactionManager("baseRepository_")
+  @InjectTransactionManager()
   async createSalesChannels_(
     data: CreateSalesChannelDTO[],
     @MedusaContext() sharedContext: Context
-  ): Promise<SalesChannel[]> {
+  ): Promise<InferEntityType<typeof SalesChannel>[]> {
     return await this.salesChannelService_.create(data, sharedContext)
   }
 
@@ -93,7 +102,7 @@ export default class SalesChannelModuleService
     sharedContext?: Context
   ): Promise<SalesChannelDTO[]>
 
-  @InjectManager("baseRepository_")
+  @InjectManager()
   async updateSalesChannels(
     idOrSelector: string | FilterableSalesChannelProps,
     data: UpdateSalesChannelDTO | UpdateSalesChannelDTO[],
@@ -128,7 +137,7 @@ export default class SalesChannelModuleService
     )
   }
 
-  @InjectTransactionManager("baseRepository_")
+  @InjectTransactionManager()
   async updateSalesChannels_(
     data: UpdateSalesChannelDTO[],
     sharedContext: Context
@@ -144,7 +153,7 @@ export default class SalesChannelModuleService
     data: UpsertSalesChannelDTO,
     sharedContext?: Context
   ): Promise<SalesChannelDTO>
-  @InjectTransactionManager("baseRepository_")
+  @InjectTransactionManager()
   async upsertSalesChannels(
     data: UpsertSalesChannelDTO | UpsertSalesChannelDTO[],
     @MedusaContext() sharedContext: Context = {}
@@ -157,7 +166,7 @@ export default class SalesChannelModuleService
       (channel): channel is CreateSalesChannelDTO => !channel.id
     )
 
-    const operations: Promise<SalesChannel[]>[] = []
+    const operations: Promise<InferEntityType<typeof SalesChannel>[]>[] = []
 
     if (forCreate.length) {
       operations.push(this.createSalesChannels_(forCreate, sharedContext))

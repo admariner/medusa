@@ -1,15 +1,21 @@
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { IStoreModuleService } from "@medusajs/types"
 import {
   ApiKeyType,
-  ModuleRegistrationName,
+  Modules,
+  PriceListStatus,
+  PriceListType,
   ProductStatus,
 } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
+import qs from "qs"
 import {
   adminHeaders,
   createAdminUser,
+  generatePublishableKey,
+  generateStoreHeaders,
 } from "../../../../helpers/create-admin-user"
 import { getProductFixture } from "../../../../helpers/fixtures"
+import { createAuthenticatedCustomer } from "../../../../modules/helpers/create-authenticated-customer"
 
 jest.setTimeout(30000)
 
@@ -28,8 +34,13 @@ medusaIntegrationTestRunner({
     let variant2
     let variant3
     let variant4
+    let region
     let inventoryItem1
     let inventoryItem2
+    let storeHeaders
+    let publishableKey
+    let storeHeadersWithCustomer
+    let customer
 
     const createProducts = async (data) => {
       const response = await api.post(
@@ -82,10 +93,25 @@ medusaIntegrationTestRunner({
 
     beforeEach(async () => {
       appContainer = getContainer()
+      publishableKey = await generatePublishableKey(appContainer)
+      storeHeaders = generateStoreHeaders({ publishableKey })
       await createAdminUser(dbConnection, adminHeaders, appContainer)
+      const result = await createAuthenticatedCustomer(api, storeHeaders, {
+        first_name: "tony",
+        last_name: "stark",
+        email: "tony@stark-industries.com",
+      })
+
+      customer = result.customer
+      storeHeadersWithCustomer = {
+        headers: {
+          ...storeHeaders.headers,
+          authorization: `Bearer ${result.jwt}`,
+        },
+      }
 
       const storeModule: IStoreModuleService = appContainer.resolve(
-        ModuleRegistrationName.STORE
+        Modules.STORE
       )
       // A default store is created when the app is started, so we want to delete that one and create one specifically for our tests.
       const defaultId = (await api.get("/admin/stores", adminHeaders)).data
@@ -101,10 +127,17 @@ medusaIntegrationTestRunner({
           { currency_code: "dkk" },
         ],
       })
+
+      region = (
+        await api.post(
+          "/admin/regions",
+          { name: "Test Region", currency_code: "usd" },
+          adminHeaders
+        )
+      ).data.region
     })
 
     describe("Get products based on publishable key", () => {
-      let pubKey1
       let salesChannel1
       let salesChannel2
 
@@ -132,14 +165,6 @@ medusaIntegrationTestRunner({
             adminHeaders
           )
         ).data.product
-
-        pubKey1 = (
-          await api.post(
-            "/admin/api-keys",
-            { title: "sample key", type: "publishable" },
-            adminHeaders
-          )
-        ).data.api_key
 
         salesChannel1 = (
           await api.post(
@@ -184,7 +209,7 @@ medusaIntegrationTestRunner({
 
       it("returns products from a specific channel associated with a publishable key", async () => {
         await api.post(
-          `/admin/api-keys/${pubKey1.id}/sales-channels`,
+          `/admin/api-keys/${publishableKey.id}/sales-channels`,
           {
             add: [salesChannel1.id],
           },
@@ -194,7 +219,7 @@ medusaIntegrationTestRunner({
         const response = await api.get(`/store/products`, {
           headers: {
             ...adminHeaders.headers,
-            "x-publishable-api-key": pubKey1.token,
+            "x-publishable-api-key": publishableKey.token,
           },
         })
 
@@ -210,7 +235,7 @@ medusaIntegrationTestRunner({
 
       it("returns products from multiples sales channels associated with a publishable key", async () => {
         await api.post(
-          `/admin/api-keys/${pubKey1.id}/sales-channels`,
+          `/admin/api-keys/${publishableKey.id}/sales-channels`,
           {
             add: [salesChannel1.id, salesChannel2.id],
           },
@@ -220,7 +245,7 @@ medusaIntegrationTestRunner({
         const response = await api.get(`/store/products`, {
           headers: {
             ...adminHeaders.headers,
-            "x-publishable-api-key": pubKey1.token,
+            "x-publishable-api-key": publishableKey.token,
           },
         })
 
@@ -239,7 +264,7 @@ medusaIntegrationTestRunner({
 
       it("SC param overrides PK channels (but SK still needs to be in the PK's scope", async () => {
         await api.post(
-          `/admin/api-keys/${pubKey1.id}/sales-channels`,
+          `/admin/api-keys/${publishableKey.id}/sales-channels`,
           {
             add: [salesChannel1.id, salesChannel2.id],
           },
@@ -251,39 +276,10 @@ medusaIntegrationTestRunner({
           {
             headers: {
               ...adminHeaders.headers,
-              "x-publishable-api-key": pubKey1.token,
+              "x-publishable-api-key": publishableKey.token,
             },
           }
         )
-
-        expect(response.data.products.length).toBe(1)
-        expect(response.data.products).toEqual(
-          expect.arrayContaining([
-            expect.objectContaining({
-              id: product2.id,
-            }),
-          ])
-        )
-      })
-
-      it("returns default product from default sales channel if PK is not passed", async () => {
-        await api.post(
-          `/admin/stores/${store.id}`,
-          { default_sales_channel_id: salesChannel2.id },
-          adminHeaders
-        )
-
-        await api.post(
-          `/admin/api-keys/${pubKey1.id}/sales-channels`,
-          {
-            add: [salesChannel1.id, salesChannel2.id],
-          },
-          adminHeaders
-        )
-
-        const response = await api.get(`/store/products`, {
-          adminHeaders,
-        })
 
         expect(response.data.products.length).toBe(1)
         expect(response.data.products).toEqual(
@@ -300,7 +296,7 @@ medusaIntegrationTestRunner({
         const response = await api.get(`/store/products`, {
           headers: {
             ...adminHeaders.headers,
-            "x-publishable-api-key": pubKey1.token,
+            "x-publishable-api-key": publishableKey.token,
           },
         })
 
@@ -322,7 +318,7 @@ medusaIntegrationTestRunner({
 
       it("throws because sales channel param is not in the scope of passed PK", async () => {
         await api.post(
-          `/admin/api-keys/${pubKey1.id}/sales-channels`,
+          `/admin/api-keys/${publishableKey.id}/sales-channels`,
           {
             add: [salesChannel1.id],
           },
@@ -333,20 +329,20 @@ medusaIntegrationTestRunner({
           .get(`/store/products?sales_channel_id[]=${salesChannel2.id}`, {
             headers: {
               ...adminHeaders.headers,
-              "x-publishable-api-key": pubKey1.token,
+              "x-publishable-api-key": publishableKey.token,
             },
           })
           .catch((e) => e)
 
         expect(err.response.status).toEqual(400)
         expect(err.response.data.message).toEqual(
-          `Requested sales channel is not part of the publishable key mappings`
+          `Requested sales channel is not part of the publishable key`
         )
       })
 
       it("retrieve a product from a specific channel associated with a publishable key", async () => {
         await api.post(
-          `/admin/api-keys/${pubKey1.id}/sales-channels`,
+          `/admin/api-keys/${publishableKey.id}/sales-channels`,
           {
             add: [salesChannel1.id],
           },
@@ -356,7 +352,7 @@ medusaIntegrationTestRunner({
         const response = await api.get(`/store/products/${product1.id}`, {
           headers: {
             ...adminHeaders.headers,
-            "x-publishable-api-key": pubKey1.token,
+            "x-publishable-api-key": publishableKey.token,
           },
         })
 
@@ -370,7 +366,7 @@ medusaIntegrationTestRunner({
       // BREAKING: If product not in sales channel we used to return 400, we return 404 instead.
       it("return 404 because requested product is not in the SC associated with a publishable key", async () => {
         await api.post(
-          `/admin/api-keys/${pubKey1.id}/sales-channels`,
+          `/admin/api-keys/${publishableKey.id}/sales-channels`,
           {
             add: [salesChannel1.id],
           },
@@ -381,7 +377,7 @@ medusaIntegrationTestRunner({
           .get(`/store/products/${product2.id}`, {
             headers: {
               ...adminHeaders.headers,
-              "x-publishable-api-key": pubKey1.token,
+              "x-publishable-api-key": publishableKey.token,
             },
           })
           .catch((e) => e)
@@ -392,7 +388,7 @@ medusaIntegrationTestRunner({
       // TODO: Add variant endpoints to the store API (if that is what we want)
       it.skip("should return 404 when the requested variant doesn't exist", async () => {
         await api.post(
-          `/admin/api-keys/${pubKey1.id}/sales-channels`,
+          `/admin/api-keys/${publishableKey.id}/sales-channels`,
           {
             add: [salesChannel1.id],
           },
@@ -403,7 +399,7 @@ medusaIntegrationTestRunner({
           .get(`/store/variants/does-not-exist`, {
             headers: {
               ...adminHeaders.headers,
-              "x-publishable-api-key": pubKey1.token,
+              "x-publishable-api-key": publishableKey.token,
             },
           })
           .catch((err) => {
@@ -418,7 +414,7 @@ medusaIntegrationTestRunner({
 
       it("should return 404 when the requested product doesn't exist", async () => {
         await api.post(
-          `/admin/api-keys/${pubKey1.id}/sales-channels`,
+          `/admin/api-keys/${publishableKey.id}/sales-channels`,
           {
             add: [salesChannel1.id],
           },
@@ -429,7 +425,7 @@ medusaIntegrationTestRunner({
           .get(`/store/products/does-not-exist`, {
             headers: {
               ...adminHeaders.headers,
-              "x-publishable-api-key": pubKey1.token,
+              "x-publishable-api-key": publishableKey.token,
             },
           })
           .catch((err) => {
@@ -448,7 +444,7 @@ medusaIntegrationTestRunner({
           .get(`/store/products/${product1.id}`, {
             headers: {
               ...adminHeaders.headers,
-              "x-publishable-api-key": pubKey1.token,
+              "x-publishable-api-key": publishableKey.token,
             },
           })
           .catch((err) => {
@@ -461,7 +457,7 @@ medusaIntegrationTestRunner({
           .get(`/store/products/${product2.id}`, {
             headers: {
               ...adminHeaders.headers,
-              "x-publishable-api-key": pubKey1.token,
+              "x-publishable-api-key": publishableKey.token,
             },
           })
           .catch((err) => {
@@ -530,6 +526,14 @@ medusaIntegrationTestRunner({
               prices: [{ amount: 3000, currency_code: "usd" }],
             },
           ],
+          images: [
+            {
+              url: "image-one",
+            },
+            {
+              url: "image-two",
+            },
+          ],
         })
         ;[product2, [variant2]] = await createProducts({
           title: "test product 2 uniquely",
@@ -553,12 +557,18 @@ medusaIntegrationTestRunner({
         ;[product3, [variant3]] = await createProducts({
           title: "product not in price list",
           status: ProductStatus.PUBLISHED,
-          variants: [{ title: "test variant 3", prices: [] }],
+          options: [{ title: "size", values: ["large", "small"] }],
+          variants: [
+            { title: "test variant 3", prices: [], options: { size: "large" } },
+          ],
         })
         ;[product4, [variant4]] = await createProducts({
           title: "draft product",
           status: ProductStatus.DRAFT,
-          variants: [{ title: "test variant 4", prices: [] }],
+          options: [{ title: "size", values: ["large", "small"] }],
+          variants: [
+            { title: "test variant 4", prices: [], options: { size: "large" } },
+          ],
         })
 
         const defaultSalesChannel = await createSalesChannel(
@@ -566,7 +576,13 @@ medusaIntegrationTestRunner({
           [product.id, product2.id, product3.id, product4.id]
         )
 
-        const service = appContainer.resolve(ModuleRegistrationName.STORE)
+        await api.post(
+          `/admin/api-keys/${publishableKey.id}/sales-channels`,
+          { add: [defaultSalesChannel.id] },
+          adminHeaders
+        )
+
+        const service = appContainer.resolve(Modules.STORE)
         const [store] = await service.listStores()
 
         if (store) {
@@ -583,7 +599,7 @@ medusaIntegrationTestRunner({
       })
 
       it("should list all published products", async () => {
-        let response = await api.get(`/store/products`)
+        let response = await api.get(`/store/products`, storeHeaders)
 
         expect(response.status).toEqual(200)
         expect(response.data.count).toEqual(3)
@@ -601,7 +617,7 @@ medusaIntegrationTestRunner({
           ])
         )
 
-        response = await api.get(`/store/products?q=uniquely`)
+        response = await api.get(`/store/products?q=uniquely`, storeHeaders)
 
         expect(response.status).toEqual(200)
         expect(response.data.count).toEqual(1)
@@ -612,14 +628,50 @@ medusaIntegrationTestRunner({
         ])
       })
 
+      it("should list all products with images ordered by rank", async () => {
+        const response = await api.get("/store/products", storeHeaders)
+
+        expect(response.data.products).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              id: product.id,
+              images: expect.arrayContaining([
+                expect.objectContaining({ url: "image-one", rank: 0 }),
+                expect.objectContaining({ url: "image-two", rank: 1 }),
+              ]),
+            }),
+          ])
+        )
+      })
+
+      it("should list all products excluding variants", async () => {
+        let response = await api.get(
+          `/admin/products?fields=-variants`,
+          adminHeaders
+        )
+
+        expect(response.data.count).toEqual(4)
+
+        for (let product of response.data.products) {
+          expect(product.variants).toBeUndefined()
+        }
+      })
+
       it("should list all products for a sales channel", async () => {
         const salesChannel = await createSalesChannel(
           { name: "sales channel test" },
           [product.id]
         )
 
+        await api.post(
+          `/admin/api-keys/${publishableKey.id}/sales-channels`,
+          { add: [salesChannel.id] },
+          adminHeaders
+        )
+
         let response = await api.get(
-          `/store/products?sales_channel_id[]=${salesChannel.id}`
+          `/store/products?sales_channel_id[]=${salesChannel.id}`,
+          storeHeaders
         )
 
         expect(response.status).toEqual(200)
@@ -643,7 +695,37 @@ medusaIntegrationTestRunner({
         )
 
         const response = await api.get(
-          `/store/products?category_id[]=${category.id}&category_id[]=${category2.id}`
+          `/store/products?category_id[]=${category.id}&category_id[]=${category2.id}`,
+          storeHeaders
+        )
+
+        expect(response.status).toEqual(200)
+        expect(response.data.count).toEqual(1)
+        expect(response.data.products).toEqual([
+          expect.objectContaining({
+            id: product.id,
+          }),
+        ])
+      })
+
+      it("should list all products for a category using $and filters", async () => {
+        const category = await createCategory(
+          { name: "test", is_internal: false, is_active: true },
+          [product.id]
+        )
+
+        const category2 = await createCategory(
+          { name: "test2", is_internal: true, is_active: true },
+          [product4.id]
+        )
+
+        const searchParam = qs.stringify({
+          $and: [{ category_id: [category.id, category2.id] }],
+        })
+
+        const response = await api.get(
+          `/store/products?${searchParam}`,
+          storeHeaders
         )
 
         expect(response.status).toEqual(200)
@@ -656,7 +738,7 @@ medusaIntegrationTestRunner({
       })
 
       it("returns a list of ordered products by id ASC", async () => {
-        const response = await api.get("/store/products?order=id")
+        const response = await api.get("/store/products?order=id", storeHeaders)
         expect(response.status).toEqual(200)
         expect(response.data.products).toEqual(
           [product.id, product2.id, product3.id]
@@ -666,7 +748,10 @@ medusaIntegrationTestRunner({
       })
 
       it("returns a list of ordered products by id DESC", async () => {
-        const response = await api.get("/store/products?order=-id")
+        const response = await api.get(
+          "/store/products?order=-id",
+          storeHeaders
+        )
 
         expect(response.status).toEqual(200)
         expect(response.data.products).toEqual(
@@ -678,7 +763,10 @@ medusaIntegrationTestRunner({
 
       // TODO: This doesn't work currently, but worked in v1
       it.skip("returns a list of ordered products by variants title DESC", async () => {
-        const response = await api.get("/store/products?order=-variants.title")
+        const response = await api.get(
+          "/store/products?order=-variants.title",
+          storeHeaders
+        )
 
         expect(response.status).toEqual(200)
         expect(response.data.products).toEqual([
@@ -690,7 +778,10 @@ medusaIntegrationTestRunner({
 
       // TODO: This doesn't work currently, but worked in v1
       it.skip("returns a list of ordered products by variants title ASC", async () => {
-        const response = await api.get("/store/products?order=variants.title")
+        const response = await api.get(
+          "/store/products?order=variants.title",
+          storeHeaders
+        )
 
         expect(response.status).toEqual(200)
         expect(response.data.products).toEqual([
@@ -703,7 +794,8 @@ medusaIntegrationTestRunner({
       // TODO: This doesn't work currently, but worked in v1
       it.skip("returns a list of ordered products by variants prices DESC", async () => {
         let response = await api.get(
-          "/store/products?order=-variants.prices.amount"
+          "/store/products?order=-variants.prices.amount",
+          storeHeaders
         )
       })
 
@@ -711,14 +803,18 @@ medusaIntegrationTestRunner({
       it.skip("returns a list of ordered products by variants prices ASC", async () => {})
 
       it("products contain only fields defined with `fields` param", async () => {
-        const response = await api.get("/store/products?fields=handle")
+        const response = await api.get(
+          "/store/products?fields=handle",
+          storeHeaders
+        )
         expect(response.status).toEqual(200)
         expect(Object.keys(response.data.products[0])).toEqual(["handle", "id"])
       })
 
       it("returns a list of products in collection", async () => {
         const response = await api.get(
-          `/store/products?collection_id[]=${collection.id}`
+          `/store/products?collection_id[]=${collection.id}`,
+          storeHeaders
         )
 
         expect(response.status).toEqual(200)
@@ -730,7 +826,8 @@ medusaIntegrationTestRunner({
 
       it("returns a list of products with a given tag", async () => {
         const response = await api.get(
-          `/store/products?tag_id[]=${product.tags[0].id}`
+          `/store/products?tag_id[]=${product.tags[0].id}`,
+          storeHeaders
         )
 
         expect(response.status).toEqual(200)
@@ -743,7 +840,7 @@ medusaIntegrationTestRunner({
       // TODO: Not implemented yet
       it.skip("returns gift card product", async () => {
         const response = await api
-          .get("/store/products?is_giftcard=true")
+          .get("/store/products?is_giftcard=true", storeHeaders)
           .catch((err) => {
             console.log(err)
           })
@@ -752,7 +849,7 @@ medusaIntegrationTestRunner({
       // TODO: Not implemented yet
       it.skip("returns non gift card products", async () => {
         const response = await api
-          .get("/store/products?is_giftcard=false")
+          .get("/store/products?is_giftcard=false", storeHeaders)
           .catch((err) => {
             console.log(err)
           })
@@ -760,7 +857,8 @@ medusaIntegrationTestRunner({
 
       it("returns a list of products in with a given handle", async () => {
         const response = await api.get(
-          `/store/products?handle=${product.handle}`
+          `/store/products?handle=${product.handle}`,
+          storeHeaders
         )
 
         expect(response.status).toEqual(200)
@@ -773,7 +871,8 @@ medusaIntegrationTestRunner({
       it("returns a list of products filtered by variant options", async () => {
         const option = product.options.find((o) => o.title === "size")
         const response = await api.get(
-          `/store/products?variants.options[option_id]=${option?.id}&variants.options[value]=large`
+          `/store/products?variants.options[option_id]=${option?.id}&variants.options[value]=large`,
+          storeHeaders
         )
 
         expect(response.status).toEqual(200)
@@ -808,6 +907,12 @@ medusaIntegrationTestRunner({
           publishableKey1 = api1Res.data.api_key
 
           await api.post(
+            `/admin/api-keys/${publishableKey.id}/sales-channels`,
+            { add: [salesChannel1.id, salesChannel2.id] },
+            adminHeaders
+          )
+
+          await api.post(
             `/admin/api-keys/${publishableKey1.id}/sales-channels`,
             { add: [salesChannel1.id] },
             adminHeaders
@@ -830,7 +935,10 @@ medusaIntegrationTestRunner({
         })
 
         it("should list products by id", async () => {
-          let response = await api.get(`/store/products?id[]=${product.id}`)
+          let response = await api.get(
+            `/store/products?id[]=${product.id}`,
+            storeHeaders
+          )
 
           expect(response.status).toEqual(200)
           expect(response.data.count).toEqual(1)
@@ -850,8 +958,8 @@ medusaIntegrationTestRunner({
 
           expect(error.response.status).toEqual(400)
           expect(error.response.data).toEqual({
-            message: `Publishable API key not found`,
-            type: "invalid_data",
+            message: `A valid publishable key is required to proceed with the request`,
+            type: "not_allowed",
           })
         })
 
@@ -864,7 +972,7 @@ medusaIntegrationTestRunner({
 
           expect(error.response.status).toEqual(400)
           expect(error.response.data).toEqual({
-            message: `Requested sales channel is not part of the publishable key mappings`,
+            message: `Requested sales channel is not part of the publishable key`,
             type: "invalid_data",
           })
         })
@@ -878,7 +986,7 @@ medusaIntegrationTestRunner({
 
           expect(error.response.status).toEqual(400)
           expect(error.response.data).toEqual({
-            message: `Requested sales channel is not part of the publishable key mappings`,
+            message: `Requested sales channel is not part of the publishable key`,
             type: "invalid_data",
           })
         })
@@ -886,7 +994,10 @@ medusaIntegrationTestRunner({
 
       it("should throw error when calculating prices without context", async () => {
         let error = await api
-          .get(`/store/products?fields=*variants.calculated_price`)
+          .get(
+            `/store/products?fields=*variants.calculated_price`,
+            storeHeaders
+          )
           .catch((e) => e)
 
         expect(error.response.status).toEqual(400)
@@ -898,16 +1009,9 @@ medusaIntegrationTestRunner({
       })
 
       it("should list products with prices when context is present", async () => {
-        const region = (
-          await api.post(
-            "/admin/regions",
-            { name: "Test Region", currency_code: "usd" },
-            adminHeaders
-          )
-        ).data.region
-
         let response = await api.get(
-          `/store/products?fields=*variants.calculated_price&region_id=${region.id}`
+          `/store/products?fields=*variants.calculated_price&region_id=${region.id}`,
+          storeHeaders
         )
 
         const expectation = expect.arrayContaining([
@@ -957,10 +1061,365 @@ medusaIntegrationTestRunner({
         expect(response.data.products).toEqual(expectation)
 
         // with only region_id
-        response = await api.get(`/store/products?region_id=${region.id}`)
+        response = await api.get(
+          `/store/products?region_id=${region.id}`,
+          storeHeaders
+        )
 
         expect(response.status).toEqual(200)
         expect(response.data.products).toEqual(expectation)
+      })
+
+      describe("with price lists", () => {
+        let customerGroup
+
+        beforeEach(async () => {
+          customerGroup = (
+            await api.post(
+              "/admin/customer-groups",
+              { name: "VIP" },
+              adminHeaders
+            )
+          ).data.customer_group
+
+          await api.post(
+            `/admin/customer-groups/${customerGroup.id}/customers`,
+            { add: [customer.id] },
+            adminHeaders
+          )
+        })
+
+        it("should list products with prices with a sale price list price", async () => {
+          const priceList = (
+            await api.post(
+              `/admin/price-lists`,
+              {
+                title: "test price list",
+                description: "test",
+                status: PriceListStatus.ACTIVE,
+                type: PriceListType.SALE,
+                prices: [
+                  {
+                    amount: 350,
+                    currency_code: "usd",
+                    variant_id: product.variants[0].id,
+                  },
+                ],
+                rules: { "customer.groups.id": [customerGroup.id] },
+              },
+              adminHeaders
+            )
+          ).data.price_list
+
+          let response = await api.get(
+            `/store/products?fields=*variants.calculated_price&region_id=${region.id}`,
+            storeHeadersWithCustomer
+          )
+
+          const expectation = expect.arrayContaining([
+            expect.objectContaining({
+              id: product.id,
+              variants: [
+                expect.objectContaining({
+                  calculated_price: {
+                    id: expect.any(String),
+                    is_calculated_price_price_list: true,
+                    is_calculated_price_tax_inclusive: false,
+                    calculated_amount: 350,
+                    raw_calculated_amount: {
+                      value: "350",
+                      precision: 20,
+                    },
+                    is_original_price_price_list: false,
+                    is_original_price_tax_inclusive: false,
+                    original_amount: 3000,
+                    raw_original_amount: {
+                      value: "3000",
+                      precision: 20,
+                    },
+                    currency_code: "usd",
+                    calculated_price: {
+                      id: expect.any(String),
+                      price_list_id: priceList.id,
+                      price_list_type: "sale",
+                      min_quantity: null,
+                      max_quantity: null,
+                    },
+                    original_price: {
+                      id: expect.any(String),
+                      price_list_id: null,
+                      price_list_type: null,
+                      min_quantity: null,
+                      max_quantity: null,
+                    },
+                  },
+                }),
+              ],
+            }),
+          ])
+
+          expect(response.status).toEqual(200)
+          expect(response.data.count).toEqual(3)
+          expect(response.data.products).toEqual(expectation)
+
+          // with only region_id
+          response = await api.get(
+            `/store/products?region_id=${region.id}`,
+            storeHeadersWithCustomer
+          )
+
+          expect(response.status).toEqual(200)
+          expect(response.data.products).toEqual(expectation)
+        })
+
+        it("should list products with prices with a default price when the price list price is higher and the price list is of type SALE", async () => {
+          const priceList = (
+            await api.post(
+              `/admin/price-lists`,
+              {
+                title: "test price list",
+                description: "test",
+                status: PriceListStatus.ACTIVE,
+                type: PriceListType.SALE,
+                prices: [
+                  {
+                    amount: 3500,
+                    currency_code: "usd",
+                    variant_id: product.variants[0].id,
+                  },
+                ],
+                rules: { "customer.groups.id": [customerGroup.id] },
+              },
+              adminHeaders
+            )
+          ).data.price_list
+
+          let response = await api.get(
+            `/store/products?fields=*variants.calculated_price&region_id=${region.id}`,
+            storeHeadersWithCustomer
+          )
+
+          const expectation = expect.arrayContaining([
+            expect.objectContaining({
+              id: product.id,
+              variants: [
+                expect.objectContaining({
+                  calculated_price: {
+                    id: expect.any(String),
+                    is_calculated_price_price_list: false,
+                    is_calculated_price_tax_inclusive: false,
+                    calculated_amount: 3000,
+                    raw_calculated_amount: {
+                      value: "3000",
+                      precision: 20,
+                    },
+                    is_original_price_price_list: false,
+                    is_original_price_tax_inclusive: false,
+                    original_amount: 3000,
+                    raw_original_amount: {
+                      value: "3000",
+                      precision: 20,
+                    },
+                    currency_code: "usd",
+                    calculated_price: {
+                      id: expect.any(String),
+                      price_list_id: null,
+                      price_list_type: null,
+                      min_quantity: null,
+                      max_quantity: null,
+                    },
+                    original_price: {
+                      id: expect.any(String),
+                      price_list_id: null,
+                      price_list_type: null,
+                      min_quantity: null,
+                      max_quantity: null,
+                    },
+                  },
+                }),
+              ],
+            }),
+          ])
+
+          expect(response.status).toEqual(200)
+          expect(response.data.count).toEqual(3)
+          expect(response.data.products).toEqual(expectation)
+
+          // with only region_id
+          response = await api.get(
+            `/store/products?region_id=${region.id}`,
+            storeHeadersWithCustomer
+          )
+
+          expect(response.status).toEqual(200)
+          expect(response.data.products).toEqual(expectation)
+        })
+
+        it("should list products with prices with a override price list price", async () => {
+          const priceList = (
+            await api.post(
+              `/admin/price-lists`,
+              {
+                title: "test price list",
+                description: "test",
+                status: PriceListStatus.ACTIVE,
+                type: PriceListType.OVERRIDE,
+                prices: [
+                  {
+                    amount: 350,
+                    currency_code: "usd",
+                    variant_id: product.variants[0].id,
+                  },
+                ],
+                rules: { "customer.groups.id": [customerGroup.id] },
+              },
+              adminHeaders
+            )
+          ).data.price_list
+
+          let response = await api.get(
+            `/store/products?fields=*variants.calculated_price&region_id=${region.id}`,
+            storeHeadersWithCustomer
+          )
+
+          const expectation = expect.arrayContaining([
+            expect.objectContaining({
+              id: product.id,
+              variants: [
+                expect.objectContaining({
+                  calculated_price: {
+                    id: expect.any(String),
+                    is_calculated_price_price_list: true,
+                    is_calculated_price_tax_inclusive: false,
+                    calculated_amount: 350,
+                    raw_calculated_amount: {
+                      value: "350",
+                      precision: 20,
+                    },
+                    is_original_price_price_list: true,
+                    is_original_price_tax_inclusive: false,
+                    original_amount: 350,
+                    raw_original_amount: {
+                      value: "350",
+                      precision: 20,
+                    },
+                    currency_code: "usd",
+                    calculated_price: {
+                      id: expect.any(String),
+                      price_list_id: priceList.id,
+                      price_list_type: "override",
+                      min_quantity: null,
+                      max_quantity: null,
+                    },
+                    original_price: {
+                      id: expect.any(String),
+                      price_list_id: priceList.id,
+                      price_list_type: "override",
+                      min_quantity: null,
+                      max_quantity: null,
+                    },
+                  },
+                }),
+              ],
+            }),
+          ])
+
+          expect(response.status).toEqual(200)
+          expect(response.data.count).toEqual(3)
+          expect(response.data.products).toEqual(expectation)
+
+          // with only region_id
+          response = await api.get(
+            `/store/products?region_id=${region.id}`,
+            storeHeadersWithCustomer
+          )
+
+          expect(response.status).toEqual(200)
+          expect(response.data.products).toEqual(expectation)
+        })
+
+        it("should list products with prices with a override price list price even if the price list price is higher than the default price", async () => {
+          const priceList = (
+            await api.post(
+              `/admin/price-lists`,
+              {
+                title: "test price list",
+                description: "test",
+                status: PriceListStatus.ACTIVE,
+                type: PriceListType.OVERRIDE,
+                prices: [
+                  {
+                    amount: 35000,
+                    currency_code: "usd",
+                    variant_id: product.variants[0].id,
+                  },
+                ],
+                rules: { "customer.groups.id": [customerGroup.id] },
+              },
+              adminHeaders
+            )
+          ).data.price_list
+
+          let response = await api.get(
+            `/store/products?fields=*variants.calculated_price&region_id=${region.id}`,
+            storeHeadersWithCustomer
+          )
+
+          const expectation = expect.arrayContaining([
+            expect.objectContaining({
+              id: product.id,
+              variants: [
+                expect.objectContaining({
+                  calculated_price: {
+                    id: expect.any(String),
+                    is_calculated_price_price_list: true,
+                    is_calculated_price_tax_inclusive: false,
+                    calculated_amount: 35000,
+                    raw_calculated_amount: {
+                      value: "35000",
+                      precision: 20,
+                    },
+                    is_original_price_price_list: true,
+                    is_original_price_tax_inclusive: false,
+                    original_amount: 35000,
+                    raw_original_amount: {
+                      value: "35000",
+                      precision: 20,
+                    },
+                    currency_code: "usd",
+                    calculated_price: {
+                      id: expect.any(String),
+                      price_list_id: priceList.id,
+                      price_list_type: "override",
+                      min_quantity: null,
+                      max_quantity: null,
+                    },
+                    original_price: {
+                      id: expect.any(String),
+                      price_list_id: priceList.id,
+                      price_list_type: "override",
+                      min_quantity: null,
+                      max_quantity: null,
+                    },
+                  },
+                }),
+              ],
+            }),
+          ])
+
+          expect(response.status).toEqual(200)
+          expect(response.data.count).toEqual(3)
+          expect(response.data.products).toEqual(expectation)
+
+          // with only region_id
+          response = await api.get(
+            `/store/products?region_id=${region.id}`,
+            storeHeadersWithCustomer
+          )
+
+          expect(response.status).toEqual(200)
+          expect(response.data.products).toEqual(expectation)
+        })
       })
 
       describe("with inventory items", () => {
@@ -1034,6 +1493,150 @@ medusaIntegrationTestRunner({
             { add: [salesChannel1.id] },
             adminHeaders
           )
+        })
+
+        it("should handle inventory items and location levels correctly", async () => {
+          const container = getContainer()
+          const channelService = container.resolve("sales_channel")
+          const locationService = container.resolve("stock_location")
+          const inventoryService = container.resolve("inventory")
+          const productService = container.resolve("product")
+          const pubKeyService = container.resolve("api_key")
+          const linkService = container.resolve("remoteLink")
+
+          const [channelOne, channelTwo] =
+            await channelService.createSalesChannels([
+              { name: "Sales Channel 1" },
+              { name: "Sales Channel 2" },
+            ])
+
+          const product = await productService.createProducts({
+            status: "published",
+            title: "my prod",
+            options: [{ title: "color", values: ["green", "blue"] }],
+            variants: [
+              { title: "variant one", options: { color: "green" } },
+              { title: "variant two", options: { color: "blue" } },
+            ],
+          })
+
+          const [variantOne, variantTwo] = product.variants
+
+          const [itemOne, itemTwo, itemThree] =
+            await inventoryService.createInventoryItems([
+              { sku: "sku-one" },
+              { sku: "sku-two" },
+              { sku: "sku-three" },
+            ])
+
+          const [locationOne, locationTwo] =
+            await locationService.createStockLocations([
+              { name: "Location One" },
+              { name: "Location Two" },
+            ])
+
+          await inventoryService.createInventoryLevels([
+            {
+              location_id: locationOne.id,
+              inventory_item_id: itemOne.id,
+              stocked_quantity: 23,
+            },
+            {
+              location_id: locationOne.id,
+              inventory_item_id: itemTwo.id,
+              stocked_quantity: 10,
+            },
+            {
+              location_id: locationTwo.id,
+              inventory_item_id: itemThree.id,
+              stocked_quantity: 5,
+            },
+          ])
+
+          const [pubKeyOne, pubKeyTwo] = await pubKeyService.createApiKeys([
+            { title: "pub key one", type: "publishable", created_by: "me" },
+            { title: "pub key two", type: "publishable", created_by: "me" },
+          ])
+
+          await linkService.create([
+            {
+              product: { product_id: product.id },
+              sales_channel: { sales_channel_id: channelOne.id },
+            },
+            {
+              product: { product_id: product.id },
+              sales_channel: { sales_channel_id: channelTwo.id },
+            },
+            {
+              product: { variant_id: variantOne.id },
+              inventory: { inventory_item_id: itemOne.id },
+            },
+            {
+              product: { variant_id: variantTwo.id },
+              inventory: { inventory_item_id: itemTwo.id },
+            },
+            {
+              product: { variant_id: variantTwo.id },
+              inventory: { inventory_item_id: itemThree.id },
+              data: { required_quantity: 2 },
+            },
+            {
+              sales_channel: { sales_channel_id: channelOne.id },
+              stock_location: { stock_location_id: locationOne.id },
+            },
+            {
+              sales_channel: { sales_channel_id: channelTwo.id },
+              stock_location: { stock_location_id: locationOne.id },
+            },
+            {
+              sales_channel: { sales_channel_id: channelTwo.id },
+              stock_location: { stock_location_id: locationTwo.id },
+            },
+            {
+              api_key: { publishable_key_id: pubKeyOne.id },
+              sales_channel: { sales_channel_id: channelOne.id },
+            },
+            {
+              api_key: { publishable_key_id: pubKeyTwo.id },
+              sales_channel: { sales_channel_id: channelTwo.id },
+            },
+          ])
+
+          let response = await api.get(
+            `/store/products?fields=+variants.inventory_quantity`,
+            { headers: { "x-publishable-api-key": pubKeyOne.token } }
+          )
+
+          expect(response.status).toEqual(200)
+          for (const variant of response.data.products
+            .map((p) => p.variants)
+            .flat()) {
+            if (variant.id === variantOne.id) {
+              expect(variant.inventory_quantity).toEqual(23)
+            } else if (variant.id === variantTwo.id) {
+              expect(variant.inventory_quantity).toEqual(0)
+            } else {
+              throw new Error("Unexpected variant")
+            }
+          }
+
+          response = await api.get(
+            `/store/products?fields=+variants.inventory_quantity`,
+            { headers: { "x-publishable-api-key": pubKeyTwo.token } }
+          )
+
+          expect(response.status).toEqual(200)
+          for (const variant of response.data.products
+            .map((p) => p.variants)
+            .flat()) {
+            if (variant.id === variantOne.id) {
+              expect(variant.inventory_quantity).toEqual(23)
+            } else if (variant.id === variantTwo.id) {
+              expect(variant.inventory_quantity).toEqual(2)
+            } else {
+              throw new Error("Unexpected variant")
+            }
+          }
         })
 
         it("should list all inventory items for a variant", async () => {
@@ -1124,10 +1727,25 @@ medusaIntegrationTestRunner({
         ;[product, [variant]] = await createProducts({
           title: "test product 1",
           status: ProductStatus.PUBLISHED,
+          options: [{ title: "size", values: ["large"] }],
           variants: [
             {
               title: "test variant 1",
-              prices: [{ amount: 3000, currency_code: "usd" }],
+              prices: [
+                {
+                  amount: 3000,
+                  currency_code: "usd",
+                  options: { size: "large" },
+                },
+              ],
+            },
+          ],
+          images: [
+            {
+              url: "image-one",
+            },
+            {
+              url: "image-two",
             },
           ],
         })
@@ -1137,7 +1755,13 @@ medusaIntegrationTestRunner({
           [product.id]
         )
 
-        const service = appContainer.resolve(ModuleRegistrationName.STORE)
+        await api.post(
+          `/admin/api-keys/${publishableKey.id}/sales-channels`,
+          { add: [defaultSalesChannel.id] },
+          adminHeaders
+        )
+
+        const service = appContainer.resolve(Modules.STORE)
         const [store] = await service.listStores()
 
         if (store) {
@@ -1154,7 +1778,10 @@ medusaIntegrationTestRunner({
       })
 
       it("should retrieve product successfully", async () => {
-        let response = await api.get(`/store/products/${product.id}`)
+        let response = await api.get(
+          `/store/products/${product.id}`,
+          storeHeaders
+        )
 
         expect(response.status).toEqual(200)
         expect(response.data.product).toEqual(
@@ -1166,6 +1793,20 @@ medusaIntegrationTestRunner({
               }),
             ],
           })
+        )
+      })
+
+      it("should retrieve product with images ordered by rank", async () => {
+        const response = await api.get(
+          `/store/products/${product.id}`,
+          storeHeaders
+        )
+
+        expect(response.data.product.images).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ url: "image-one", rank: 0 }),
+            expect.objectContaining({ url: "image-two", rank: 1 }),
+          ])
         )
       })
 
@@ -1185,7 +1826,8 @@ medusaIntegrationTestRunner({
         )
 
         const response = await api.get(
-          `/store/products/${product.id}?fields=*categories`
+          `/store/products/${product.id}?fields=*categories`,
+          storeHeaders
         )
 
         expect(response.status).toEqual(200)
@@ -1200,7 +1842,8 @@ medusaIntegrationTestRunner({
       it("should throw error when calculating prices without context", async () => {
         let error = await api
           .get(
-            `/store/products/${product.id}?fields=*variants.calculated_price`
+            `/store/products/${product.id}?fields=*variants.calculated_price`,
+            storeHeaders
           )
           .catch((e) => e)
 
@@ -1213,16 +1856,9 @@ medusaIntegrationTestRunner({
       })
 
       it("should get product with prices when context is present", async () => {
-        const region = (
-          await api.post(
-            "/admin/regions",
-            { name: "Test Region", currency_code: "usd" },
-            adminHeaders
-          )
-        ).data.region
-
         let response = await api.get(
-          `/store/products/${product.id}?fields=*variants.calculated_price&region_id=${region.id}`
+          `/store/products/${product.id}?fields=*variants.calculated_price&region_id=${region.id}`,
+          storeHeaders
         )
 
         const expectation = expect.objectContaining({
@@ -1270,11 +1906,192 @@ medusaIntegrationTestRunner({
 
         // with only region_id
         response = await api.get(
-          `/store/products/${product.id}?region_id=${region.id}`
+          `/store/products/${product.id}?region_id=${region.id}`,
+          storeHeaders
         )
 
         expect(response.status).toEqual(200)
         expect(response.data.product).toEqual(expectation)
+      })
+
+      describe("with price lists", () => {
+        let customerGroup
+
+        beforeEach(async () => {
+          customerGroup = (
+            await api.post(
+              "/admin/customer-groups",
+              { name: "VIP" },
+              adminHeaders
+            )
+          ).data.customer_group
+
+          await api.post(
+            `/admin/customer-groups/${customerGroup.id}/customers`,
+            { add: [customer.id] },
+            adminHeaders
+          )
+        })
+
+        it("should return product with sale price list prices", async () => {
+          const priceList = (
+            await api.post(
+              `/admin/price-lists`,
+              {
+                title: "test price list",
+                description: "test",
+                status: PriceListStatus.ACTIVE,
+                type: PriceListType.SALE,
+                prices: [
+                  {
+                    amount: 350,
+                    currency_code: "usd",
+                    variant_id: product.variants[0].id,
+                  },
+                ],
+                rules: { "customer.groups.id": [customerGroup.id] },
+              },
+              adminHeaders
+            )
+          ).data.price_list
+
+          let response = await api.get(
+            `/store/products/${product.id}?fields=*variants.calculated_price&region_id=${region.id}`,
+            storeHeadersWithCustomer
+          )
+
+          const expectation = expect.objectContaining({
+            id: product.id,
+            variants: [
+              expect.objectContaining({
+                calculated_price: {
+                  id: expect.any(String),
+                  is_calculated_price_price_list: true,
+                  is_calculated_price_tax_inclusive: false,
+                  calculated_amount: 350,
+                  raw_calculated_amount: {
+                    value: "350",
+                    precision: 20,
+                  },
+                  is_original_price_price_list: false,
+                  is_original_price_tax_inclusive: false,
+                  original_amount: 3000,
+                  raw_original_amount: {
+                    value: "3000",
+                    precision: 20,
+                  },
+                  currency_code: "usd",
+                  calculated_price: {
+                    id: expect.any(String),
+                    price_list_id: priceList.id,
+                    price_list_type: "sale",
+                    min_quantity: null,
+                    max_quantity: null,
+                  },
+                  original_price: {
+                    id: expect.any(String),
+                    price_list_id: null,
+                    price_list_type: null,
+                    min_quantity: null,
+                    max_quantity: null,
+                  },
+                },
+              }),
+            ],
+          })
+
+          expect(response.status).toEqual(200)
+          expect(response.data.product).toEqual(expectation)
+
+          // with only region_id
+          response = await api.get(
+            `/store/products/${product.id}?region_id=${region.id}`,
+            storeHeadersWithCustomer
+          )
+
+          expect(response.status).toEqual(200)
+          expect(response.data.product).toEqual(expectation)
+        })
+
+        it("should list products with prices with a override price list price", async () => {
+          const priceList = (
+            await api.post(
+              `/admin/price-lists`,
+              {
+                title: "test price list",
+                description: "test",
+                status: PriceListStatus.ACTIVE,
+                type: PriceListType.OVERRIDE,
+                prices: [
+                  {
+                    amount: 350,
+                    currency_code: "usd",
+                    variant_id: product.variants[0].id,
+                  },
+                ],
+                rules: { "customer.groups.id": [customerGroup.id] },
+              },
+              adminHeaders
+            )
+          ).data.price_list
+
+          let response = await api.get(
+            `/store/products/${product.id}?fields=*variants.calculated_price&region_id=${region.id}`,
+            storeHeadersWithCustomer
+          )
+
+          const expectation = expect.objectContaining({
+            id: product.id,
+            variants: [
+              expect.objectContaining({
+                calculated_price: {
+                  id: expect.any(String),
+                  is_calculated_price_price_list: true,
+                  is_calculated_price_tax_inclusive: false,
+                  calculated_amount: 350,
+                  raw_calculated_amount: {
+                    value: "350",
+                    precision: 20,
+                  },
+                  is_original_price_price_list: true,
+                  is_original_price_tax_inclusive: false,
+                  original_amount: 350,
+                  raw_original_amount: {
+                    value: "350",
+                    precision: 20,
+                  },
+                  currency_code: "usd",
+                  calculated_price: {
+                    id: expect.any(String),
+                    price_list_id: priceList.id,
+                    price_list_type: "override",
+                    min_quantity: null,
+                    max_quantity: null,
+                  },
+                  original_price: {
+                    id: expect.any(String),
+                    price_list_id: priceList.id,
+                    price_list_type: "override",
+                    min_quantity: null,
+                    max_quantity: null,
+                  },
+                },
+              }),
+            ],
+          })
+
+          expect(response.status).toEqual(200)
+          expect(response.data.product).toEqual(expectation)
+
+          // with only region_id
+          response = await api.get(
+            `/store/products/${product.id}?region_id=${region.id}`,
+            storeHeadersWithCustomer
+          )
+
+          expect(response.status).toEqual(200)
+          expect(response.data.product).toEqual(expectation)
+        })
       })
     })
 
@@ -1285,12 +2102,30 @@ medusaIntegrationTestRunner({
       let euCart
 
       beforeEach(async () => {
+        const salesChannel = (
+          await api.post(
+            "/admin/sales-channels",
+            {
+              name: "test name",
+              description: "test description",
+            },
+            adminHeaders
+          )
+        ).data.sales_channel
+
+        await api.post(
+          `/admin/api-keys/${publishableKey.id}/sales-channels`,
+          { add: [salesChannel.id] },
+          adminHeaders
+        )
+
         const store = (await api.get("/admin/stores", adminHeaders)).data
           .stores[0]
         if (store) {
           await api.post(
             `/admin/stores/${store.id}`,
             {
+              default_sales_channel_id: salesChannel.id,
               supported_currencies: [
                 {
                   currency_code: "usd",
@@ -1307,6 +2142,7 @@ medusaIntegrationTestRunner({
           await api.post(
             "/admin/stores",
             {
+              default_sales_channel_id: salesChannel.id,
               name: "Test store",
               supported_currencies: [
                 {
@@ -1400,13 +2236,27 @@ medusaIntegrationTestRunner({
         product2 = (
           await api.post(
             "/admin/products",
-            getProductFixture({ title: "test2", status: "published" }),
+            getProductFixture({
+              title: "test2",
+              status: "published",
+            }),
             adminHeaders
           )
         ).data.product
 
-        euCart = (await api.post("/store/carts", { region_id: euRegion.id }))
-          .data.cart
+        await api.post(
+          `/admin/sales-channels/${salesChannel.id}/products`,
+          { add: [product1.id, product2.id] },
+          adminHeaders
+        )
+
+        euCart = (
+          await api.post(
+            "/store/carts",
+            { region_id: euRegion.id },
+            storeHeaders
+          )
+        ).data.cart
 
         await api.post(
           `/admin/tax-regions`,
@@ -1451,7 +2301,8 @@ medusaIntegrationTestRunner({
       it("should not return tax pricing if the context is not sufficient when listing products", async () => {
         const products = (
           await api.get(
-            `/store/products?fields=id,*variants.calculated_price&region_id=${usRegion.id}`
+            `/store/products?fields=id,*variants.calculated_price&region_id=${usRegion.id}`,
+            storeHeaders
           )
         ).data.products
 
@@ -1467,7 +2318,8 @@ medusaIntegrationTestRunner({
       it("should not return tax pricing if automatic taxes are off when listing products", async () => {
         const products = (
           await api.get(
-            `/store/products?fields=id,*variants.calculated_price&region_id=${usRegion.id}&country_code=us`
+            `/store/products?fields=id,*variants.calculated_price&region_id=${usRegion.id}&country_code=us`,
+            storeHeaders
           )
         ).data.products
 
@@ -1483,7 +2335,8 @@ medusaIntegrationTestRunner({
       it("should return prices with and without tax for a tax inclusive region when listing products", async () => {
         const products = (
           await api.get(
-            `/store/products?fields=id,*variants.calculated_price&region_id=${euRegion.id}&country_code=it`
+            `/store/products?fields=id,*variants.calculated_price&region_id=${euRegion.id}&country_code=it`,
+            storeHeaders
           )
         ).data.products
 
@@ -1524,7 +2377,8 @@ medusaIntegrationTestRunner({
       it("should return prices with and without tax for a tax exclusive region when listing products", async () => {
         const products = (
           await api.get(
-            `/store/products?fields=id,*variants.calculated_price&region_id=${dkRegion.id}&country_code=dk`
+            `/store/products?fields=id,*variants.calculated_price&region_id=${dkRegion.id}&country_code=dk`,
+            storeHeaders
           )
         ).data.products
 
@@ -1558,7 +2412,8 @@ medusaIntegrationTestRunner({
       it("should return prices with and without tax when the cart is available and a country is passed when listing products", async () => {
         const products = (
           await api.get(
-            `/store/products?fields=id,*variants.calculated_price&cart_id=${euCart.id}&country_code=it`
+            `/store/products?fields=id,*variants.calculated_price&cart_id=${euCart.id}&country_code=it`,
+            storeHeaders
           )
         ).data.products
 
@@ -1584,15 +2439,20 @@ medusaIntegrationTestRunner({
       })
 
       it("should return prices with and without tax when the cart context is available when listing products", async () => {
-        await api.post(`/store/carts/${euCart.id}`, {
-          shipping_address: {
-            country_code: "it",
+        await api.post(
+          `/store/carts/${euCart.id}`,
+          {
+            shipping_address: {
+              country_code: "it",
+            },
           },
-        })
+          storeHeaders
+        )
 
         const products = (
           await api.get(
-            `/store/products?fields=id,*variants.calculated_price&cart_id=${euCart.id}`
+            `/store/products?fields=id,*variants.calculated_price&cart_id=${euCart.id}`,
+            storeHeaders
           )
         ).data.products
 
@@ -1620,7 +2480,8 @@ medusaIntegrationTestRunner({
       it("should not return tax pricing if the context is not sufficient when fetching a single product", async () => {
         const product = (
           await api.get(
-            `/store/products/${product1.id}?fields=id,*variants.calculated_price&region_id=${usRegion.id}`
+            `/store/products/${product1.id}?fields=id,*variants.calculated_price&region_id=${usRegion.id}`,
+            storeHeaders
           )
         ).data.product
 
@@ -1635,7 +2496,8 @@ medusaIntegrationTestRunner({
       it("should return prices with and without tax for a tax inclusive region when fetching a single product", async () => {
         const product = (
           await api.get(
-            `/store/products/${product1.id}?fields=id,*variants.calculated_price&region_id=${euRegion.id}&country_code=it`
+            `/store/products/${product1.id}?fields=id,*variants.calculated_price&region_id=${euRegion.id}&country_code=it`,
+            storeHeaders
           )
         ).data.product
 

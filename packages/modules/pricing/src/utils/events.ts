@@ -1,69 +1,69 @@
 import {
   CommonEvents,
-  eventBuilderFactory,
+  moduleEventBuilderFactory,
   Modules,
   PricingEvents,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 
 export const eventBuilders = {
-  createdPriceSet: eventBuilderFactory({
+  createdPriceSet: moduleEventBuilderFactory({
     source: Modules.PRICING,
     action: CommonEvents.CREATED,
     object: "price_set",
-    eventsEnum: PricingEvents,
+    eventName: PricingEvents.PRICE_SET_CREATED,
   }),
-  createdPrice: eventBuilderFactory({
+  createdPrice: moduleEventBuilderFactory({
     source: Modules.PRICING,
     action: CommonEvents.CREATED,
     object: "price",
-    eventsEnum: PricingEvents,
+    eventName: PricingEvents.PRICE_CREATED,
   }),
-  createdPriceRule: eventBuilderFactory({
+  createdPriceRule: moduleEventBuilderFactory({
     source: Modules.PRICING,
     action: CommonEvents.CREATED,
     object: "price_rule",
-    eventsEnum: PricingEvents,
+    eventName: PricingEvents.PRICE_RULE_CREATED,
   }),
-  createdPriceList: eventBuilderFactory({
+  createdPriceList: moduleEventBuilderFactory({
     source: Modules.PRICING,
     action: CommonEvents.CREATED,
     object: "price_list",
-    eventsEnum: PricingEvents,
+    eventName: PricingEvents.PRICE_LIST_CREATED,
   }),
-  createdPriceListRule: eventBuilderFactory({
+  createdPriceListRule: moduleEventBuilderFactory({
     source: Modules.PRICING,
     action: CommonEvents.CREATED,
     object: "price_list_rule",
-    eventsEnum: PricingEvents,
+    eventName: PricingEvents.PRICE_LIST_RULE_CREATED,
   }),
-  attachedPriceListRule: eventBuilderFactory({
+  attachedPriceListRule: moduleEventBuilderFactory({
     source: Modules.PRICING,
     action: CommonEvents.ATTACHED,
     object: "price_list_rule",
-    eventsEnum: PricingEvents,
+    eventName: PricingEvents.PRICE_LIST_RULE_ATTACHED,
   }),
-  updatedPrice: eventBuilderFactory({
+  updatedPrice: moduleEventBuilderFactory({
     source: Modules.PRICING,
     action: CommonEvents.UPDATED,
     object: "price",
-    eventsEnum: PricingEvents,
+    eventName: PricingEvents.PRICE_UPDATED,
   }),
-  updatedPriceRule: eventBuilderFactory({
+  updatedPriceRule: moduleEventBuilderFactory({
     source: Modules.PRICING,
     action: CommonEvents.UPDATED,
     object: "price_rule",
-    eventsEnum: PricingEvents,
+    eventName: PricingEvents.PRICE_RULE_UPDATED,
   }),
-  deletedPrice: eventBuilderFactory({
+  deletedPrice: moduleEventBuilderFactory({
     source: Modules.PRICING,
     action: CommonEvents.DELETED,
     object: "price",
-    eventsEnum: PricingEvents,
+    eventName: PricingEvents.PRICE_DELETED,
   }),
-  deletedPriceRule: eventBuilderFactory({
+  deletedPriceRule: moduleEventBuilderFactory({
     source: Modules.PRICING,
     action: CommonEvents.DELETED,
     object: "price_rule",
-    eventsEnum: PricingEvents,
+    eventName: PricingEvents.PRICE_RULE_DELETED,
   }),
 }

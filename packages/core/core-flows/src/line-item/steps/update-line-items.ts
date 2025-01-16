@@ -1,14 +1,14 @@
 import {
   ICartModuleService,
   UpdateLineItemWithSelectorDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
-  ModuleRegistrationName,
+  Modules,
   getSelectsAndRelationsFromObjectArray,
   promiseAll,
   removeUndefined,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const updateLineItemsStepWithSelectorId =
   "update-line-items-with-selector"
@@ -18,9 +18,7 @@ export const updateLineItemsStepWithSelectorId =
 export const updateLineItemsStepWithSelector = createStep(
   updateLineItemsStepWithSelectorId,
   async (input: UpdateLineItemWithSelectorDTO, { container }) => {
-    const service = container.resolve<ICartModuleService>(
-      ModuleRegistrationName.CART
-    )
+    const service = container.resolve<ICartModuleService>(Modules.CART)
 
     const { selects, relations } = getSelectsAndRelationsFromObjectArray([
       input.data,
@@ -40,9 +38,7 @@ export const updateLineItemsStepWithSelector = createStep(
       return
     }
 
-    const service = container.resolve<ICartModuleService>(
-      ModuleRegistrationName.CART
-    )
+    const service = container.resolve<ICartModuleService>(Modules.CART)
 
     await promiseAll(
       itemsBefore.map(async (i) =>

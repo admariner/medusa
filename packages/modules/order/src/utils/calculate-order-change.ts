@@ -1,10 +1,11 @@
-import { BigNumberInput, OrderSummaryDTO } from "@medusajs/types"
+import { BigNumberInput, OrderSummaryDTO } from "@medusajs/framework/types"
 import {
   BigNumber,
+  ChangeActionType,
   MathBN,
   isPresent,
   transformPropertiesToBigNumber,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 import {
   ActionTypeDefinition,
   EVENT_STATUS,
@@ -58,6 +59,10 @@ export class OrderChangeProcessing {
     let paid = MathBN.convert(0)
     let refunded = MathBN.convert(0)
     let transactionTotal = MathBN.convert(0)
+    let creditLineTotal = (this.order.credit_lines || []).reduce(
+      (acc, creditLine) => MathBN.add(acc, creditLine.amount),
+      MathBN.convert(0)
+    )
 
     for (const tr of transactions) {
       if (MathBN.lt(tr.amount, 0)) {
@@ -71,7 +76,6 @@ export class OrderChangeProcessing {
     transformPropertiesToBigNumber(this.order.metadata)
 
     this.summary = {
-      temporary_difference: 0,
       pending_difference: 0,
       difference_sum: 0,
       current_order_total: this.order.total ?? 0,
@@ -79,6 +83,8 @@ export class OrderChangeProcessing {
       transaction_total: transactionTotal,
       paid_total: paid,
       refunded_total: refunded,
+      credit_line_total: creditLineTotal,
+      accounting_total: MathBN.sub(this.order.total ?? 0, creditLineTotal),
     }
   }
 
@@ -96,11 +102,17 @@ export class OrderChangeProcessing {
   }
 
   public processActions() {
+    let creditLineTotal = (this.order.credit_lines || []).reduce(
+      (acc, creditLine) => MathBN.add(acc, creditLine.amount),
+      MathBN.convert(0)
+    )
+
     for (const action of this.actions) {
       this.processAction_(action)
     }
 
     const summary = this.summary
+
     for (const action of this.actions) {
       if (!this.isEventActive(action)) {
         continue
@@ -121,33 +133,35 @@ export class OrderChangeProcessing {
         )
       }
 
-      if (type.awaitRequired) {
-        summary.temporary_difference = MathBN.add(
-          summary.temporary_difference,
+      if (action.action === ChangeActionType.CREDIT_LINE_ADD) {
+        creditLineTotal = MathBN.add(creditLineTotal, amount)
+      } else {
+        if (!this.isEventDone(action) && !action.change_id) {
+          summary.difference_sum = MathBN.add(summary.difference_sum, amount)
+        }
+
+        summary.current_order_total = MathBN.add(
+          summary.current_order_total,
           amount
         )
       }
-
-      if (!this.isEventDone(action) && !action.change_id) {
-        summary.difference_sum = MathBN.add(summary.difference_sum, amount)
-      }
-      summary.current_order_total = MathBN.add(
-        summary.current_order_total,
-        amount
-      )
     }
 
     const groupSum = MathBN.add(...Object.values(this.groupTotal))
-
     summary.difference_sum = MathBN.add(summary.difference_sum, groupSum)
+    summary.credit_line_total = creditLineTotal
+    summary.accounting_total = MathBN.sub(
+      summary.current_order_total,
+      creditLineTotal
+    )
 
     summary.transaction_total = MathBN.sum(
       ...this.transactions.map((tr) => tr.amount)
     )
 
-    summary.temporary_difference = MathBN.sub(
-      summary.difference_sum,
-      summary.temporary_difference
+    summary.current_order_total = MathBN.sub(
+      summary.current_order_total,
+      creditLineTotal
     )
 
     summary.pending_difference = MathBN.sub(
@@ -161,6 +175,7 @@ export class OrderChangeProcessing {
     isReplay = false
   ): BigNumberInput | void {
     const definedType = OrderChangeProcessing.typeDefinition[action.action]
+
     if (!isPresent(definedType)) {
       throw new Error(`Action type ${action.action} is not defined`)
     }
@@ -208,11 +223,12 @@ export class OrderChangeProcessing {
       transaction_total: new BigNumber(summary.transaction_total),
       original_order_total: new BigNumber(summary.original_order_total),
       current_order_total: new BigNumber(summary.current_order_total),
-      temporary_difference: new BigNumber(summary.temporary_difference),
       pending_difference: new BigNumber(summary.pending_difference),
       difference_sum: new BigNumber(summary.difference_sum),
       paid_total: new BigNumber(summary.paid_total),
       refunded_total: new BigNumber(summary.refunded_total),
+      credit_line_total: new BigNumber(summary.credit_line_total),
+      accounting_total: new BigNumber(summary.accounting_total),
     } as unknown as OrderSummaryDTO
 
     return orderSummary

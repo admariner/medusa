@@ -7,14 +7,15 @@ import {
   OrderDTO,
   OrderPreviewDTO,
   OrderReturnItemDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
   ChangeActionType,
   MedusaError,
   Modules,
   OrderChangeStatus,
+  OrderWorkflowEvents,
   ReturnStatus,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 import {
   WorkflowResponse,
   createStep,
@@ -22,10 +23,14 @@ import {
   parallelize,
   transform,
   when,
-} from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/workflows-sdk"
 import { reserveInventoryStep } from "../../../cart/steps/reserve-inventory"
 import { prepareConfirmInventoryInput } from "../../../cart/utils/prepare-confirm-inventory-input"
-import { createRemoteLinkStep, useRemoteQueryStep } from "../../../common"
+import {
+  createRemoteLinkStep,
+  emitEventStep,
+  useRemoteQueryStep,
+} from "../../../common"
 import { createReturnFulfillmentWorkflow } from "../../../fulfillment/workflows/create-return-fulfillment"
 import { previewOrderChangeStep, updateReturnsStep } from "../../steps"
 import { createOrderClaimItemsFromActionsStep } from "../../steps/claim/create-claim-items-from-actions"
@@ -37,13 +42,62 @@ import {
 } from "../../utils/order-validation"
 import { createOrUpdateOrderPaymentCollectionWorkflow } from "../create-or-update-order-payment-collection"
 
-export type ConfirmClaimRequestWorkflowInput = {
-  claim_id: string
-  confirmed_by?: string
+function getUpdateReturnData({ returnId }: { returnId: string }) {
+  return transform({ returnId }, ({ returnId }) => {
+    return [
+      {
+        id: returnId,
+        status: ReturnStatus.REQUESTED,
+        requested_at: new Date(),
+      },
+    ]
+  })
 }
 
 /**
- * This step validates that a requested claim can be confirmed.
+ * The data to validate confirming a claim request.
+ */
+export type ConfirmClaimRequestValidationStepInput = {
+  /**
+   * The order's details.
+   */
+  order: OrderDTO
+  /**
+   * The order claim's details.
+   */
+  orderClaim: OrderClaimDTO
+  /**
+   * The order change's details.
+   */
+  orderChange: OrderChangeDTO
+}
+
+/**
+ * This step validates that a requested claim can be confirmed. If the order or claim is canceled,
+ * or the order change is not active, the step will throw an error.
+ * 
+ * :::note
+ * 
+ * You can retrieve an order, order claim, and order change details using [Query](https://docs.medusajs.com/learn/fundamentals/module-links/query),
+ * or [useQueryGraphStep](https://docs.medusajs.com/resources/references/medusa-workflows/steps/useQueryGraphStep).
+ * 
+ * :::
+ * 
+ * @example
+ * const data = confirmClaimRequestValidationStep({
+ *   order: {
+ *     id: "order_123",
+ *     // other order details...
+ *   },
+ *   orderChange: {
+ *     id: "orch_123",
+ *     // other order change details...
+ *   },
+ *   orderClaim: {
+ *     id: "claim_123",
+ *     // other order claim details...
+ *   },
+ * })
  */
 export const confirmClaimRequestValidationStep = createStep(
   "validate-confirm-claim-request",
@@ -51,11 +105,7 @@ export const confirmClaimRequestValidationStep = createStep(
     order,
     orderChange,
     orderClaim,
-  }: {
-    order: OrderDTO
-    orderClaim: OrderClaimDTO
-    orderChange: OrderChangeDTO
-  }) {
+  }: ConfirmClaimRequestValidationStepInput) {
     throwIfIsCancelled(order, "Order")
     throwIfIsCancelled(orderClaim, "Claim")
     throwIfOrderChangeIsNotActive({ orderChange })
@@ -204,9 +254,39 @@ function extractShippingOption({ orderPreview, orderClaim, returnId }) {
   }
 }
 
+/**
+ * The details of confirming the claim request.
+ */
+export type ConfirmClaimRequestWorkflowInput = {
+  /**
+   * The ID of the claim to confirm.
+   */
+  claim_id: string
+  /**
+   * The ID of the user confirming the claim.
+   */
+  confirmed_by?: string
+}
+
 export const confirmClaimRequestWorkflowId = "confirm-claim-request"
 /**
- * This workflow confirms a requested claim.
+ * This workflow confirms a requested claim. It's used by the 
+ * [Confirm Claim Request API Route](https://docs.medusajs.com/api/admin#claims_postclaimsidrequest).
+ * 
+ * You can use this workflow within your customizations or your own custom workflows, allowing you to confirm a claim
+ * for an order in your custom flows.
+ * 
+ * @example
+ * const { result } = await confirmClaimRequestWorkflow(container)
+ * .run({
+ *   input: {
+ *     claim_id: "claim_123",
+ *   }
+ * })
+ * 
+ * @summary
+ * 
+ * Confirm a requested claim.
  */
 export const confirmClaimRequestWorkflow = createWorkflow(
   confirmClaimRequestWorkflowId,
@@ -246,6 +326,7 @@ export const confirmClaimRequestWorkflow = createWorkflow(
       entry_point: "order_change",
       fields: [
         "id",
+        "status",
         "actions.id",
         "actions.claim_id",
         "actions.return_id",
@@ -291,18 +372,17 @@ export const confirmClaimRequestWorkflow = createWorkflow(
       }
     )
 
-    confirmOrderChanges({ changes: [orderChange], orderId: order.id })
+    confirmOrderChanges({
+      changes: [orderChange],
+      orderId: order.id,
+      confirmed_by: input.confirmed_by,
+    })
 
     when({ returnId }, ({ returnId }) => {
       return !!returnId
     }).then(() => {
-      updateReturnsStep([
-        {
-          id: returnId,
-          status: ReturnStatus.REQUESTED,
-          requested_at: new Date(),
-        },
-      ])
+      const updateReturnDate = getUpdateReturnData({ returnId })
+      updateReturnsStep(updateReturnDate)
     })
 
     const claimId = transform(
@@ -431,6 +511,14 @@ export const confirmClaimRequestWorkflow = createWorkflow(
     createOrUpdateOrderPaymentCollectionWorkflow.runAsStep({
       input: {
         order_id: order.id,
+      },
+    })
+
+    emitEventStep({
+      eventName: OrderWorkflowEvents.CLAIM_CREATED,
+      data: {
+        order_id: order.id,
+        claim_id: orderClaim.id,
       },
     })
 

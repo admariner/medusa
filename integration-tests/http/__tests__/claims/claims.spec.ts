@@ -1,12 +1,11 @@
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import {
   ClaimReason,
   ClaimType,
   ContainerRegistrationKeys,
-  ModuleRegistrationName,
   Modules,
   RuleOperator,
 } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
 import {
   adminHeaders,
   createAdminUser,
@@ -72,10 +71,12 @@ medusaIntegrationTestRunner({
           "/admin/products",
           {
             title: "Test product",
+            options: [{ title: "size", values: ["large", "small"] }],
             variants: [
               {
                 title: "Test variant",
                 sku: "test-variant",
+                options: { size: "large" },
                 prices: [
                   {
                     currency_code: "usd",
@@ -94,10 +95,12 @@ medusaIntegrationTestRunner({
           "/admin/products",
           {
             title: "Extra product",
+            options: [{ title: "size", values: ["large", "small"] }],
             variants: [
               {
                 title: "my variant",
                 sku: "variant-sku",
+                options: { size: "large" },
                 prices: [
                   {
                     currency_code: "usd",
@@ -122,7 +125,7 @@ medusaIntegrationTestRunner({
         )
       ).data.return_reason
 
-      const orderModule = container.resolve(ModuleRegistrationName.ORDER)
+      const orderModule = container.resolve(Modules.ORDER)
 
       order = await orderModule.createOrders({
         region_id: region.id,
@@ -401,7 +404,7 @@ medusaIntegrationTestRunner({
 
       item = order.items[0]
 
-      await setupTaxStructure(container.resolve(ModuleRegistrationName.TAX))
+      await setupTaxStructure(container.resolve(Modules.TAX))
     })
 
     describe("Claims lifecycle", () => {
@@ -437,7 +440,6 @@ medusaIntegrationTestRunner({
               pending_difference: 0,
               current_order_total: 61,
               original_order_total: 61,
-              temporary_difference: 0,
             })
           )
 
@@ -595,13 +597,17 @@ medusaIntegrationTestRunner({
             adminHeaders
           )
 
+          // shipping Options w/ custom price
           const {
             data: {
               order_preview: { shipping_methods: outboundShippingMethods },
             },
           } = await api.post(
             `/admin/claims/${claimId}/outbound/shipping-method`,
-            { shipping_option_id: outboundShippingOption.id },
+            {
+              shipping_option_id: outboundShippingOption.id,
+              custom_amount: 12.5,
+            },
             adminHeaders
           )
 
@@ -609,9 +615,32 @@ medusaIntegrationTestRunner({
             (m) => m.shipping_option_id == outboundShippingOption.id
           )
 
+          expect(outboundShippingMethod.subtotal).toBe(12.5)
+          expect(outboundShippingMethod.is_custom_amount).toBe(true)
+
+          // Reset shipping custom price
+          const {
+            data: {
+              order_preview: { shipping_methods: outboundShippingMethods2 },
+            },
+          } = await api.post(
+            `/admin/claims/${claimId}/outbound/shipping-method/${outboundShippingMethod.actions[0].id}`,
+            {
+              custom_amount: null,
+            },
+            adminHeaders
+          )
+
+          const outboundShippingMethodReset = outboundShippingMethods2.find(
+            (m) => m.shipping_option_id == outboundShippingOption.id
+          )
+
+          expect(outboundShippingMethodReset.subtotal).toBe(20)
+          expect(outboundShippingMethodReset.is_custom_amount).toBe(false)
+
           // Delete & recreate again to ensure it works for both delete and create
           await api.delete(
-            `/admin/claims/${claimId}/outbound/shipping-method/${outboundShippingMethod.actions[0].id}`,
+            `/admin/claims/${claimId}/outbound/shipping-method/${outboundShippingMethodReset.actions[0].id}`,
             adminHeaders
           )
 
@@ -812,6 +841,8 @@ medusaIntegrationTestRunner({
       })
 
       describe("with only outbound items", () => {
+        let orderResult
+
         beforeEach(async () => {
           await api.post(
             `/admin/orders/${order.id}/fulfillments`,
@@ -880,7 +911,7 @@ medusaIntegrationTestRunner({
             adminHeaders
           )
 
-          await api.post(
+          const { data } = await api.post(
             `/admin/claims/${claimId}/outbound/items`,
             {
               items: [
@@ -939,7 +970,7 @@ medusaIntegrationTestRunner({
             adminHeaders
           )
 
-          let orderResult = (
+          orderResult = (
             await api.get(`/admin/orders/${order.id}`, adminHeaders)
           ).data.order
 
@@ -1014,9 +1045,55 @@ medusaIntegrationTestRunner({
 
           expect(orderResult.fulfillment_status).toEqual("shipped")
         })
+
+        it("should remove outbound shipping method when outbound items are completely removed", async () => {
+          orderResult = (
+            await api.get(`/admin/orders/${order.id}/preview`, adminHeaders)
+          ).data.order
+
+          const claimItems = orderResult.items.filter(
+            (item) =>
+              !!item.actions?.find((action) => action.action === "ITEM_ADD")
+          )
+
+          const claimShippingMethods = orderResult.shipping_methods.filter(
+            (item) =>
+              !!item.actions?.find((action) => action.action === "SHIPPING_ADD")
+          )
+
+          expect(claimItems).toHaveLength(1)
+          expect(claimShippingMethods).toHaveLength(1)
+
+          await api.delete(
+            `/admin/claims/${claimId}/outbound/items/${claimItems[0].actions[0].id}`,
+            adminHeaders
+          )
+
+          orderResult = (
+            await api.get(`/admin/orders/${order.id}/preview`, adminHeaders)
+          ).data.order
+
+          const updatedClaimItems = orderResult.items.filter(
+            (item) =>
+              !!item.actions?.find((action) => action.action === "ITEM_ADD")
+          )
+
+          const updatedClaimShippingMethods =
+            orderResult.shipping_methods.filter(
+              (item) =>
+                !!item.actions?.find(
+                  (action) => action.action === "SHIPPING_ADD"
+                )
+            )
+
+          expect(updatedClaimItems).toHaveLength(0)
+          expect(updatedClaimShippingMethods).toHaveLength(0)
+        })
       })
 
       describe("with only inbound items", () => {
+        let orderResult
+
         beforeEach(async () => {
           await api.post(
             `/admin/orders/${order.id}/fulfillments`,
@@ -1046,7 +1123,7 @@ medusaIntegrationTestRunner({
           claimId = baseClaim.id
           item = order.items[0]
 
-          let result = await api.post(
+          await api.post(
             `/admin/claims/${claimId}/inbound/items`,
             {
               items: [
@@ -1065,7 +1142,9 @@ medusaIntegrationTestRunner({
             { shipping_option_id: returnShippingOption.id },
             adminHeaders
           )
+        })
 
+        it("test inbound only", async () => {
           // Claim Items
           await api.post(
             `/admin/claims/${claimId}/claim-items`,
@@ -1083,20 +1162,18 @@ medusaIntegrationTestRunner({
 
           await api.post(`/admin/claims/${claimId}/request`, {}, adminHeaders)
 
-          result = (
+          const claims = (
             await api.get(
               `/admin/claims?fields=*claim_items,*additional_items`,
               adminHeaders
             )
           ).data.claims
 
-          expect(result).toHaveLength(1)
-          expect(result[0].additional_items).toHaveLength(0)
-          expect(result[0].claim_items).toHaveLength(1)
-          expect(result[0].canceled_at).toBeNull()
-        })
+          expect(claims).toHaveLength(1)
+          expect(claims[0].additional_items).toHaveLength(0)
+          expect(claims[0].claim_items).toHaveLength(1)
+          expect(claims[0].canceled_at).toBeNull()
 
-        it("test inbound only", async () => {
           const orderCheck = (
             await api.get(`/admin/orders/${order.id}`, adminHeaders)
           ).data.order
@@ -1106,11 +1183,53 @@ medusaIntegrationTestRunner({
               pending_difference: -11,
               current_order_total: 50,
               original_order_total: 60,
-              temporary_difference: 15,
             })
           )
 
           expect(true).toBe(true)
+        })
+
+        it("should remove inbound shipping method when inbound items are completely removed", async () => {
+          orderResult = (
+            await api.get(`/admin/orders/${order.id}/preview`, adminHeaders)
+          ).data.order
+
+          const returnItems = orderResult.items.filter(
+            (item) =>
+              !!item.actions?.find((action) => action.action === "RETURN_ITEM")
+          )
+          const returnShippingMethods = orderResult.shipping_methods.filter(
+            (item) =>
+              !!item.actions?.find((action) => action.action === "SHIPPING_ADD")
+          )
+
+          expect(returnItems).toHaveLength(1)
+          expect(returnShippingMethods).toHaveLength(1)
+
+          await api.delete(
+            `/admin/claims/${claimId}/inbound/items/${returnItems[0].actions[0].id}`,
+            adminHeaders
+          )
+
+          orderResult = (
+            await api.get(`/admin/orders/${order.id}/preview`, adminHeaders)
+          ).data.order
+
+          const updatedReturnItems = orderResult.items.filter(
+            (item) =>
+              !!item.actions?.find((action) => action.action === "RETURN_ITEM")
+          )
+
+          const updatedReturnShippingMethods =
+            orderResult.shipping_methods.filter(
+              (item) =>
+                !!item.actions?.find(
+                  (action) => action.action === "SHIPPING_ADD"
+                )
+            )
+
+          expect(updatedReturnItems).toHaveLength(0)
+          expect(updatedReturnShippingMethods).toHaveLength(0)
         })
       })
     })
@@ -1253,6 +1372,33 @@ medusaIntegrationTestRunner({
         )
         // additional items is one of the props that should be undefined
         expect(res.data.claim.additional_items).toBeUndefined()
+
+        const resLineItems = await api.get(
+          `/admin/orders/${order.id}/line-items`,
+          adminHeaders
+        )
+
+        expect(resLineItems.data).toEqual(
+          expect.objectContaining({
+            order_items: [
+              expect.objectContaining({
+                order_id: order.id,
+                item_id: item.id,
+                version: 3,
+                item: expect.objectContaining({
+                  title: "Custom Item 2",
+                  unit_price: 25,
+                }),
+                history: {
+                  version: {
+                    from: 1,
+                    to: 3,
+                  },
+                },
+              }),
+            ],
+          })
+        )
       })
     })
   },

@@ -1,7 +1,6 @@
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 
-import { ContainerRegistrationKeys } from "@medusajs/utils"
-import { InventoryItemDTO } from "@medusajs/types"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 
 export const attachInventoryItemToVariantsStepId =
   "attach-inventory-items-to-variants-step"
@@ -17,15 +16,15 @@ export const attachInventoryItemToVariants = createStep(
     }[],
     { container }
   ) => {
-    const remoteLink = container.resolve(ContainerRegistrationKeys.REMOTE_LINK)
+    const remoteLink = container.resolve(ContainerRegistrationKeys.LINK)
 
     const linkDefinitions = input
       .filter(({ tag }) => !!tag)
       .map(({ inventoryItemId, tag }) => ({
-        productService: {
+        [Modules.PRODUCT]: {
           variant_id: tag!,
         },
-        inventoryService: {
+        [Modules.INVENTORY]: {
           inventory_item_id: inventoryItemId,
         },
       }))
@@ -39,7 +38,7 @@ export const attachInventoryItemToVariants = createStep(
       return
     }
 
-    const remoteLink = container.resolve(ContainerRegistrationKeys.REMOTE_LINK)
+    const remoteLink = container.resolve(ContainerRegistrationKeys.LINK)
 
     await remoteLink.dismiss(linkDefinitions)
   }

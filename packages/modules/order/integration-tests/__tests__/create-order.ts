@@ -1,6 +1,6 @@
-import { CreateOrderDTO, IOrderModuleService } from "@medusajs/types"
-import { Modules } from "@medusajs/utils"
-import { moduleIntegrationTestRunner } from "medusa-test-utils"
+import { CreateOrderDTO, IOrderModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { moduleIntegrationTestRunner } from "@medusajs/test-utils"
 
 jest.setTimeout(100000)
 
@@ -21,6 +21,7 @@ moduleIntegrationTestRunner<IOrderModuleService>({
             product_description: "Description 1",
             product_subtitle: "Product Subtitle 1",
             product_type: "Type 1",
+            product_type_id: "type_1",
             product_collection: "Collection 1",
             product_handle: "handle1",
             variant_id: "variant1",
@@ -211,7 +212,7 @@ moduleIntegrationTestRunner<IOrderModuleService>({
         expect(created.summary).toEqual(
           expect.objectContaining({
             transaction_total: 68,
-            pending_difference: -20.21999000999001,
+            pending_difference: -20.10799200799201,
             paid_total: 68,
             refunded_total: 0,
           })
@@ -236,7 +237,7 @@ moduleIntegrationTestRunner<IOrderModuleService>({
         expect(serializedOrder.summary).toEqual(
           expect.objectContaining({
             transaction_total: 48,
-            pending_difference: -0.21999000999001,
+            pending_difference: -0.10799200799201,
             paid_total: 68,
             refunded_total: 20,
           })
@@ -255,7 +256,7 @@ moduleIntegrationTestRunner<IOrderModuleService>({
         expect(serializedOrder2.summary).toEqual(
           expect.objectContaining({
             transaction_total: 68,
-            pending_difference: -20.21999000999001,
+            pending_difference: -20.10799200799201,
             paid_total: 68,
             refunded_total: 0,
           })
@@ -282,7 +283,7 @@ moduleIntegrationTestRunner<IOrderModuleService>({
             paid_total: 68,
             refunded_total: 50,
             transaction_total: 18,
-            pending_difference: 29.78000999000999,
+            pending_difference: 29.89200799200799,
           })
         )
 
@@ -301,7 +302,7 @@ moduleIntegrationTestRunner<IOrderModuleService>({
             paid_total: 68,
             refunded_total: 70,
             transaction_total: -2,
-            pending_difference: 49.78000999000999,
+            pending_difference: 49.89200799200799,
           })
         )
       })
@@ -384,7 +385,6 @@ moduleIntegrationTestRunner<IOrderModuleService>({
           {
             select: ["id"],
             relations: ["items"],
-            take: null,
           }
         )
         expect(orders.length).toEqual(1)
@@ -398,7 +398,6 @@ moduleIntegrationTestRunner<IOrderModuleService>({
           {
             select: ["items.quantity"],
             relations: ["items"],
-            take: null,
           }
         )
         expect(orders2.length).toEqual(0)
@@ -414,7 +413,6 @@ moduleIntegrationTestRunner<IOrderModuleService>({
           {
             select: ["id"],
             relations: ["items.detail"],
-            take: null,
           }
         )
         expect(orders3.length).toEqual(1)
@@ -430,7 +428,6 @@ moduleIntegrationTestRunner<IOrderModuleService>({
           {
             select: ["id"],
             relations: ["items.detail"],
-            take: null,
           }
         )
         expect(orders4.length).toEqual(0)

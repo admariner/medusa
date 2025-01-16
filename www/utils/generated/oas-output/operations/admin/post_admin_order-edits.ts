@@ -4,7 +4,6 @@
  * summary: Create Order Edit
  * description: Create an order edit.
  * x-authenticated: true
- * parameters: []
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -19,7 +18,7 @@
  *     label: cURL
  *     source: |-
  *       curl -X POST '{backend_url}/admin/order-edits' \
- *       -H 'x-medusa-access-token: {api_token}' \
+ *       -H 'Authorization: Bearer {access_token}' \
  *       -H 'Content-Type: application/json' \
  *       --data-raw '{
  *         "order_id": "{value}",

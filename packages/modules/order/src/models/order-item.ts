@@ -1,10 +1,10 @@
-import { BigNumberRawValue, DAL } from "@medusajs/types"
+import { BigNumberRawValue, DAL } from "@medusajs/framework/types"
 import {
   BigNumber,
   MikroOrmBigNumberProperty,
   createPsqlIndexStatementHelper,
   generateEntityId,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 import {
   BeforeCreate,
   Entity,
@@ -84,6 +84,18 @@ export default class OrderItem {
   })
   item: Rel<OrderLineItem>
 
+  @MikroOrmBigNumberProperty({ nullable: true })
+  unit_price: BigNumber | number | null = null
+
+  @Property({ columnType: "jsonb", nullable: true })
+  raw_unit_price: BigNumberRawValue | null = null
+
+  @MikroOrmBigNumberProperty({ nullable: true })
+  compare_at_unit_price: BigNumber | number | null = null
+
+  @Property({ columnType: "jsonb", nullable: true })
+  raw_compare_at_unit_price: BigNumberRawValue | null = null
+
   @MikroOrmBigNumberProperty()
   quantity: BigNumber | number
 
@@ -95,6 +107,12 @@ export default class OrderItem {
 
   @Property({ columnType: "jsonb" })
   raw_fulfilled_quantity: BigNumberRawValue
+
+  @MikroOrmBigNumberProperty()
+  delivered_quantity: BigNumber | number = 0
+
+  @Property({ columnType: "jsonb" })
+  raw_delivered_quantity: BigNumberRawValue
 
   @MikroOrmBigNumberProperty()
   shipped_quantity: BigNumber | number = 0

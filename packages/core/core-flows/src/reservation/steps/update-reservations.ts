@@ -1,11 +1,11 @@
-import { IInventoryService, InventoryTypes } from "@medusajs/types"
+import { IInventoryService, InventoryTypes } from "@medusajs/framework/types"
 import {
   convertItemResponseToUpdateRequest,
   getSelectsAndRelationsFromObjectArray,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
-import { ModuleRegistrationName } from "@medusajs/utils"
+import { Modules } from "@medusajs/framework/utils"
 
 export const updateReservationsStepId = "update-reservations-step"
 /**
@@ -15,7 +15,7 @@ export const updateReservationsStep = createStep(
   updateReservationsStepId,
   async (data: InventoryTypes.UpdateReservationItemInput[], { container }) => {
     const inventoryModuleService = container.resolve<IInventoryService>(
-      ModuleRegistrationName.INVENTORY
+      Modules.INVENTORY
     )
 
     const { selects, relations } = getSelectsAndRelationsFromObjectArray(data)
@@ -41,7 +41,7 @@ export const updateReservationsStep = createStep(
     const { dataBeforeUpdate = [], selects, relations } = revertInput
 
     const inventoryModuleService = container.resolve<IInventoryService>(
-      ModuleRegistrationName.INVENTORY
+      Modules.INVENTORY
     )
 
     await inventoryModuleService.updateReservationItems(

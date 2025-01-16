@@ -1,102 +1,55 @@
 import {
   BigNumberInput,
-  Context,
-  CreatePaymentProviderDTO,
   CreatePaymentProviderSession,
   DAL,
-  FilterablePaymentProviderProps,
-  FindConfig,
-  InternalModuleDeclaration,
   IPaymentProvider,
+  Logger,
   PaymentProviderAuthorizeResponse,
   PaymentProviderDataInput,
-  PaymentProviderDTO,
   PaymentProviderError,
   PaymentProviderSessionResponse,
   PaymentSessionStatus,
   ProviderWebhookPayload,
   UpdatePaymentProviderSession,
   WebhookActionResult,
-} from "@medusajs/types"
-import {
-  InjectManager,
-  InjectTransactionManager,
-  isPaymentProviderError,
-  MedusaContext,
-  MedusaError,
-  ModulesSdkUtils,
-} from "@medusajs/utils"
+} from "@medusajs/framework/types"
+import { MedusaError, ModulesSdkUtils } from "@medusajs/framework/utils"
 import { PaymentProvider } from "@models"
 import { EOL } from "os"
 
 type InjectedDependencies = {
+  logger?: Logger
   paymentProviderRepository: DAL.RepositoryService
   [key: `pp_${string}`]: IPaymentProvider
 }
 
-export default class PaymentProviderService {
-  protected readonly container_: InjectedDependencies
-  protected readonly paymentProviderRepository_: DAL.RepositoryService
+export default class PaymentProviderService extends ModulesSdkUtils.MedusaInternalService<InjectedDependencies>(
+  PaymentProvider
+) {
+  #logger: Logger
 
-  constructor(
-    container: InjectedDependencies,
-
-    protected readonly moduleDeclaration: InternalModuleDeclaration
-  ) {
-    this.container_ = container
-    this.paymentProviderRepository_ = container.paymentProviderRepository
-  }
-
-  @InjectTransactionManager("paymentProviderRepository_")
-  async create(
-    data: CreatePaymentProviderDTO[],
-    @MedusaContext() sharedContext?: Context
-  ): Promise<PaymentProvider[]> {
-    return await this.paymentProviderRepository_.create(data, sharedContext)
-  }
-
-  @InjectManager("paymentProviderRepository_")
-  async list(
-    filters?: FilterablePaymentProviderProps,
-    config?: FindConfig<PaymentProviderDTO>,
-    @MedusaContext() sharedContext?: Context
-  ): Promise<PaymentProvider[]> {
-    const queryOptions = ModulesSdkUtils.buildQuery<PaymentProvider>(
-      filters,
-      config
-    )
-
-    return await this.paymentProviderRepository_.find(
-      queryOptions,
-      sharedContext
-    )
-  }
-
-  @InjectManager("paymentProviderRepository_")
-  async listAndCount(
-    filters: FilterablePaymentProviderProps,
-    config: FindConfig<PaymentProviderDTO>,
-    @MedusaContext() sharedContext?: Context
-  ): Promise<[PaymentProvider[], number]> {
-    const queryOptions = ModulesSdkUtils.buildQuery<PaymentProvider>(
-      filters,
-      config
-    )
-
-    return await this.paymentProviderRepository_.findAndCount(
-      queryOptions,
-      sharedContext
-    )
+  constructor(container: InjectedDependencies) {
+    super(container)
+    this.#logger = container["logger"]
+      ? container.logger
+      : (console as unknown as Logger)
   }
 
   retrieveProvider(providerId: string): IPaymentProvider {
     try {
-      return this.container_[providerId] as IPaymentProvider
-    } catch (e) {
-      throw new MedusaError(
-        MedusaError.Types.NOT_FOUND,
-        `Could not find a payment provider with id: ${providerId}`
-      )
+      return this.__container__[providerId] as IPaymentProvider
+    } catch (err) {
+      if (err.name === "AwilixResolutionError") {
+        const errMessage = `
+Unable to retrieve the payment provider with id: ${providerId}
+Please make sure that the provider is registered in the container and it is configured correctly in your project configuration file.`
+        throw new Error(errMessage)
+      }
+
+      const errMessage = `Unable to retrieve the payment provider with id: ${providerId}, the following error occurred: ${err.message}`
+      this.#logger.error(errMessage)
+
+      throw new Error(errMessage)
     }
   }
 
@@ -213,4 +166,14 @@ export default class PaymentProviderService {
       errObj.code
     )
   }
+}
+
+function isPaymentProviderError(obj: any): obj is PaymentProviderError {
+  return (
+    obj &&
+    typeof obj === "object" &&
+    "error" in obj &&
+    "code" in obj &&
+    "detail" in obj
+  )
 }

@@ -1,15 +1,11 @@
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import {
   ICustomerModuleService,
   IPricingModuleService,
   IProductModuleService,
   IRegionModuleService,
 } from "@medusajs/types"
-import {
-  ModuleRegistrationName,
-  PriceListStatus,
-  PriceListType,
-} from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
+import { Modules, PriceListStatus, PriceListType } from "@medusajs/utils"
 import { createAdminUser } from "../../../../helpers/create-admin-user"
 import { createVariantPriceSet } from "../../../helpers/create-variant-price-set"
 
@@ -37,10 +33,10 @@ medusaIntegrationTestRunner({
 
       beforeAll(async () => {
         appContainer = getContainer()
-        pricingModule = appContainer.resolve(ModuleRegistrationName.PRICING)
-        productModule = appContainer.resolve(ModuleRegistrationName.PRODUCT)
-        customerModule = appContainer.resolve(ModuleRegistrationName.CUSTOMER)
-        regionModule = appContainer.resolve(ModuleRegistrationName.REGION)
+        pricingModule = appContainer.resolve(Modules.PRICING)
+        productModule = appContainer.resolve(Modules.PRODUCT)
+        customerModule = appContainer.resolve(Modules.CUSTOMER)
+        regionModule = appContainer.resolve(Modules.REGION)
       })
 
       beforeEach(async () => {
@@ -98,7 +94,7 @@ medusaIntegrationTestRunner({
                 },
               ],
               rules: {
-                customer_group_id: [customerGroup.id],
+                "customer.groups.id": [customerGroup.id],
               },
             },
           ])
@@ -120,7 +116,7 @@ medusaIntegrationTestRunner({
               updated_at: expect.any(String),
               deleted_at: null,
               rules: {
-                customer_group_id: [customerGroup.id],
+                "customer.groups.id": [customerGroup.id],
               },
               prices: [
                 {
@@ -189,7 +185,7 @@ medusaIntegrationTestRunner({
                 },
               ],
               rules: {
-                customer_group_id: [customerGroup.id],
+                "customer.groups.id": [customerGroup.id],
               },
             },
             {
@@ -210,7 +206,7 @@ medusaIntegrationTestRunner({
                 },
               ],
               rules: {
-                customer_group_id: [customerGroup.id],
+                "customer.groups.id": [customerGroup.id],
               },
             },
           ])
@@ -256,7 +252,7 @@ medusaIntegrationTestRunner({
                 },
               ],
               rules: {
-                customer_group_id: [customerGroup.id],
+                "customer.groups.id": [customerGroup.id],
               },
             },
           ])
@@ -280,7 +276,7 @@ medusaIntegrationTestRunner({
               updated_at: expect.any(String),
               deleted_at: null,
               rules: {
-                customer_group_id: [customerGroup.id],
+                "customer.groups.id": [customerGroup.id],
               },
               prices: [
                 {
@@ -346,7 +342,7 @@ medusaIntegrationTestRunner({
             status: "active",
             starts_at: new Date(),
             rules: {
-              customer_group_id: [customerGroup.id],
+              "customer.groups.id": [customerGroup.id],
             },
             prices: [
               {
@@ -378,7 +374,7 @@ medusaIntegrationTestRunner({
               updated_at: expect.any(String),
               deleted_at: null,
               rules: {
-                customer_group_id: [customerGroup.id],
+                "customer.groups.id": [customerGroup.id],
               },
               prices: [
                 expect.objectContaining({
@@ -523,7 +519,7 @@ medusaIntegrationTestRunner({
             title: "new price list name",
             description: "new price list description",
             rules: {
-              customer_group_id: [customerGroup.id],
+              "customer.groups.id": [customerGroup.id],
             },
           }
 
@@ -540,7 +536,7 @@ medusaIntegrationTestRunner({
               title: "new price list name",
               description: "new price list description",
               rules: {
-                customer_group_id: [customerGroup.id],
+                "customer.groups.id": [customerGroup.id],
               },
             })
           )

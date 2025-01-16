@@ -1,10 +1,10 @@
-import { ModuleRegistrationName } from "@medusajs/utils"
+import { Modules } from "@medusajs/utils"
 import {
   adminHeaders,
   createAdminUser,
 } from "../../../../helpers/create-admin-user"
 
-const { medusaIntegrationTestRunner } = require("medusa-test-utils")
+const { medusaIntegrationTestRunner } = require("@medusajs/test-utils")
 
 jest.setTimeout(30000)
 
@@ -165,6 +165,58 @@ medusaIntegrationTestRunner({
         expect(response.status).toEqual(200)
         expect(response.data.stock_location.name).toEqual("new name")
       })
+
+      it("should update stock location address without creating new addresses", async () => {
+        const response = await api.post(
+          `/admin/stock-locations/${location1.id}`,
+          {
+            name: "new name",
+            address: {
+              address_1: "test",
+              country_code: "dk",
+            },
+          },
+          adminHeaders
+        )
+
+        const firstAddressId = response.data.stock_location.address.id
+
+        expect(response.status).toEqual(200)
+        expect(response.data.stock_location).toEqual(
+          expect.objectContaining({
+            name: "new name",
+            address: expect.objectContaining({
+              id: firstAddressId,
+              address_1: "test",
+              country_code: "dk",
+            }),
+          })
+        )
+
+        const response2 = await api.post(
+          `/admin/stock-locations/${location1.id}`,
+          {
+            name: "new name 2",
+            address: {
+              address_1: "test 2",
+              country_code: "dk",
+            },
+          },
+          adminHeaders
+        )
+
+        expect(response2.status).toEqual(200)
+        expect(response2.data.stock_location).toEqual(
+          expect.objectContaining({
+            name: "new name 2",
+            address: expect.objectContaining({
+              id: firstAddressId,
+              address_1: "test 2",
+              country_code: "dk",
+            }),
+          })
+        )
+      })
     })
 
     describe("Get stock location", () => {
@@ -298,9 +350,7 @@ medusaIntegrationTestRunner({
         await api.delete(`/admin/stock-locations/${location1.id}`, adminHeaders)
 
         // TODO: Ideally we use HTTP here, maybe we should have a get endpoint for fulfillment sets?
-        const fulfillmentModule = getContainer().resolve(
-          ModuleRegistrationName.FULFILLMENT
-        )
+        const fulfillmentModule = getContainer().resolve(Modules.FULFILLMENT)
         const sets = await fulfillmentModule.listFulfillmentSets()
         expect(sets).toHaveLength(0)
       })

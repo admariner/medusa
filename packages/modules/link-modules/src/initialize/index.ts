@@ -1,8 +1,4 @@
-import {
-  MedusaModule,
-  MODULE_RESOURCE_TYPE,
-  MODULE_SCOPE,
-} from "@medusajs/modules-sdk"
+import { MedusaModule, MODULE_SCOPE } from "@medusajs/framework/modules-sdk"
 import {
   ExternalModuleDeclaration,
   ILinkModule,
@@ -12,23 +8,20 @@ import {
   ModuleJoinerConfig,
   ModuleServiceInitializeCustomDataLayerOptions,
   ModuleServiceInitializeOptions,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
   arrayDifference,
+  composeLinkName,
+  composeTableName,
   ContainerRegistrationKeys,
-  lowerCaseFirst,
-  ModuleRegistrationName,
+  Modules,
   simpleHash,
   toPascalCase,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 import * as linkDefinitions from "../definitions"
 import { MigrationsExecutionPlanner } from "../migration"
 import { InitializeModuleInjectableDependencies } from "../types"
-import {
-  composeLinkName,
-  composeTableName,
-  generateGraphQLSchema,
-} from "../utils"
+import { generateGraphQLSchema } from "../utils"
 import { getLinkModuleDefinition } from "./module-definition"
 
 export const initialize = async (
@@ -86,14 +79,12 @@ export const initialize = async (
     }
 
     const serviceKey = !definition.isReadOnlyLink
-      ? lowerCaseFirst(
-          definition.serviceName ??
-            composeLinkName(
-              primary.serviceName,
-              primary.foreignKey,
-              foreign.serviceName,
-              foreign.foreignKey
-            )
+      ? definition.serviceName ??
+        composeLinkName(
+          primary.serviceName,
+          primary.foreignKey,
+          foreign.serviceName,
+          foreign.foreignKey
         )
       : simpleHash(JSON.stringify(definition.extends))
 
@@ -139,7 +130,7 @@ export const initialize = async (
     for (const alias of definition.alias) {
       alias.args ??= {}
 
-      alias.args.entity = toPascalCase(
+      alias.entity = toPascalCase(
         "Link_" +
           (definition.databaseConfig?.tableName ??
             composeTableName(
@@ -159,16 +150,10 @@ export const initialize = async (
 
     const linkModuleDefinition: LinkModuleDefinition = {
       key: serviceKey,
-      registrationName: serviceKey,
       label: serviceKey,
-      dependencies: [ModuleRegistrationName.EVENT_BUS],
+      dependencies: [Modules.EVENT_BUS],
       defaultModuleDeclaration: {
         scope: MODULE_SCOPE.INTERNAL,
-        resources: injectedDependencies?.[
-          ContainerRegistrationKeys.PG_CONNECTION
-        ]
-          ? MODULE_RESOURCE_TYPE.SHARED
-          : MODULE_RESOURCE_TYPE.ISOLATED,
       },
     }
 
@@ -218,15 +203,14 @@ export function getMigrationPlanner(
     }
 
     const [primary, foreign] = definition.relationships ?? []
-    const serviceKey = lowerCaseFirst(
+    const serviceKey =
       definition.serviceName ??
-        composeLinkName(
-          primary.serviceName,
-          primary.foreignKey,
-          foreign.serviceName,
-          foreign.foreignKey
-        )
-    )
+      composeLinkName(
+        primary.serviceName,
+        primary.foreignKey,
+        foreign.serviceName,
+        foreign.foreignKey
+      )
 
     if (allLinks.has(serviceKey)) {
       throw new Error(`Link module ${serviceKey} already exists.`)

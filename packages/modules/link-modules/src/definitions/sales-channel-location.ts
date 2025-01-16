@@ -1,5 +1,5 @@
-import { ModuleJoinerConfig } from "@medusajs/types"
-import { LINKS, Modules } from "@medusajs/utils"
+import { ModuleJoinerConfig } from "@medusajs/framework/types"
+import { LINKS, Modules } from "@medusajs/framework/utils"
 
 export const SalesChannelLocation: ModuleJoinerConfig = {
   serviceName: LINKS.SalesChannelLocation,
@@ -11,15 +11,14 @@ export const SalesChannelLocation: ModuleJoinerConfig = {
   alias: [
     {
       name: ["sales_channel_location", "sales_channel_locations"],
-      args: {
-        entity: "LinkSalesChannelLocation",
-      },
+      entity: "LinkSalesChannelLocation",
     },
   ],
   primaryKeys: ["id", "sales_channel_id", "stock_location_id"],
   relationships: [
     {
       serviceName: Modules.SALES_CHANNEL,
+      entity: "SalesChannel",
       primaryKey: "id",
       foreignKey: "sales_channel_id",
       alias: "sales_channel",
@@ -29,6 +28,7 @@ export const SalesChannelLocation: ModuleJoinerConfig = {
     },
     {
       serviceName: Modules.STOCK_LOCATION,
+      entity: "StockLocation",
       primaryKey: "id",
       foreignKey: "stock_location_id",
       alias: "location",
@@ -40,6 +40,7 @@ export const SalesChannelLocation: ModuleJoinerConfig = {
   extends: [
     {
       serviceName: Modules.SALES_CHANNEL,
+      entity: "SalesChannel",
       fieldAlias: {
         stock_locations: {
           path: "locations_link.location",
@@ -56,6 +57,7 @@ export const SalesChannelLocation: ModuleJoinerConfig = {
     },
     {
       serviceName: Modules.STOCK_LOCATION,
+      entity: "StockLocation",
       fieldAlias: {
         sales_channels: {
           path: "sales_channels_link.sales_channel",

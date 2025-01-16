@@ -1,23 +1,6 @@
 import { EventBusTypes } from "./bundles"
 import { Message } from "./event-bus"
 
-/**
- * @deprecated use `Context` instead
- * @interface
- *
- * A context used to share resources, such as transaction manager, between the application and the module.
- */
-export type SharedContext = {
-  /**
-   * An instance of a transaction manager.
-   */
-  transactionManager?: any
-  /**
-   * An instance of an entity manager.
-   */
-  manager?: any
-}
-
 export interface MessageAggregatorFormat {
   groupBy?: string[]
   sortBy?: { [key: string]: string[] | string | number }
@@ -85,4 +68,9 @@ export type Context<TManager = unknown> = {
    * A string indicating the idempotencyKey of the current workflow execution.
    */
   idempotencyKey?: string
+
+  /**
+   * A string indicating the idempotencyKey of the parent workflow execution.
+   */
+  parentStepIdempotencyKey?: string
 }

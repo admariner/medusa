@@ -2,9 +2,9 @@ import {
   FindConfig,
   IFulfillmentModuleService,
   ShippingOptionDTO,
-} from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export interface ListShippingOptionsForContextStepInput {
   context: Record<string, unknown>
@@ -20,7 +20,7 @@ export const listShippingOptionsForContextStep = createStep(
   listShippingOptionsForContextStepId,
   async (data: ListShippingOptionsForContextStepInput, { container }) => {
     const fulfillmentService = container.resolve<IFulfillmentModuleService>(
-      ModuleRegistrationName.FULFILLMENT
+      Modules.FULFILLMENT
     )
 
     const shippingOptions =

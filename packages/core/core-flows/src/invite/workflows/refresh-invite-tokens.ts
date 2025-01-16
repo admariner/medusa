@@ -1,10 +1,13 @@
-import { InviteDTO, InviteWorkflow } from "@medusajs/types"
+import { InviteDTO, InviteWorkflow } from "@medusajs/framework/types"
 import {
   WorkflowData,
   WorkflowResponse,
   createWorkflow,
-} from "@medusajs/workflows-sdk"
+  transform,
+} from "@medusajs/framework/workflows-sdk"
 
+import { InviteWorkflowEvents } from "@medusajs/framework/utils"
+import { emitEventStep } from "../../common"
 import { refreshInviteTokensStep } from "../steps/refresh-invite-tokens"
 
 export const refreshInviteTokensWorkflowId = "refresh-invite-tokens-workflow"
@@ -16,6 +19,19 @@ export const refreshInviteTokensWorkflow = createWorkflow(
   (
     input: WorkflowData<InviteWorkflow.ResendInvitesWorkflowInputDTO>
   ): WorkflowResponse<InviteDTO[]> => {
-    return new WorkflowResponse(refreshInviteTokensStep(input.invite_ids))
+    const invites = refreshInviteTokensStep(input.invite_ids)
+
+    const invitesIdEvents = transform({ invites }, ({ invites }) => {
+      return invites.map((v) => {
+        return { id: v.id }
+      })
+    })
+
+    emitEventStep({
+      eventName: InviteWorkflowEvents.RESENT,
+      data: invitesIdEvents,
+    })
+
+    return new WorkflowResponse(invites)
   }
 )

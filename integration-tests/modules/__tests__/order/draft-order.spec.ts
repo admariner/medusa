@@ -1,3 +1,4 @@
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import {
   ICartModuleService,
   IFulfillmentModuleService,
@@ -9,12 +10,7 @@ import {
   IStockLocationServiceNext,
   ITaxModuleService,
 } from "@medusajs/types"
-import {
-  ContainerRegistrationKeys,
-  ModuleRegistrationName,
-  Modules,
-} from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/utils"
 import {
   adminHeaders,
   createAdminUser,
@@ -42,21 +38,15 @@ medusaIntegrationTestRunner({
 
     beforeAll(async () => {
       appContainer = getContainer()
-      cartModuleService = appContainer.resolve(ModuleRegistrationName.CART)
-      regionModuleService = appContainer.resolve(ModuleRegistrationName.REGION)
-      scModuleService = appContainer.resolve(
-        ModuleRegistrationName.SALES_CHANNEL
-      )
-      productModule = appContainer.resolve(ModuleRegistrationName.PRODUCT)
-      pricingModule = appContainer.resolve(ModuleRegistrationName.PRICING)
-      inventoryModule = appContainer.resolve(ModuleRegistrationName.INVENTORY)
-      stockLocationModule = appContainer.resolve(
-        ModuleRegistrationName.STOCK_LOCATION
-      )
-      fulfillmentModule = appContainer.resolve(
-        ModuleRegistrationName.FULFILLMENT
-      )
-      taxModule = appContainer.resolve(ModuleRegistrationName.TAX)
+      cartModuleService = appContainer.resolve(Modules.CART)
+      regionModuleService = appContainer.resolve(Modules.REGION)
+      scModuleService = appContainer.resolve(Modules.SALES_CHANNEL)
+      productModule = appContainer.resolve(Modules.PRODUCT)
+      pricingModule = appContainer.resolve(Modules.PRICING)
+      inventoryModule = appContainer.resolve(Modules.INVENTORY)
+      stockLocationModule = appContainer.resolve(Modules.STOCK_LOCATION)
+      fulfillmentModule = appContainer.resolve(Modules.FULFILLMENT)
+      taxModule = appContainer.resolve(Modules.TAX)
       remoteLink = appContainer.resolve(ContainerRegistrationKeys.REMOTE_LINK)
       remoteQuery = appContainer.resolve(ContainerRegistrationKeys.REMOTE_QUERY)
     })
@@ -217,8 +207,8 @@ medusaIntegrationTestRunner({
             },
             {
               title: "Custom Item",
-              sku: "sku123",
-              barcode: "barcode123",
+              variant_sku: "sku123",
+              variant_barcode: "barcode123",
               unit_price: 2200,
               quantity: 1,
             },
@@ -254,6 +244,7 @@ medusaIntegrationTestRunner({
                   product_description: null,
                   product_subtitle: null,
                   product_type: null,
+                  product_type_id: null,
                   product_collection: null,
                   product_handle: "test-product",
                   variant_sku: null,
@@ -263,6 +254,7 @@ medusaIntegrationTestRunner({
                   requires_shipping: true,
                   is_discountable: true,
                   is_tax_inclusive: true,
+                  is_custom_price: false,
                   raw_compare_at_unit_price: null,
                   raw_unit_price: expect.objectContaining({
                     value: "3000",
@@ -332,7 +324,8 @@ medusaIntegrationTestRunner({
                   title: "Custom Item",
                   variant_sku: "sku123",
                   variant_barcode: "barcode123",
-                  variant_title: "Custom Item",
+                  variant_title: null,
+                  is_custom_price: true,
                   raw_unit_price: expect.objectContaining({
                     value: "2200",
                   }),

@@ -5,14 +5,6 @@
  * description: Create a campaign.
  * x-authenticated: true
  * parameters:
- *   - name: expand
- *     in: query
- *     description: Comma-separated relations that should be expanded in the returned data.
- *     required: false
- *     schema:
- *       type: string
- *       title: expand
- *       description: Comma-separated relations that should be expanded in the returned data.
  *   - name: fields
  *     in: query
  *     description: Comma-separated fields that should be included in the returned data. if a field is prefixed with `+` it will be added to the default fields, using `-` will remove it from the default
@@ -23,30 +15,8 @@
  *       title: fields
  *       description: Comma-separated fields that should be included in the returned data. if a field is prefixed with `+` it will be added to the default fields, using `-` will remove it from the default
  *         fields. without prefix it will replace the entire default fields.
- *   - name: offset
- *     in: query
- *     description: The number of items to skip when retrieving a list.
- *     required: false
- *     schema:
- *       type: number
- *       title: offset
- *       description: The number of items to skip when retrieving a list.
- *   - name: limit
- *     in: query
- *     description: Limit the number of items returned in the list.
- *     required: false
- *     schema:
- *       type: number
- *       title: limit
- *       description: Limit the number of items returned in the list.
- *   - name: order
- *     in: query
- *     description: The field to sort the data by. By default, the sort order is ascending. To change the order to descending, prefix the field name with `-`.
- *     required: false
- *     schema:
- *       type: string
- *       title: order
- *       description: The field to sort the data by. By default, the sort order is ascending. To change the order to descending, prefix the field name with `-`.
+ *       externalDocs:
+ *         url: "#select-fields-and-relations"
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -90,8 +60,8 @@
  *                     type: string
  *                     title: type
  *                     description: >
- *                       The budget's type. This can't be edited later. Use `spend` to set a limit on the total amount discounted by the campaign's promotions.
- *                       Use `usage` to set a limit on the total number of times the campaign's promotions can be used.
+ *                       The budget's type. This can't be edited later. Use `spend` to set a limit on the total amount discounted by the campaign's promotions. Use `usage` to set a limit on the total
+ *                       number of times the campaign's promotions can be used.
  *                     enum:
  *                       - spend
  *                       - usage
@@ -138,7 +108,7 @@
  *     label: cURL
  *     source: |-
  *       curl -X POST '{backend_url}/admin/campaigns' \
- *       -H 'x-medusa-access-token: {api_token}' \
+ *       -H 'Authorization: Bearer {access_token}' \
  *       -H 'Content-Type: application/json' \
  *       --data-raw '{
  *         "name": "Gunner",

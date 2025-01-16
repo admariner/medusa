@@ -4,14 +4,14 @@ import {
   OrderClaimDTO,
   OrderDTO,
   OrderPreviewDTO,
-} from "@medusajs/types"
-import { ChangeActionType, OrderChangeStatus } from "@medusajs/utils"
+} from "@medusajs/framework/types"
+import { ChangeActionType, OrderChangeStatus } from "@medusajs/framework/utils"
 import {
   WorkflowResponse,
   createStep,
   createWorkflow,
   transform,
-} from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/workflows-sdk"
 import { useRemoteQueryStep } from "../../../common"
 import { previewOrderChangeStep } from "../../steps"
 import { createOrderShippingMethods } from "../../steps/create-order-shipping-methods"
@@ -19,11 +19,54 @@ import {
   throwIfIsCancelled,
   throwIfOrderChangeIsNotActive,
 } from "../../utils/order-validation"
+import { prepareShippingMethod } from "../../utils/prepare-shipping-method"
 import { createOrderChangeActionsWorkflow } from "../create-order-change-actions"
 import { updateOrderTaxLinesWorkflow } from "../update-tax-lines"
 
 /**
+ * The data to validate that a shipping method can be created for a claim.
+ */
+export type CreateClaimShippingMethodValidationStepInput = {
+  /**
+   * The order's details.
+   */
+  order: OrderDTO
+  /**
+   * The order claim's details.
+   */
+  orderClaim: OrderClaimDTO
+  /**
+   * The order change's details.
+   */
+  orderChange: OrderChangeDTO
+}
+
+/**
  * This step confirms that a shipping method can be created for a claim.
+ * If the order or claim is canceled, or the order change is not active, the step will throw an error.
+ * 
+ * :::note
+ * 
+ * You can retrieve an order, order claim, and order change details using [Query](https://docs.medusajs.com/learn/fundamentals/module-links/query),
+ * or [useQueryGraphStep](https://docs.medusajs.com/resources/references/medusa-workflows/steps/useQueryGraphStep).
+ * 
+ * :::
+ * 
+ * @example
+ * const data = createClaimShippingMethodValidationStep({
+ *   order: {
+ *     id: "order_123",
+ *     // other order details...
+ *   },
+ *   orderChange: {
+ *     id: "orch_123",
+ *     // other order change details...
+ *   },
+ *   orderClaim: {
+ *     id: "claim_123",
+ *     // other order claim details...
+ *   },
+ * })
  */
 export const createClaimShippingMethodValidationStep = createStep(
   "validate-create-claim-shipping-method",
@@ -31,30 +74,80 @@ export const createClaimShippingMethodValidationStep = createStep(
     order,
     orderChange,
     orderClaim,
-  }: {
-    order: OrderDTO
-    orderClaim: OrderClaimDTO
-    orderChange: OrderChangeDTO
-  }) {
+  }: CreateClaimShippingMethodValidationStepInput) {
     throwIfIsCancelled(order, "Order")
     throwIfIsCancelled(orderClaim, "Claim")
     throwIfOrderChangeIsNotActive({ orderChange })
   }
 )
 
+/**
+ * The data to create a shipping method for a claim.
+ */
+export type CreateClaimShippingMethodWorkflowInput = {
+  /**
+   * The ID of the return associated with the claim.
+   * If this is set, the shipping method will be created as an inbound (return) shipping method.
+   * If not set, the shipping method will be created as an outbound (delivering new items) shipping method.
+   */
+  return_id?: string
+  /**
+   * The ID of the claim to create the shipping method for.
+   */
+  claim_id?: string
+  /**
+   * The ID of the shipping option to create the shipping method from.
+   */
+  shipping_option_id: string
+  /**
+   * A custom amount to set for the shipping method. If not set, the shipping option's amount is used.
+   */
+  custom_amount?: BigNumberInput | null
+}
+
 export const createClaimShippingMethodWorkflowId =
   "create-claim-shipping-method"
 /**
- * This workflow creates a shipping method for a claim.
+ * This workflow creates an inbound (return) or outbound (delivering new items) shipping method for a claim.
+ * It's used by the [Add Inbound Shipping Admin API Route](https://docs.medusajs.com/api/admin#claims_postclaimsidinboundshippingmethod),
+ * and the [Add Outbound Shipping Admin API Route](https://docs.medusajs.com/api/admin#claims_postclaimsidoutboundshippingmethod).
+ * 
+ * You can use this workflow within your customizations or your own custom workflows, allowing you to create a shipping method
+ * for a claim in your custom flows.
+ * 
+ * @example
+ * To create an outbound shipping method for a claim:
+ * 
+ * ```ts
+ * const { result } = await createClaimShippingMethodWorkflow(container)
+ * .run({
+ *   input: {
+ *     claim_id: "claim_123",
+ *     shipping_option_id: "so_123",
+ *   }
+ * })
+ * ```
+ * 
+ * To create an inbound shipping method for a claim, specify the ID of the return associated with the claim:
+ * 
+ * ```ts
+ * const { result } = await createClaimShippingMethodWorkflow(container)
+ * .run({
+ *   input: {
+ *     claim_id: "claim_123",
+ *     return_id: "return_123",
+ *     shipping_option_id: "so_123",
+ *   }
+ * })
+ * ```
+ * 
+ * @summary
+ * 
+ * Create an inbound or outbound shipping method for a claim.
  */
 export const createClaimShippingMethodWorkflow = createWorkflow(
   createClaimShippingMethodWorkflowId,
-  function (input: {
-    return_id?: string
-    claim_id?: string
-    shipping_option_id: string
-    custom_price?: BigNumberInput
-  }): WorkflowResponse<OrderPreviewDTO> {
+  function (input: CreateClaimShippingMethodWorkflowInput): WorkflowResponse<OrderPreviewDTO> {
     const orderClaim: OrderClaimDTO = useRemoteQueryStep({
       entry_point: "order_claim",
       fields: ["id", "status", "order_id", "canceled_at"],
@@ -65,7 +158,7 @@ export const createClaimShippingMethodWorkflow = createWorkflow(
 
     const order: OrderDTO = useRemoteQueryStep({
       entry_point: "orders",
-      fields: ["id", "status", "currency_code", "canceled_at"],
+      fields: ["id", "status", "region_id", "currency_code", "canceled_at"],
       variables: { id: orderClaim.order_id },
       list: false,
       throw_if_key_not_found: true,
@@ -104,29 +197,13 @@ export const createClaimShippingMethodWorkflow = createWorkflow(
 
     const shippingMethodInput = transform(
       {
-        orderClaim,
+        relatedEntity: orderClaim,
         shippingOptions,
-        customPrice: input.custom_price,
+        customPrice: input.custom_amount,
         orderChange,
         input,
       },
-      (data) => {
-        const option = data.shippingOptions[0]
-        const orderChange = data.orderChange
-
-        return {
-          shipping_option_id: option.id,
-          amount: data.customPrice ?? option.calculated_price.calculated_amount,
-          is_tax_inclusive:
-            !!option.calculated_price.is_calculated_price_tax_inclusive,
-          data: option.data ?? {},
-          name: option.name,
-          version: orderChange.version,
-          order_id: data.orderClaim.order_id,
-          return_id: input.return_id,
-          claim_id: data.orderClaim.id,
-        }
-      }
+      prepareShippingMethod("claim_id")
     )
 
     const createdMethods = createOrderShippingMethods({
@@ -155,7 +232,7 @@ export const createClaimShippingMethodWorkflow = createWorkflow(
         orderClaim,
         shippingOptions,
         createdMethods,
-        customPrice: input.custom_price,
+        customPrice: input.custom_amount,
         orderChange,
         input,
       },
@@ -170,6 +247,7 @@ export const createClaimShippingMethodWorkflow = createWorkflow(
       }) => {
         const shippingOption = shippingOptions[0]
         const createdMethod = createdMethods[0]
+
         const methodPrice =
           customPrice ?? shippingOption.calculated_price.calculated_amount
 

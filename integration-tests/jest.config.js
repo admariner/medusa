@@ -7,8 +7,8 @@ const pkgs = glob
 module.exports = {
   testEnvironment: `node`,
   testTimeout: 10000,
-  globalSetup: "<rootDir>/integration-tests/globalSetup.js",
-  globalTeardown: "<rootDir>/integration-tests/globalTeardown.js",
+  // globalSetup: "<rootDir>/integration-tests/globalSetup.js",
+  // globalTeardown: "<rootDir>/integration-tests/globalTeardown.js",
   rootDir: `../`,
   roots: pkgs,
   projects: [
@@ -31,8 +31,16 @@ module.exports = {
       "@swc/jest",
       {
         jsc: {
-          parser: { syntax: "typescript", decorators: true },
-          transform: { decoratorMetadata: true },
+          parser: {
+            syntax: "typescript",
+            decorators: true,
+          },
+          transform: {
+            useDefineForClassFields: false,
+            legacyDecorator: true,
+            decoratorMetadata: true,
+          },
+          target: "ES2021",
         },
       },
     ],

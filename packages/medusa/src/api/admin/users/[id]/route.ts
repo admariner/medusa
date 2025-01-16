@@ -1,17 +1,20 @@
-import { deleteUsersWorkflow, updateUsersWorkflow } from "@medusajs/core-flows"
-import { HttpTypes, UpdateUserDTO } from "@medusajs/types"
+import {
+  removeUserAccountWorkflow,
+  updateUsersWorkflow,
+} from "@medusajs/core-flows"
+import { HttpTypes, UpdateUserDTO } from "@medusajs/framework/types"
 import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
-} from "../../../../types/routing"
+} from "@medusajs/framework/http"
 
 import {
   ContainerRegistrationKeys,
   MedusaError,
   remoteQueryObjectFromString,
-} from "@medusajs/utils"
-import { AdminUpdateUserType } from "../validators"
+} from "@medusajs/framework/utils"
 import { refetchUser } from "../helpers"
+import { AdminUpdateUserType } from "../validators"
 
 // Get user
 export const GET = async (
@@ -24,7 +27,7 @@ export const GET = async (
   const query = remoteQueryObjectFromString({
     entryPoint: "user",
     variables: { id },
-    fields: req.remoteQueryConfig.fields,
+    fields: req.queryConfig.fields,
   })
 
   const [user] = await remoteQuery(query)
@@ -59,7 +62,7 @@ export const POST = async (
   const user = await refetchUser(
     req.params.id,
     req.scope,
-    req.remoteQueryConfig.fields
+    req.queryConfig.fields
   )
 
   res.status(200).json({ user })
@@ -71,10 +74,19 @@ export const DELETE = async (
   res: MedusaResponse<HttpTypes.AdminUserDeleteResponse>
 ) => {
   const { id } = req.params
-  const workflow = deleteUsersWorkflow(req.scope)
+  const { actor_id } = req.auth_context
+
+  if (actor_id !== id) {
+    throw new MedusaError(
+      MedusaError.Types.NOT_ALLOWED,
+      "You are not allowed to delete other users"
+    )
+  }
+
+  const workflow = removeUserAccountWorkflow(req.scope)
 
   await workflow.run({
-    input: { ids: [id] },
+    input: { userId: id },
   })
 
   res.status(200).json({

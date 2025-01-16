@@ -1,16 +1,15 @@
 /**
  * @schema AdminPostOrderEditsReqSchema
  * type: object
- * description: SUMMARY
+ * description: The order edit's details.
  * x-schemaName: AdminPostOrderEditsReqSchema
  * required:
  *   - order_id
- *   - metadata
  * properties:
  *   order_id:
  *     type: string
  *     title: order_id
- *     description: The order edit's order id.
+ *     description: The ID of the order this edit is for.
  *   description:
  *     type: string
  *     title: description
@@ -18,10 +17,10 @@
  *   internal_note:
  *     type: string
  *     title: internal_note
- *     description: The order edit's internal note.
+ *     description: A note viewed only by admin users.
  *   metadata:
  *     type: object
- *     description: The order edit's metadata.
+ *     description: The order edit's metadata, can hold custom key-value pairs.
  * 
 */
 

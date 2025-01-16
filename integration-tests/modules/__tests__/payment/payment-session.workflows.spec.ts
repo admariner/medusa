@@ -3,8 +3,8 @@ import {
   createPaymentSessionsWorkflowId,
 } from "@medusajs/core-flows"
 import { IPaymentModuleService, IRegionModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
+import { Modules } from "@medusajs/utils"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 
 jest.setTimeout(50000)
 
@@ -21,8 +21,8 @@ medusaIntegrationTestRunner({
 
       beforeAll(async () => {
         appContainer = getContainer()
-        paymentModule = appContainer.resolve(ModuleRegistrationName.PAYMENT)
-        regionModule = appContainer.resolve(ModuleRegistrationName.REGION)
+        paymentModule = appContainer.resolve(Modules.PAYMENT)
+        regionModule = appContainer.resolve(Modules.REGION)
         remoteLink = appContainer.resolve("remoteLink")
       })
 
@@ -39,7 +39,6 @@ medusaIntegrationTestRunner({
           paymentCollection = await paymentModule.createPaymentCollections({
             currency_code: "usd",
             amount: 1000,
-            region_id: region.id,
           })
         })
 
@@ -65,7 +64,6 @@ medusaIntegrationTestRunner({
               id: paymentCollection.id,
               currency_code: "usd",
               amount: 1000,
-              region_id: region.id,
               payment_sessions: expect.arrayContaining([
                 expect.objectContaining({
                   amount: 1000,
@@ -106,7 +104,6 @@ medusaIntegrationTestRunner({
               id: paymentCollection.id,
               currency_code: "usd",
               amount: 1000,
-              region_id: region.id,
               payment_sessions: [
                 expect.objectContaining({
                   amount: 1000,
@@ -139,7 +136,6 @@ medusaIntegrationTestRunner({
               await paymentModule.createPaymentCollections({
                 currency_code: "usd",
                 amount: 1000,
-                region_id: region.id,
               })
 
             const { errors } = await workflow.run({

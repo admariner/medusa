@@ -1,117 +1,135 @@
 import {
   CommonEvents,
-  eventBuilderFactory,
+  moduleEventBuilderFactory,
   Modules,
   ProductEvents,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 
 export const eventBuilders = {
-  createdProduct: eventBuilderFactory({
+  createdProduct: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.CREATED,
     object: "product",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_CREATED,
   }),
-  updatedProduct: eventBuilderFactory({
+  updatedProduct: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.UPDATED,
     object: "product",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_UPDATED,
   }),
-  deletedProduct: eventBuilderFactory({
+  deletedProduct: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.DELETED,
     object: "product",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_DELETED,
   }),
-  createdProductVariant: eventBuilderFactory({
+  createdProductVariant: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.CREATED,
     object: "product_variant",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_VARIANT_CREATED,
   }),
-  updatedProductVariant: eventBuilderFactory({
+  updatedProductVariant: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.UPDATED,
     object: "product_variant",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_VARIANT_UPDATED,
   }),
-  deletedProductVariant: eventBuilderFactory({
+  deletedProductVariant: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.DELETED,
     object: "product_variant",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_VARIANT_DELETED,
   }),
-  createdProductOption: eventBuilderFactory({
+  createdProductOption: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.CREATED,
     object: "product_option",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_OPTION_CREATED,
   }),
-  updatedProductOption: eventBuilderFactory({
+  updatedProductOption: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.UPDATED,
     object: "product_option",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_OPTION_UPDATED,
   }),
-  deletedProductOption: eventBuilderFactory({
+  deletedProductOption: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.DELETED,
     object: "product_option",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_OPTION_DELETED,
   }),
-  createdProductType: eventBuilderFactory({
+  createdProductType: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.CREATED,
     object: "product_type",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_TYPE_CREATED,
   }),
-  updatedProductType: eventBuilderFactory({
+  updatedProductType: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.UPDATED,
     object: "product_type",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_TYPE_UPDATED,
   }),
-  deletedProductType: eventBuilderFactory({
+  deletedProductType: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.DELETED,
     object: "product_type",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_TYPE_DELETED,
   }),
-  createdProductTag: eventBuilderFactory({
+  createdProductTag: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.CREATED,
     object: "product_tag",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_TAG_CREATED,
   }),
-  updatedProductTag: eventBuilderFactory({
+  updatedProductTag: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.UPDATED,
     object: "product_tag",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_TAG_UPDATED,
   }),
-  deletedProductTag: eventBuilderFactory({
+  deletedProductTag: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.DELETED,
     object: "product_tag",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_TAG_DELETED,
   }),
-  createdProductCategory: eventBuilderFactory({
+  createdProductCategory: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.CREATED,
     object: "product_category",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_CATEGORY_CREATED,
   }),
-  updatedProductCategory: eventBuilderFactory({
+  updatedProductCategory: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.UPDATED,
     object: "product_category",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_CATEGORY_UPDATED,
   }),
-  deletedProductCategory: eventBuilderFactory({
+  deletedProductCategory: moduleEventBuilderFactory({
     source: Modules.PRODUCT,
     action: CommonEvents.DELETED,
     object: "product_category",
-    eventsEnum: ProductEvents,
+    eventName: ProductEvents.PRODUCT_CATEGORY_DELETED,
+  }),
+  createdProductCollection: moduleEventBuilderFactory({
+    source: Modules.PRODUCT,
+    action: CommonEvents.CREATED,
+    object: "product_collection",
+    eventName: ProductEvents.PRODUCT_COLLECTION_CREATED,
+  }),
+  updatedProductCollection: moduleEventBuilderFactory({
+    source: Modules.PRODUCT,
+    action: CommonEvents.UPDATED,
+    object: "product_collection",
+    eventName: ProductEvents.PRODUCT_COLLECTION_UPDATED,
+  }),
+  deletedProductCollection: moduleEventBuilderFactory({
+    source: Modules.PRODUCT,
+    action: CommonEvents.DELETED,
+    object: "product_collection",
+    eventName: ProductEvents.PRODUCT_COLLECTION_DELETED,
   }),
 }

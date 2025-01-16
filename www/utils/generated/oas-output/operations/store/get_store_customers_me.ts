@@ -1,18 +1,22 @@
 /**
  * @oas [get] /store/customers/me
  * operationId: GetCustomersMe
- * summary: List Customers
- * description: Retrieve a list of customers. The customers can be filtered by fields such as `id`. The customers can also be sorted or paginated.
+ * summary: Get Logged-in Customer
+ * x-sidebar-summary: Get Customer
+ * description: Retrieve the logged-in customer. You can expand the customer's relations or select the fields that should be returned.
  * x-authenticated: true
+ * externalDocs:
+ *   url: https://docs.medusajs.com/v2/resources/storefront-development/customers/retrieve
+ *   description: "Storefront guide: How to retrieve the logged-in customer."
  * parameters:
- *   - name: expand
- *     in: query
- *     description: Comma-separated relations that should be expanded in the returned data.
- *     required: false
+ *   - name: x-publishable-api-key
+ *     in: header
+ *     description: Publishable API Key created in the Medusa Admin.
+ *     required: true
  *     schema:
  *       type: string
- *       title: expand
- *       description: Comma-separated relations that should be expanded in the returned data.
+ *       externalDocs:
+ *         url: https://docs.medusajs.com/api/store#publishable-api-key
  *   - name: fields
  *     in: query
  *     description: Comma-separated fields that should be included in the returned data. if a field is prefixed with `+` it will be added to the default fields, using `-` will remove it from the default
@@ -23,30 +27,8 @@
  *       title: fields
  *       description: Comma-separated fields that should be included in the returned data. if a field is prefixed with `+` it will be added to the default fields, using `-` will remove it from the default
  *         fields. without prefix it will replace the entire default fields.
- *   - name: offset
- *     in: query
- *     description: The number of items to skip when retrieving a list.
- *     required: false
- *     schema:
- *       type: number
- *       title: offset
- *       description: The number of items to skip when retrieving a list.
- *   - name: limit
- *     in: query
- *     description: Limit the number of items returned in the list.
- *     required: false
- *     schema:
- *       type: number
- *       title: limit
- *       description: Limit the number of items returned in the list.
- *   - name: order
- *     in: query
- *     description: The field to sort the data by. By default, the sort order is ascending. To change the order to descending, prefix the field name with `-`.
- *     required: false
- *     schema:
- *       type: string
- *       title: order
- *       description: The field to sort the data by. By default, the sort order is ascending. To change the order to descending, prefix the field name with `-`.
+ *       externalDocs:
+ *         url: "#select-fields-and-relations"
  * security:
  *   - cookie_auth: []
  *   - jwt_token: []
@@ -55,7 +37,8 @@
  *     label: cURL
  *     source: |-
  *       curl '{backend_url}/store/customers/me' \
- *       -H 'Authorization: Bearer {access_token}'
+ *       -H 'Authorization: Bearer {access_token}' \
+ *       -H 'x-publishable-api-key: {your_publishable_api_key}'
  * tags:
  *   - Customers
  * responses:

@@ -1,7 +1,29 @@
+import { events } from "fetch-event-stream"
 import qs from "qs"
-import { ClientFetch, Config, FetchArgs, FetchInput, Logger } from "./types"
+import {
+  ClientFetch,
+  Config,
+  FetchArgs,
+  FetchInput,
+  FetchStreamResponse,
+  Logger,
+} from "./types"
 
 export const PUBLISHABLE_KEY_HEADER = "x-publishable-api-key"
+
+// We want to explicitly retrieve the base URL instead of relying on relative paths that differ in behavior between browsers.
+const getBaseUrl = (passedBaseUrl: string) => {
+  if (typeof window === "undefined") {
+    return passedBaseUrl
+  }
+
+  // If the passed base URL is empty or "/", we use the current origin from the browser.
+  if (passedBaseUrl === "" || passedBaseUrl === "/") {
+    return window.location.origin
+  }
+
+  return passedBaseUrl
+}
 
 const hasStorage = (storage: "localStorage" | "sessionStorage") => {
   if (typeof window !== "undefined") {
@@ -36,11 +58,20 @@ const normalizeRequest = (
     body = JSON.stringify(body)
   }
 
+  // "credentials" is not supported in some environments (eg. on the backend), and it might throw an exception if the field is set.
+  const isFetchCredentialsSupported = "credentials" in Request.prototype
+
+  // Oftentimes the server will be on a different origin, so we want to default to include
+  // Note that the cookie's SameSite attribute takes precedence over this setting.
+  const credentials =
+    config.auth?.type === "session"
+      ? config.auth?.fetchCredentials || "include"
+      : "omit"
+
   return {
     ...init,
     headers,
-    // TODO: Setting this to "include" poses some security risks, as it will send cookies to any domain. We should consider making this configurable.
-    credentials: config.auth?.type === "session" ? "include" : "omit",
+    credentials: isFetchCredentialsSupported ? credentials : undefined,
     ...(body ? { body: body as RequestInit["body"] } : {}),
   } as RequestInit
 }
@@ -82,7 +113,7 @@ export class Client {
   private token = ""
 
   constructor(config: Config) {
-    this.config = config
+    this.config = { ...config, baseUrl: getBaseUrl(config.baseUrl) }
     const logger = config.logger || {
       error: console.error,
       warn: console.warn,
@@ -110,9 +141,38 @@ export class Client {
    * @param init: FetchArgs
    * @returns Promise<T>
    */
-
   fetch<T extends any>(input: FetchInput, init?: FetchArgs): Promise<T> {
     return this.fetch_(input, init) as unknown as Promise<T>
+  }
+
+  /**
+   * `fetchStream` is a helper method to deal with server-sent events. It returns an object with a stream and an abort function.
+   * It follows a very similar interface to `fetch`, with the return value being an async generator.
+   * The stream is an async generator that yields `ServerSentEventMessage` objects, which contains the event name, stringified data, and few other properties.
+   * The caller is responsible for handling `disconnect` events and aborting the stream. The caller is also responsible for parsing the data field.
+   *
+   * @param input: FetchInput
+   * @param init: FetchArgs
+   * @returns FetchStreamResponse
+   */
+  async fetchStream(
+    input: FetchInput,
+    init?: FetchArgs
+  ): Promise<FetchStreamResponse> {
+    const abortController = new AbortController()
+    const abortFunc = abortController.abort.bind(abortController)
+
+    let res = await this.fetch_(input, {
+      ...init,
+      signal: abortController.signal,
+      headers: { ...init?.headers, accept: "text/event-stream" },
+    })
+
+    if (res.ok) {
+      return { stream: events(res, abortController.signal), abort: abortFunc }
+    }
+
+    return { stream: null, abort: abortFunc }
   }
 
   setToken(token: string) {
@@ -173,7 +233,11 @@ export class Client {
 
       let normalizedInput: RequestInfo | URL = input
       if (input instanceof URL || typeof input === "string") {
-        normalizedInput = new URL(input, this.config.baseUrl)
+        const baseUrl = new URL(this.config.baseUrl)
+        const fullPath = `${baseUrl.pathname.replace(/\/$/, "")}/${input
+          .toString()
+          .replace(/^\//, "")}`
+        normalizedInput = new URL(fullPath, baseUrl.origin)
         if (init?.query) {
           const params = Object.fromEntries(
             normalizedInput.searchParams.entries()
@@ -264,7 +328,8 @@ export class Client {
     const hasSession = hasStorage("sessionStorage")
 
     const storageMethod =
-      this.config.auth?.jwtTokenStorageMethod || (hasLocal ? "local" : "memory")
+      this.config.auth?.jwtTokenStorageMethod ||
+      (hasLocal ? "local" : "nostore")
     const storageKey =
       this.config.auth?.jwtTokenStorageKey || this.DEFAULT_JWT_STORAGE_KEY
 

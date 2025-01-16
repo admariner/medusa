@@ -2,13 +2,12 @@ import { cancelFulfillmentWorkflow } from "@medusajs/core-flows"
 import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
-} from "../../../../../types/routing"
+} from "@medusajs/framework/http"
 import { refetchFulfillment } from "../../helpers"
-import { AdminCancelFulfillmentType } from "../../validators"
-import { HttpTypes } from "@medusajs/types"
+import { HttpTypes } from "@medusajs/framework/types"
 
 export const POST = async (
-  req: AuthenticatedMedusaRequest<AdminCancelFulfillmentType>,
+  req: AuthenticatedMedusaRequest,
   res: MedusaResponse<HttpTypes.AdminFulfillmentResponse>
 ) => {
   const { id } = req.params
@@ -19,7 +18,7 @@ export const POST = async (
   const fulfillment = await refetchFulfillment(
     id,
     req.scope,
-    req.remoteQueryConfig.fields
+    req.queryConfig.fields
   )
 
   res.status(200).json({ fulfillment })

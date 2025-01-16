@@ -2,9 +2,8 @@
  * @oas [post] /store/return
  * operationId: PostReturn
  * summary: Create Return
- * description: Create a return.
+ * description: Create a return for an order's items. The admin receives the return and process it from their side.
  * x-authenticated: false
- * parameters: []
  * requestBody:
  *   content:
  *     application/json:
@@ -16,6 +15,7 @@
  *     source: |-
  *       curl -X POST '{backend_url}/store/return' \
  *       -H 'Content-Type: application/json' \
+ *       -H 'x-publishable-api-key: {your_publishable_api_key}' \
  *       --data-raw '{
  *         "order_id": "{value}",
  *         "items": [
@@ -55,6 +55,15 @@
  *   "500":
  *     $ref: "#/components/responses/500_error"
  * x-workflow: createAndCompleteReturnOrderWorkflow
+ * parameters:
+ *   - name: x-publishable-api-key
+ *     in: header
+ *     description: Publishable API Key created in the Medusa Admin.
+ *     required: true
+ *     schema:
+ *       type: string
+ *       externalDocs:
+ *         url: https://docs.medusajs.com/api/store#publishable-api-key
  * 
 */
 

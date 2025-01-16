@@ -10,6 +10,16 @@ import {
   ReturnDTO,
 } from "./common"
 
+type OrderChangeType =
+  | "return_request"
+  | "return_receive"
+  | "exchange"
+  | "claim"
+  | "edit"
+  | "transfer"
+  | "update_order"
+  | "credit_line"
+
 /** ADDRESS START */
 /**
  * The data to create or update in the address.
@@ -860,12 +870,7 @@ export interface CreateOrderChangeDTO {
   /**
    * The type of the order change.
    */
-  change_type?:
-    | "return_request"
-    | "return_receive"
-    | "exchange"
-    | "claim"
-    | "edit"
+  change_type?: OrderChangeType
 
   /**
    * The description of the order change.
@@ -1048,6 +1053,62 @@ export interface ConfirmOrderChangeDTO {
   metadata?: Record<string, unknown> | null
 }
 
+/**
+ * The details of the order change registration.
+ */
+export interface RegisterOrderChangeDTO {
+  /**
+   * The associated order's ID.
+   */
+  order_id: string
+
+  /**
+   * The type of the order change.
+   */
+  change_type?: OrderChangeType
+
+  /**
+   * The description of the order change.
+   */
+  description?: string
+
+  /**
+   * The internal note of the order change.
+   */
+  internal_note?: string | null
+
+  /**
+   * The user that created the order change.
+   */
+  created_by?: string
+
+  /**
+   * The user or customer that confirmed the order change.
+   */
+  confirmed_by?: string
+
+  /**
+   * Holds custom data in key-value pairs.
+   */
+  metadata?: Record<string, unknown> | null
+
+  /**
+   * The details of the order change action
+   */
+  details?: Record<string, unknown>
+
+  /**
+   * The name of the data model that this change
+   * references. For example, `shipping_address`.
+   */
+  reference?: string
+
+  /**
+   * The ID of the data model's record referenced.
+   */
+  reference_id?: string
+}
+
 /** ORDER CHANGE END */
 /** ORDER CHANGE ACTION START */
 /**
@@ -1123,6 +1184,11 @@ export interface CreateOrderChangeActionDTO {
    * quantity, based on the type of this action.
    */
   details?: Record<string, unknown>
+
+  /**
+   * Whether the action has been applied.
+   */
+  applied?: boolean
 }
 
 /**
@@ -1469,6 +1535,22 @@ export interface RegisterOrderShipmentDTO extends BaseOrderBundledActionsDTO {
 }
 
 /**
+ * The details to register a delivery of an order, return, exchange,
+ * or claim.
+ */
+export interface RegisterOrderDeliveryDTO extends BaseOrderBundledActionsDTO {
+  /**
+   * The items of the delivery.
+   */
+  items?: BaseOrderBundledItemActionsDTO[]
+
+  /**
+   * Whether the customer should receive notifications about the delivery.
+   */
+  no_notification?: boolean
+}
+
+/**
  * The return to be created.
  */
 export interface CreateOrderReturnDTO extends BaseOrderBundledActionsDTO {
@@ -1566,7 +1648,7 @@ export interface UpdateReturnDTO {
   /**
    * The ID of the location to return the items to.
    */
-  location_id?: string
+  location_id?: string | null
 
   /**
    * The refund amount of the return.
@@ -1892,8 +1974,18 @@ export interface UpdateOrderExchangeWithSelectorDTO {
    */
   data: Partial<UpdateOrderExchangeDTO>
 }
+
+/**
+ * The details of the return cancelation.
+ */
 export interface CancelOrderReturnDTO extends BaseOrderBundledActionsDTO {
+  /**
+   * The return's ID.
+   */
   return_id: string
+  /**
+   * The ID of the user canceling the return.
+   */
   canceled_by?: string
 }
 
@@ -1980,8 +2072,17 @@ export interface CreateOrderClaimDTO extends BaseOrderBundledActionsDTO {
   created_by?: string | null
 }
 
+/**
+ * The details of tjhe claim cancelation.
+ */
 export interface CancelOrderClaimDTO extends BaseOrderBundledActionsDTO {
+  /**
+   * The claim's ID.
+   */
   claim_id: string
+  /**
+   * The ID of the user canceling the claim
+   */
   canceled_by?: string
 }
 
@@ -2031,8 +2132,17 @@ export interface CreateOrderExchangeDTO extends BaseOrderBundledActionsDTO {
   created_by?: string | null
 }
 
+/**
+ * The details of the exchange cancelation.
+ */
 export interface CancelOrderExchangeDTO extends BaseOrderBundledActionsDTO {
+  /**
+   * The exchange's ID.
+   */
   exchange_id: string
+  /**
+   * The ID of the user canceling the exchange
+   */
   canceled_by?: string
 }
 

@@ -1,6 +1,6 @@
 import { IFulfillmentModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
+import { Modules } from "@medusajs/utils"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { createAdminUser } from "../../../helpers/create-admin-user"
 
 jest.setTimeout(100000)
@@ -18,7 +18,7 @@ medusaIntegrationTestRunner({
 
     beforeAll(() => {
       container = getContainer()
-      service = container.resolve(ModuleRegistrationName.FULFILLMENT)
+      service = container.resolve(Modules.FULFILLMENT)
     })
 
     beforeEach(async () => {

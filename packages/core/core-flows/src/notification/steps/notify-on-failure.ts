@@ -1,6 +1,6 @@
-import { INotificationModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import { INotificationModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export type NotifyOnFailureStepInput = {
   to: string
@@ -17,7 +17,7 @@ export type NotifyOnFailureStepInput = {
 
 export const notifyOnFailureStepId = "notify-on-failure"
 /**
- * This step sends one or more notification when a workflow fails. This 
+ * This step sends one or more notification when a workflow fails. This
  * step can be used in a workflow for its compensation function. When the workflow fails,
  * its compensation function is triggered to send the notification.
  */
@@ -33,7 +33,7 @@ export const notifyOnFailureStep = createStep(
     }
 
     const service = container.resolve<INotificationModuleService>(
-      ModuleRegistrationName.NOTIFICATION
+      Modules.NOTIFICATION
     )
     await service.createNotifications(data)
   }

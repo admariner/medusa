@@ -1,2 +1,2 @@
-export * from "./clean-graphql-schema"
-export * from "./graphql-schema-to-fields"
+export * from "./linking-error"
+export * from "./convert-data-to-link-definition"

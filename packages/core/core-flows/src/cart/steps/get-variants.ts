@@ -3,10 +3,13 @@ import {
   FindConfig,
   IProductModuleService,
   ProductVariantDTO,
-} from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The details of the variants to retrieve.
+ */
 export interface GetVariantsStepInput {
   filter?: FilterableProductVariantProps
   config?: FindConfig<ProductVariantDTO>
@@ -15,12 +18,19 @@ export interface GetVariantsStepInput {
 export const getVariantsStepId = "get-variants"
 /**
  * This step retrieves variants matching the specified filters.
+ * 
+ * @example
+ * const data = getVariantsStep({
+ *   filter: {
+ *     id: "variant_123"
+ *   }
+ * })
  */
 export const getVariantsStep = createStep(
   getVariantsStepId,
   async (data: GetVariantsStepInput, { container }) => {
     const productModuleService = container.resolve<IProductModuleService>(
-      ModuleRegistrationName.PRODUCT
+      Modules.PRODUCT
     )
 
     const variants = await productModuleService.listProductVariants(

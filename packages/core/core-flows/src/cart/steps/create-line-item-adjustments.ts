@@ -1,24 +1,41 @@
 import {
   CreateLineItemAdjustmentDTO,
   ICartModuleService,
-} from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The details of the line item adjustments to create.
+ */
 export interface CreateLineItemAdjustmentsCartStepInput {
+  /**
+   * The line item adjustments to create.
+   */
   lineItemAdjustmentsToCreate: CreateLineItemAdjustmentDTO[]
 }
 
 export const createLineItemAdjustmentsStepId = "create-line-item-adjustments"
 /**
- * This step creates line item adjustments in a cart.
+ * This step creates line item adjustments in a cart, such as when a promotion is applied.
+ * 
+ * @example
+ * createLineItemAdjustmentsStep({
+ *   lineItemAdjustmentsToCreate: [
+ *     {
+ *       item_id: "litem_123",
+ *       code: "10OFF",
+ *       amount: 10,
+ *     }
+ *   ]
+ * })
  */
 export const createLineItemAdjustmentsStep = createStep(
   createLineItemAdjustmentsStepId,
   async (data: CreateLineItemAdjustmentsCartStepInput, { container }) => {
     const { lineItemAdjustmentsToCreate = [] } = data
     const cartModuleService: ICartModuleService = container.resolve(
-      ModuleRegistrationName.CART
+      Modules.CART
     )
 
     const createdLineItemAdjustments =
@@ -30,7 +47,7 @@ export const createLineItemAdjustmentsStep = createStep(
   },
   async (createdLineItemAdjustments, { container }) => {
     const cartModuleService: ICartModuleService = container.resolve(
-      ModuleRegistrationName.CART
+      Modules.CART
     )
 
     if (!createdLineItemAdjustments?.length) {

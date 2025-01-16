@@ -1,6 +1,16 @@
-import { IOrderModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { createStep, StepResponse } from "@medusajs/workflows-sdk"
+import { IOrderModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
+
+/**
+ * The details of deleting one or more claims.
+ */
+export type DeleteOrderClaimsInput = {
+  /**
+   * The IDs of the claims to delete.
+   */
+  ids: string[]
+}
 
 export const deleteClaimsStepId = "delete-claims"
 /**
@@ -8,10 +18,8 @@ export const deleteClaimsStepId = "delete-claims"
  */
 export const deleteClaimsStep = createStep(
   deleteClaimsStepId,
-  async (data: { ids: string[] }, { container }) => {
-    const service = container.resolve<IOrderModuleService>(
-      ModuleRegistrationName.ORDER
-    )
+  async (data: DeleteOrderClaimsInput, { container }) => {
+    const service = container.resolve<IOrderModuleService>(Modules.ORDER)
 
     const deleted = await service.softDeleteOrderClaims(data.ids)
 
@@ -22,9 +30,7 @@ export const deleteClaimsStep = createStep(
       return
     }
 
-    const service = container.resolve<IOrderModuleService>(
-      ModuleRegistrationName.ORDER
-    )
+    const service = container.resolve<IOrderModuleService>(Modules.ORDER)
 
     await service.restoreOrderClaims(ids)
   }

@@ -1,6 +1,6 @@
 import { IUserModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
+import { Modules } from "@medusajs/utils"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { createAdminUser } from "../../../helpers/create-admin-user"
 
 jest.setTimeout(50000)
@@ -19,7 +19,7 @@ medusaIntegrationTestRunner({
 
       beforeAll(async () => {
         appContainer = getContainer()
-        userModuleService = appContainer.resolve(ModuleRegistrationName.USER)
+        userModuleService = appContainer.resolve(Modules.USER)
       })
 
       beforeEach(async () => {

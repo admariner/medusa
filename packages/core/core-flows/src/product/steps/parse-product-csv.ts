@@ -2,37 +2,46 @@ import {
   IProductModuleService,
   IRegionModuleService,
   ISalesChannelModuleService,
-} from "@medusajs/types"
-import { MedusaError, ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/types"
+import { MedusaError, Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 import { normalizeForImport } from "../helpers/normalize-for-import"
 import { normalizeV1Products } from "../helpers/normalize-v1-import"
 import { convertCsvToJson } from "../utlils"
 
+/**
+ * The CSV file content to parse.
+ */
+export type ParseProductCsvStepInput = string
+
 export const parseProductCsvStepId = "parse-product-csv"
 /**
- * This step parses a CSV file holding products to import.
+ * This step parses a CSV file holding products to import, returning the products as 
+ * objects that can be imported.
+ * 
+ * @example
+ * const data = parseProductCsvStep("products.csv")
  */
 export const parseProductCsvStep = createStep(
   parseProductCsvStepId,
-  async (fileContent: string, { container }) => {
+  async (fileContent: ParseProductCsvStepInput, { container }) => {
     const regionService = container.resolve<IRegionModuleService>(
-      ModuleRegistrationName.REGION
+      Modules.REGION
     )
     const productService = container.resolve<IProductModuleService>(
-      ModuleRegistrationName.PRODUCT
+      Modules.PRODUCT
     )
     const salesChannelService = container.resolve<ISalesChannelModuleService>(
-      ModuleRegistrationName.SALES_CHANNEL
+      Modules.SALES_CHANNEL
     )
 
     const csvProducts = convertCsvToJson(fileContent)
 
     const [productTypes, productCollections, salesChannels] = await Promise.all(
       [
-        productService.listProductTypes({}, { take: null }),
-        productService.listProductCollections({}, { take: null }),
-        salesChannelService.listSalesChannels({}, { take: null }),
+        productService.listProductTypes({}, {}),
+        productService.listProductCollections({}, {}),
+        salesChannelService.listSalesChannels({}, {}),
       ]
     )
 
@@ -55,12 +64,9 @@ export const parseProductCsvStep = createStep(
     const [allRegions, allTags] = await Promise.all([
       regionService.listRegions(
         {},
-        { select: ["id", "name", "currency_code"], take: null }
+        { select: ["id", "name", "currency_code"] }
       ),
-      productService.listProductTags(
-        {},
-        { select: ["id", "value"], take: null }
-      ),
+      productService.listProductTags({}, { select: ["id", "value"] }),
     ])
 
     const normalizedData = normalizeForImport(v1Normalized, {

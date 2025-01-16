@@ -1,6 +1,9 @@
-import { CreateTaxRegionDTO, ITaxModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import {
+  CreateTaxRegionDTO,
+  ITaxModuleService,
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const createTaxRegionsStepId = "create-tax-regions"
 /**
@@ -9,9 +12,7 @@ export const createTaxRegionsStepId = "create-tax-regions"
 export const createTaxRegionsStep = createStep(
   createTaxRegionsStepId,
   async (data: CreateTaxRegionDTO[], { container }) => {
-    const service = container.resolve<ITaxModuleService>(
-      ModuleRegistrationName.TAX
-    )
+    const service = container.resolve<ITaxModuleService>(Modules.TAX)
 
     const created = await service.createTaxRegions(data)
 
@@ -25,9 +26,7 @@ export const createTaxRegionsStep = createStep(
       return
     }
 
-    const service = container.resolve<ITaxModuleService>(
-      ModuleRegistrationName.TAX
-    )
+    const service = container.resolve<ITaxModuleService>(Modules.TAX)
 
     await service.deleteTaxRegions(createdIds)
   }

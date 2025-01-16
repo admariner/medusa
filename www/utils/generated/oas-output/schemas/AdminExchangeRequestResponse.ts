@@ -1,7 +1,7 @@
 /**
  * @schema AdminExchangeRequestResponse
  * type: object
- * description: SUMMARY
+ * description: The details of a requested exchange.
  * x-schemaName: AdminExchangeRequestResponse
  * required:
  *   - return
@@ -11,7 +11,7 @@
  *   return:
  *     $ref: "#/components/schemas/AdminReturn"
  *   order_preview:
- *     $ref: "#/components/schemas/OrderPreview"
+ *     $ref: "#/components/schemas/AdminOrderPreview"
  *   exchange:
  *     $ref: "#/components/schemas/AdminExchange"
  * 

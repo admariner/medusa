@@ -7,14 +7,15 @@ import {
   OrderExchangeItemDTO,
   OrderPreviewDTO,
   OrderReturnItemDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
   ChangeActionType,
   MedusaError,
   Modules,
   OrderChangeStatus,
+  OrderWorkflowEvents,
   ReturnStatus,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 import {
   WorkflowResponse,
   createStep,
@@ -22,10 +23,14 @@ import {
   parallelize,
   transform,
   when,
-} from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/workflows-sdk"
 import { reserveInventoryStep } from "../../../cart/steps/reserve-inventory"
 import { prepareConfirmInventoryInput } from "../../../cart/utils/prepare-confirm-inventory-input"
-import { createRemoteLinkStep, useRemoteQueryStep } from "../../../common"
+import {
+  createRemoteLinkStep,
+  emitEventStep,
+  useRemoteQueryStep,
+} from "../../../common"
 import { createReturnFulfillmentWorkflow } from "../../../fulfillment/workflows/create-return-fulfillment"
 import { previewOrderChangeStep, updateReturnsStep } from "../../steps"
 import { confirmOrderChanges } from "../../steps/confirm-order-changes"
@@ -37,13 +42,50 @@ import {
 } from "../../utils/order-validation"
 import { createOrUpdateOrderPaymentCollectionWorkflow } from "../create-or-update-order-payment-collection"
 
-export type ConfirmExchangeRequestWorkflowInput = {
-  exchange_id: string
-  confirmed_by?: string
+/**
+ * The data to validate that a requested exchange can be confirmed.
+ */
+export type ConfirmExchangeRequestValidationStepInput = {
+  /**
+   * The order's details.
+   */
+  order: OrderDTO
+  /**
+   * The order exchange's details.
+   */
+  orderExchange: OrderExchangeDTO
+  /**
+   * The order change's details.
+   */
+  orderChange: OrderChangeDTO
 }
 
 /**
  * This step validates that a requested exchange can be confirmed.
+ * If the order or exchange is canceled, or the order change is not active, the step will throw an error.
+ * 
+ * :::note
+ * 
+ * You can retrieve an order, order exchange, and order change details using [Query](https://docs.medusajs.com/learn/fundamentals/module-links/query),
+ * or [useQueryGraphStep](https://docs.medusajs.com/resources/references/medusa-workflows/steps/useQueryGraphStep).
+ * 
+ * :::
+ * 
+ * @example
+ * const data = confirmExchangeRequestValidationStep({
+ *   order: {
+ *     id: "order_123",
+ *     // other order details...
+ *   },
+ *   orderChange: {
+ *     id: "orch_123",
+ *     // other order change details...
+ *   },
+ *   orderExchange: {
+ *     id: "exchange_123",
+ *     // other order exchange details...
+ *   },
+ * })
  */
 export const confirmExchangeRequestValidationStep = createStep(
   "validate-confirm-exchange-request",
@@ -51,11 +93,7 @@ export const confirmExchangeRequestValidationStep = createStep(
     order,
     orderChange,
     orderExchange,
-  }: {
-    order: OrderDTO
-    orderExchange: OrderExchangeDTO
-    orderChange: OrderChangeDTO
-  }) {
+  }: ConfirmExchangeRequestValidationStepInput) {
     throwIfIsCancelled(order, "Order")
     throwIfIsCancelled(orderExchange, "Exchange")
     throwIfOrderChangeIsNotActive({ orderChange })
@@ -198,9 +236,51 @@ function extractShippingOption({ orderPreview, orderExchange, returnId }) {
   }
 }
 
+function getUpdateReturnData({ returnId }: { returnId: string }) {
+  return transform({ returnId }, ({ returnId }) => {
+    return [
+      {
+        id: returnId,
+        status: ReturnStatus.REQUESTED,
+        requested_at: new Date(),
+      },
+    ]
+  })
+}
+
+/**
+ * The details to confirm an exchange request.
+ */
+export type ConfirmExchangeRequestWorkflowInput = {
+  /**
+   * The ID of the exchange to confirm.
+   */
+  exchange_id: string
+  /**
+   * The ID of the user that's confirming the exchange.
+   */
+  confirmed_by?: string
+}
+
 export const confirmExchangeRequestWorkflowId = "confirm-exchange-request"
 /**
- * This workflow confirms an exchange request.
+ * This workflow confirms an exchange request. It's used by the
+ * [Confirm Exchange Admin API Route](https://docs.medusajs.com/api/admin#exchanges_postexchangesidrequest).
+ * 
+ * You can use this workflow within your customizations or your own custom workflows, allowing you to confirm an exchange
+ * for an order in your custom flow.
+ * 
+ * @example
+ * const { result } = await confirmExchangeRequestWorkflow(container)
+ * .run({
+ *   input: {
+ *     exchange_id: "exchange_123",
+ *   }
+ * })
+ * 
+ * @summary
+ * 
+ * Confirm an exchange request.
  */
 export const confirmExchangeRequestWorkflow = createWorkflow(
   confirmExchangeRequestWorkflowId,
@@ -234,6 +314,7 @@ export const confirmExchangeRequestWorkflow = createWorkflow(
       entry_point: "order_change",
       fields: [
         "id",
+        "status",
         "actions.id",
         "actions.exchange_id",
         "actions.return_id",
@@ -272,7 +353,11 @@ export const confirmExchangeRequestWorkflow = createWorkflow(
       returnItems: createdReturnItems,
     })
 
-    confirmOrderChanges({ changes: [orderChange], orderId: order.id })
+    confirmOrderChanges({
+      changes: [orderChange],
+      orderId: order.id,
+      confirmed_by: input.confirmed_by,
+    })
 
     const returnId = transform(
       { createdReturnItems },
@@ -284,13 +369,8 @@ export const confirmExchangeRequestWorkflow = createWorkflow(
     when({ returnId }, ({ returnId }) => {
       return !!returnId
     }).then(() => {
-      updateReturnsStep([
-        {
-          id: returnId,
-          status: ReturnStatus.REQUESTED,
-          requested_at: new Date(),
-        },
-      ])
+      const updateReturnData = getUpdateReturnData({ returnId })
+      updateReturnsStep(updateReturnData)
     })
 
     const exchangeId = transform(
@@ -418,6 +498,14 @@ export const confirmExchangeRequestWorkflow = createWorkflow(
     createOrUpdateOrderPaymentCollectionWorkflow.runAsStep({
       input: {
         order_id: order.id,
+      },
+    })
+
+    emitEventStep({
+      eventName: OrderWorkflowEvents.EXCHANGE_CREATED,
+      data: {
+        order_id: order.id,
+        exchange_id: orderExchange.id,
       },
     })
 

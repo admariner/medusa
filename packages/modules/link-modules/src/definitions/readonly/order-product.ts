@@ -1,5 +1,5 @@
-import { ModuleJoinerConfig } from "@medusajs/types"
-import { Modules } from "@medusajs/utils"
+import { ModuleJoinerConfig } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
 
 export const OrderProduct: ModuleJoinerConfig = {
   isLink: true,
@@ -7,8 +7,10 @@ export const OrderProduct: ModuleJoinerConfig = {
   extends: [
     {
       serviceName: Modules.ORDER,
+      entity: "OrderLineItem",
       relationship: {
         serviceName: Modules.PRODUCT,
+        entity: "Product",
         primaryKey: "id",
         foreignKey: "items.product_id",
         alias: "product",
@@ -19,8 +21,10 @@ export const OrderProduct: ModuleJoinerConfig = {
     },
     {
       serviceName: Modules.ORDER,
+      entity: "OrderLineItem",
       relationship: {
         serviceName: Modules.PRODUCT,
+        entity: "ProductVariant",
         primaryKey: "id",
         foreignKey: "items.variant_id",
         alias: "variant",
@@ -31,14 +35,16 @@ export const OrderProduct: ModuleJoinerConfig = {
     },
     {
       serviceName: Modules.PRODUCT,
+      entity: "ProductVariant",
       relationship: {
         serviceName: Modules.ORDER,
+        entity: "OrderLineItem",
         primaryKey: "variant_id",
         foreignKey: "id",
         alias: "order_items",
         isList: true,
         args: {
-          methodSuffix: "LineItems",
+          methodSuffix: "OrderLineItems",
         },
       },
     },

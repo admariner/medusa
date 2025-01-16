@@ -1,10 +1,13 @@
-import { ChangeActionType, MathBN, MedusaError } from "@medusajs/utils"
+import {
+  ChangeActionType,
+  MathBN,
+  MedusaError,
+} from "@medusajs/framework/utils"
 import { OrderChangeProcessing } from "../calculate-order-change"
 import { setActionReference } from "../set-action-reference"
 
 OrderChangeProcessing.registerActionType(ChangeActionType.RETURN_ITEM, {
   isDeduction: true,
-  awaitRequired: true,
   operation({ action, currentOrder, options }) {
     const existing = currentOrder.items.find(
       (item) => item.id === action.details.reference_id

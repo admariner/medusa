@@ -1,7 +1,15 @@
-import { MedusaModule } from "@medusajs/modules-sdk"
-import { ModuleJoinerConfig, ModuleJoinerRelationship } from "@medusajs/types"
-import { camelToSnakeCase, lowerCaseFirst, toPascalCase } from "@medusajs/utils"
-import { composeTableName } from "./compose-link-name"
+import { MedusaModule } from "@medusajs/framework/modules-sdk"
+import {
+  ModuleJoinerConfig,
+  ModuleJoinerRelationship,
+} from "@medusajs/framework/types"
+import {
+  camelToSnakeCase,
+  composeTableName,
+  isString,
+  lowerCaseFirst,
+  toPascalCase,
+} from "@medusajs/framework/utils"
 
 export function generateGraphQLSchema(
   joinerConfig: ModuleJoinerConfig,
@@ -38,15 +46,14 @@ export function generateGraphQLSchema(
       )
     }
 
-    const extJoinerConfig = MedusaModule.getJoinerConfig(
-      extend.relationship.serviceName
-    )
     let extendedEntityName =
-      extJoinerConfig?.linkableKeys?.[extend.relationship.foreignKey]!
+      extendedModule[extend.serviceName].__joinerConfig.linkableKeys[
+        extend.relationship.primaryKey
+      ]
 
-    if (!isReadOnlyLink && !extendedEntityName && (!primary || !foreign)) {
+    if (!isReadOnlyLink && (!primary || !foreign || !extendedEntityName)) {
       logger.warn(
-        `Link modules schema: No linkable key found for ${extend.relationship.foreignKey} on module ${extend.relationship.serviceName}.`
+        `Link modules schema: No linkable key found for ${extend.relationship.primaryKey} on module ${extend.serviceName}.`
       )
 
       continue
@@ -57,15 +64,83 @@ export function generateGraphQLSchema(
     )
 
     let type = extend.relationship.isList ? `[${entityName}]` : entityName
-    if (extJoinerConfig?.isReadOnlyLink) {
-      type = extend.relationship.isList
-        ? `[${extendedEntityName}]`
-        : extendedEntityName
+    if (joinerConfig?.isReadOnlyLink) {
+      // TODO: In readonly links, the relationship of the extend where entity is undefined has to be applied on all entities in the module that have the relationshiop foreing key attribute (unkown in this context)
+      if (!extend.entity) {
+        continue
+      }
+
+      const rel = extend.relationship
+      const extendedService = MedusaModule.getModuleInstance(rel.serviceName)
+
+      const hasGraphqlSchema =
+        !!extendedService[rel.serviceName].__joinerConfig.schema
+      const relEntity = rel.entity
+        ? rel.entity
+        : extendedService[rel.serviceName].__joinerConfig.linkableKeys[
+            rel.primaryKey
+          ]
+
+      if (!relEntity || !hasGraphqlSchema) {
+        continue
+      }
+
+      type = rel.isList ? `[${relEntity}]` : relEntity!
+      extendedEntityName = extend.entity
     }
 
+    /**
+     * Find the field aliases shortcut to extend the entity with it
+     */
+    const fieldsAliasesField = Object.entries(extend.fieldAlias || {})
+      .map(([field, config]) => {
+        const path = isString(config) ? config : config.path
+        const isList = isString(config)
+          ? extend.relationship.isList
+          : config.isList ?? extend.relationship.isList
+
+        const targetEntityAlias = path.split(".").pop()
+
+        const targetEntityRelation = joinerConfig.relationships?.find(
+          (relation) => relation.alias === targetEntityAlias
+        )
+
+        if (!targetEntityRelation) {
+          return
+        }
+
+        const targetEntityName = MedusaModule.getJoinerConfig(
+          targetEntityRelation.serviceName
+        ).linkableKeys?.[targetEntityRelation.foreignKey]
+
+        if (!targetEntityName) {
+          logger.warn(
+            `Link modules schema: No linkable key found for ${targetEntityRelation.foreignKey} on module ${targetEntityRelation.serviceName}.`
+          )
+
+          return
+        }
+
+        // TODO: Re visit field aliases that access properties from a type
+        /*const targetEntityType = `${targetEntityName}${
+          relationshipPropertyPath.length
+            ? relationshipPropertyPath.reduce((acc, value) => {
+                return `${acc}[${value}]`
+              }, targetEntityName)
+            : ""
+        }`*/
+
+        return `${field}: ${
+          isList ? `[${targetEntityName}]` : targetEntityName
+        }`
+      })
+      .filter(Boolean)
+
     typeDef += `    
-      extend type ${extend.serviceName} {
+      extend type ${extendedEntityName} {
         ${fieldName}: ${type}
+        
+        ${fieldsAliasesField.join("\n")}
       }
     `
   }
@@ -92,14 +167,26 @@ export function generateGraphQLSchema(
     }
   }
 
-  // Link table relationships
-  const primaryField = `${camelToSnakeCase(primary.alias)}: ${toPascalCase(
-    composeTableName(primary.serviceName)
-  )}`
+  // TODO: temporary, every module might always expose their schema
+  const doesPrimaryExportSchema = !!MedusaModule.getJoinerConfig(
+    primary.serviceName
+  )?.schema
+  const doesForeignExportSchema = !!MedusaModule.getJoinerConfig(
+    foreign.serviceName
+  )?.schema
 
-  const foreignField = `${camelToSnakeCase(foreign.alias)}: ${toPascalCase(
-    composeTableName(foreign.serviceName)
-  )}`
+  // Link table relationships
+  const primaryField = doesPrimaryExportSchema
+    ? `${camelToSnakeCase(primary.alias)}: ${toPascalCase(
+        composeTableName(primary.serviceName)
+      )}`
+    : ""
+
+  const foreignField = doesForeignExportSchema
+    ? `${camelToSnakeCase(foreign.alias)}: ${toPascalCase(
+        composeTableName(foreign.serviceName)
+      )}`
+    : ""
 
   typeDef += `
     type ${entityName} {

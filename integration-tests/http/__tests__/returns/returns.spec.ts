@@ -1,10 +1,9 @@
 import {
   ContainerRegistrationKeys,
-  ModuleRegistrationName,
   Modules,
   RuleOperator,
 } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import {
   adminHeaders,
   createAdminUser,
@@ -31,10 +30,12 @@ medusaIntegrationTestRunner({
           "/admin/products",
           {
             title: "Test product",
+            options: [{ title: "size", values: ["x", "l"] }],
             variants: [
               {
                 title: "Test variant",
                 sku: "test-variant",
+                options: { size: "l" },
                 prices: [
                   {
                     currency_code: "usd",
@@ -60,7 +61,7 @@ medusaIntegrationTestRunner({
         )
       ).data.return_reason
 
-      const orderModule = container.resolve(ModuleRegistrationName.ORDER)
+      const orderModule = container.resolve(Modules.ORDER)
 
       order = await orderModule.createOrders({
         region_id: "test_region_id",
@@ -665,7 +666,7 @@ medusaIntegrationTestRunner({
         result = await api.post(
           `/admin/returns/${returnId}/shipping-method/${updateShippingActionId}`,
           {
-            custom_price: 1002,
+            custom_amount: 1002,
             internal_note: "cx agent note",
           },
           adminHeaders

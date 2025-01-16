@@ -2,9 +2,9 @@ import {
   CreateOrderReturnItemDTO,
   IOrderModuleService,
   OrderChangeActionDTO,
-} from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export type CreateReturnItemsFromActionsInput = {
   changes: OrderChangeActionDTO[]
@@ -18,7 +18,7 @@ export const createReturnItemsFromActionsStep = createStep(
   "create-return-items-from-change-actions",
   async (input: CreateReturnItemsFromActionsInput, { container }) => {
     const orderModuleService = container.resolve<IOrderModuleService>(
-      ModuleRegistrationName.ORDER
+      Modules.ORDER
     )
 
     const returnItems = input.changes.map((item) => {
@@ -47,7 +47,7 @@ export const createReturnItemsFromActionsStep = createStep(
     }
 
     const orderModuleService = container.resolve<IOrderModuleService>(
-      ModuleRegistrationName.ORDER
+      Modules.ORDER
     )
 
     await orderModuleService.deleteReturnItems(ids)

@@ -1,20 +1,20 @@
 /**
  * @schema AdminPostOrderEditsShippingActionReqSchema
  * type: object
- * description: SUMMARY
+ * description: The shipping method's details.
  * x-schemaName: AdminPostOrderEditsShippingActionReqSchema
  * properties:
- *   custom_price:
+ *   custom_amount:
  *     type: number
- *     title: custom_price
- *     description: The order edit's custom price.
+ *     title: custom_amount
+ *     description: Set a custom price for the shipping method.
  *   internal_note:
  *     type: string
  *     title: internal_note
- *     description: The order edit's internal note.
+ *     description: A note viewed only by admin users.
  *   metadata:
  *     type: object
- *     description: The order edit's metadata.
+ *     description: The order edit's metadata, can hold custom key-value pairs.
  * 
 */
 

@@ -1,719 +1,543 @@
 {
-	"id": 13938,
+	"id": 16930,
 	"name": "user-models",
 	"variant": "project",
 	"kind": 1,
 	"flags": {},
 	"children": [
 		{
-			"id": 13956,
+			"id": 16939,
 			"name": "Invite",
 			"variant": "declaration",
-			"kind": 128,
-			"flags": {},
-			"children": [
-				{
-					"id": 13957,
-					"name": "constructor",
-					"variant": "declaration",
-					"kind": 512,
-					"flags": {},
-					"signatures": [
-						{
-							"id": 13958,
-							"name": "new Invite",
-							"variant": "signature",
-							"kind": 16384,
-							"flags": {},
-							"type": {
-								"type": "reference",
-								"target": 13956,
-								"name": "Invite",
-								"package": "@medusajs/user",
-								"qualifiedName": "default"
-							}
-						}
-					]
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"type": {
+				"type": "reference",
+				"target": {
+					"sourceFileName": "../../../../packages/core/utils/src/dml/entity.ts",
+					"qualifiedName": "DmlEntity"
 				},
-				{
-					"id": 13972,
-					"name": "[OptionalProps]",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
+				"typeArguments": [
+					{
 						"type": "reference",
 						"target": {
-							"sourceFileName": "../../../../packages/modules/user/src/models/invite.ts",
-							"qualifiedName": "OptionalFields"
+							"sourceFileName": "../../../../packages/core/utils/src/dml/entity.ts",
+							"qualifiedName": "DMLEntitySchemaBuilder"
 						},
-						"name": "OptionalFields",
-						"package": "@medusajs/user"
-					}
-				},
-				{
-					"id": 13959,
-					"name": "id",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "intrinsic",
-						"name": "string"
-					}
-				},
-				{
-					"id": 13960,
-					"name": "email",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "intrinsic",
-						"name": "string"
-					}
-				},
-				{
-					"id": 13961,
-					"name": "accepted",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "intrinsic",
-						"name": "boolean"
+						"typeArguments": [
+							{
+								"type": "reflection",
+								"declaration": {
+									"id": 16940,
+									"name": "__type",
+									"variant": "declaration",
+									"kind": 65536,
+									"flags": {},
+									"children": [
+										{
+											"id": 16941,
+											"name": "id",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "The ID of the invite."
+													}
+												]
+											},
+											"type": {
+												"type": "reference",
+												"target": {
+													"sourceFileName": "../../../../packages/core/utils/src/dml/properties/primary-key.ts",
+													"qualifiedName": "PrimaryKeyModifier"
+												},
+												"typeArguments": [
+													{
+														"type": "reference",
+														"target": {
+															"sourceFileName": "../../../../packages/core/utils/src/dml/properties/id.ts",
+															"qualifiedName": "IdProperty"
+														},
+														"name": "IdProperty",
+														"package": "@medusajs/utils"
+													}
+												],
+												"name": "PrimaryKeyModifier",
+												"package": "@medusajs/utils"
+											},
+											"defaultValue": "..."
+										},
+										{
+											"id": 16942,
+											"name": "email",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "The email of the invited user."
+													}
+												]
+											},
+											"type": {
+												"type": "reference",
+												"target": {
+													"sourceFileName": "../../../../packages/core/utils/src/dml/properties/text.ts",
+													"qualifiedName": "TextProperty"
+												},
+												"name": "TextProperty",
+												"package": "@medusajs/utils"
+											},
+											"defaultValue": "..."
+										},
+										{
+											"id": 16943,
+											"name": "accepted",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "Whether the invite is accepted."
+													}
+												]
+											},
+											"type": {
+												"type": "reference",
+												"target": {
+													"sourceFileName": "../../../../packages/core/utils/src/dml/properties/boolean.ts",
+													"qualifiedName": "BooleanProperty"
+												},
+												"name": "BooleanProperty",
+												"package": "@medusajs/utils"
+											},
+											"defaultValue": "..."
+										},
+										{
+											"id": 16944,
+											"name": "token",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "The token of the invite."
+													}
+												]
+											},
+											"type": {
+												"type": "reference",
+												"target": {
+													"sourceFileName": "../../../../packages/core/utils/src/dml/properties/text.ts",
+													"qualifiedName": "TextProperty"
+												},
+												"name": "TextProperty",
+												"package": "@medusajs/utils"
+											},
+											"defaultValue": "..."
+										},
+										{
+											"id": 16945,
+											"name": "expires_at",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "When the invite expires."
+													}
+												]
+											},
+											"type": {
+												"type": "reference",
+												"target": {
+													"sourceFileName": "../../../../packages/core/utils/src/dml/properties/date-time.ts",
+													"qualifiedName": "DateTimeProperty"
+												},
+												"name": "DateTimeProperty",
+												"package": "@medusajs/utils"
+											},
+											"defaultValue": "..."
+										},
+										{
+											"id": 16946,
+											"name": "metadata",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {
+												"isOptional": true
+											},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "Holds custom data in key-value pairs."
+													}
+												]
+											},
+											"type": {
+												"type": "reference",
+												"target": {
+													"sourceFileName": "../../../../packages/core/utils/src/dml/properties/json.ts",
+													"qualifiedName": "JSONProperty"
+												},
+												"name": "JSONProperty",
+												"package": "@medusajs/utils"
+											},
+											"defaultValue": "..."
+										}
+									],
+									"groups": [
+										{
+											"title": "Properties",
+											"children": [
+												16941,
+												16942,
+												16943,
+												16944,
+												16945,
+												16946
+											]
+										}
+									]
+								}
+							}
+						],
+						"name": "DMLEntitySchemaBuilder",
+						"package": "@medusajs/utils"
 					},
-					"defaultValue": "false"
-				},
-				{
-					"id": 13962,
-					"name": "token",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "intrinsic",
-						"name": "string"
+					{
+						"type": "literal",
+						"value": "invite"
 					}
-				},
-				{
-					"id": 13963,
-					"name": "expires_at",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "reference",
-						"target": {
-							"sourceFileName": "../../node_modules/typescript/lib/lib.es5.d.ts",
-							"qualifiedName": "Date"
-						},
-						"name": "Date",
-						"package": "typescript"
-					}
-				},
-				{
-					"id": 13964,
-					"name": "metadata",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "union",
-						"types": [
-							{
-								"type": "literal",
-								"value": null
-							},
-							{
-								"type": "reference",
-								"target": {
-									"sourceFileName": "../../node_modules/typescript/lib/lib.es5.d.ts",
-									"qualifiedName": "Record"
-								},
-								"typeArguments": [
-									{
-										"type": "intrinsic",
-										"name": "string"
-									},
-									{
-										"type": "intrinsic",
-										"name": "unknown"
-									}
-								],
-								"name": "Record",
-								"package": "typescript"
-							}
-						]
-					},
-					"defaultValue": "null"
-				},
-				{
-					"id": 13965,
-					"name": "created_at",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "reference",
-						"target": {
-							"sourceFileName": "../../node_modules/typescript/lib/lib.es5.d.ts",
-							"qualifiedName": "Date"
-						},
-						"name": "Date",
-						"package": "typescript"
-					}
-				},
-				{
-					"id": 13966,
-					"name": "updated_at",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "reference",
-						"target": {
-							"sourceFileName": "../../node_modules/typescript/lib/lib.es5.d.ts",
-							"qualifiedName": "Date"
-						},
-						"name": "Date",
-						"package": "typescript"
-					}
-				},
-				{
-					"id": 13967,
-					"name": "deleted_at",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "union",
-						"types": [
-							{
-								"type": "literal",
-								"value": null
-							},
-							{
-								"type": "reference",
-								"target": {
-									"sourceFileName": "../../node_modules/typescript/lib/lib.es5.d.ts",
-									"qualifiedName": "Date"
-								},
-								"name": "Date",
-								"package": "typescript"
-							}
-						]
-					},
-					"defaultValue": "null"
-				},
-				{
-					"id": 13968,
-					"name": "onInit",
-					"variant": "declaration",
-					"kind": 2048,
-					"flags": {},
-					"signatures": [
-						{
-							"id": 13969,
-							"name": "onInit",
-							"variant": "signature",
-							"kind": 4096,
-							"flags": {},
-							"type": {
-								"type": "intrinsic",
-								"name": "void"
-							}
-						}
-					]
-				},
-				{
-					"id": 13970,
-					"name": "beforeCreate",
-					"variant": "declaration",
-					"kind": 2048,
-					"flags": {},
-					"signatures": [
-						{
-							"id": 13971,
-							"name": "beforeCreate",
-							"variant": "signature",
-							"kind": 4096,
-							"flags": {},
-							"type": {
-								"type": "intrinsic",
-								"name": "void"
-							}
-						}
-					]
-				}
-			],
-			"groups": [
-				{
-					"title": "Constructors",
-					"children": [
-						13957
-					]
-				},
-				{
-					"title": "Properties",
-					"children": [
-						13972,
-						13959,
-						13960,
-						13961,
-						13962,
-						13963,
-						13964,
-						13965,
-						13966,
-						13967
-					]
-				},
-				{
-					"title": "Methods",
-					"children": [
-						13968,
-						13970
-					]
-				}
-			]
+				],
+				"name": "DmlEntity",
+				"package": "@medusajs/utils"
+			},
+			"defaultValue": "..."
 		},
 		{
-			"id": 13939,
+			"id": 16931,
 			"name": "User",
 			"variant": "declaration",
-			"kind": 128,
-			"flags": {},
-			"children": [
-				{
-					"id": 13940,
-					"name": "constructor",
-					"variant": "declaration",
-					"kind": 512,
-					"flags": {},
-					"signatures": [
-						{
-							"id": 13941,
-							"name": "new User",
-							"variant": "signature",
-							"kind": 16384,
-							"flags": {},
-							"type": {
-								"type": "reference",
-								"target": 13939,
-								"name": "User",
-								"package": "@medusajs/user",
-								"qualifiedName": "default"
-							}
-						}
-					]
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"type": {
+				"type": "reference",
+				"target": {
+					"sourceFileName": "../../../../packages/core/utils/src/dml/entity.ts",
+					"qualifiedName": "DmlEntity"
 				},
-				{
-					"id": 13955,
-					"name": "[OptionalProps]",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {
-						"isOptional": true
-					},
-					"type": {
+				"typeArguments": [
+					{
 						"type": "reference",
 						"target": {
-							"sourceFileName": "../../../../packages/modules/user/src/models/user.ts",
-							"qualifiedName": "OptionalFields"
+							"sourceFileName": "../../../../packages/core/utils/src/dml/entity.ts",
+							"qualifiedName": "DMLEntitySchemaBuilder"
 						},
-						"name": "OptionalFields",
-						"package": "@medusajs/user"
+						"typeArguments": [
+							{
+								"type": "reflection",
+								"declaration": {
+									"id": 16932,
+									"name": "__type",
+									"variant": "declaration",
+									"kind": 65536,
+									"flags": {},
+									"children": [
+										{
+											"id": 16933,
+											"name": "id",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "The ID of the user."
+													}
+												]
+											},
+											"type": {
+												"type": "reference",
+												"target": {
+													"sourceFileName": "../../../../packages/core/utils/src/dml/properties/primary-key.ts",
+													"qualifiedName": "PrimaryKeyModifier"
+												},
+												"typeArguments": [
+													{
+														"type": "reference",
+														"target": {
+															"sourceFileName": "../../../../packages/core/utils/src/dml/properties/id.ts",
+															"qualifiedName": "IdProperty"
+														},
+														"name": "IdProperty",
+														"package": "@medusajs/utils"
+													}
+												],
+												"name": "PrimaryKeyModifier",
+												"package": "@medusajs/utils"
+											},
+											"defaultValue": "..."
+										},
+										{
+											"id": 16934,
+											"name": "first_name",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {
+												"isOptional": true
+											},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "The first name of the user."
+													}
+												]
+											},
+											"type": {
+												"type": "reference",
+												"target": {
+													"sourceFileName": "../../../../packages/core/utils/src/dml/properties/text.ts",
+													"qualifiedName": "TextProperty"
+												},
+												"name": "TextProperty",
+												"package": "@medusajs/utils"
+											},
+											"defaultValue": "..."
+										},
+										{
+											"id": 16935,
+											"name": "last_name",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {
+												"isOptional": true
+											},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "The last name of the user."
+													}
+												]
+											},
+											"type": {
+												"type": "reference",
+												"target": {
+													"sourceFileName": "../../../../packages/core/utils/src/dml/properties/text.ts",
+													"qualifiedName": "TextProperty"
+												},
+												"name": "TextProperty",
+												"package": "@medusajs/utils"
+											},
+											"defaultValue": "..."
+										},
+										{
+											"id": 16936,
+											"name": "email",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "The email of the user."
+													}
+												]
+											},
+											"type": {
+												"type": "reference",
+												"target": {
+													"sourceFileName": "../../../../packages/core/utils/src/dml/properties/text.ts",
+													"qualifiedName": "TextProperty"
+												},
+												"name": "TextProperty",
+												"package": "@medusajs/utils"
+											},
+											"defaultValue": "..."
+										},
+										{
+											"id": 16937,
+											"name": "avatar_url",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {
+												"isOptional": true
+											},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "The image URL of the user's avatar."
+													}
+												]
+											},
+											"type": {
+												"type": "reference",
+												"target": {
+													"sourceFileName": "../../../../packages/core/utils/src/dml/properties/text.ts",
+													"qualifiedName": "TextProperty"
+												},
+												"name": "TextProperty",
+												"package": "@medusajs/utils"
+											},
+											"defaultValue": "..."
+										},
+										{
+											"id": 16938,
+											"name": "metadata",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {
+												"isOptional": true
+											},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "Holds custom data in key-value pairs."
+													}
+												]
+											},
+											"type": {
+												"type": "reference",
+												"target": {
+													"sourceFileName": "../../../../packages/core/utils/src/dml/properties/json.ts",
+													"qualifiedName": "JSONProperty"
+												},
+												"name": "JSONProperty",
+												"package": "@medusajs/utils"
+											},
+											"defaultValue": "..."
+										}
+									],
+									"groups": [
+										{
+											"title": "Properties",
+											"children": [
+												16933,
+												16934,
+												16935,
+												16936,
+												16937,
+												16938
+											]
+										}
+									]
+								}
+							}
+						],
+						"name": "DMLEntitySchemaBuilder",
+						"package": "@medusajs/utils"
+					},
+					{
+						"type": "literal",
+						"value": "user"
 					}
-				},
-				{
-					"id": 13942,
-					"name": "id",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "intrinsic",
-						"name": "string"
-					}
-				},
-				{
-					"id": 13943,
-					"name": "first_name",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "union",
-						"types": [
-							{
-								"type": "literal",
-								"value": null
-							},
-							{
-								"type": "intrinsic",
-								"name": "string"
-							}
-						]
-					},
-					"defaultValue": "null"
-				},
-				{
-					"id": 13944,
-					"name": "last_name",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "union",
-						"types": [
-							{
-								"type": "literal",
-								"value": null
-							},
-							{
-								"type": "intrinsic",
-								"name": "string"
-							}
-						]
-					},
-					"defaultValue": "null"
-				},
-				{
-					"id": 13945,
-					"name": "email",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "intrinsic",
-						"name": "string"
-					}
-				},
-				{
-					"id": 13946,
-					"name": "avatar_url",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "union",
-						"types": [
-							{
-								"type": "literal",
-								"value": null
-							},
-							{
-								"type": "intrinsic",
-								"name": "string"
-							}
-						]
-					},
-					"defaultValue": "null"
-				},
-				{
-					"id": 13947,
-					"name": "metadata",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "union",
-						"types": [
-							{
-								"type": "literal",
-								"value": null
-							},
-							{
-								"type": "reference",
-								"target": {
-									"sourceFileName": "../../node_modules/typescript/lib/lib.es5.d.ts",
-									"qualifiedName": "Record"
-								},
-								"typeArguments": [
-									{
-										"type": "intrinsic",
-										"name": "string"
-									},
-									{
-										"type": "intrinsic",
-										"name": "unknown"
-									}
-								],
-								"name": "Record",
-								"package": "typescript"
-							}
-						]
-					},
-					"defaultValue": "null"
-				},
-				{
-					"id": 13948,
-					"name": "created_at",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "reference",
-						"target": {
-							"sourceFileName": "../../node_modules/typescript/lib/lib.es5.d.ts",
-							"qualifiedName": "Date"
-						},
-						"name": "Date",
-						"package": "typescript"
-					}
-				},
-				{
-					"id": 13949,
-					"name": "updated_at",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {},
-					"type": {
-						"type": "reference",
-						"target": {
-							"sourceFileName": "../../node_modules/typescript/lib/lib.es5.d.ts",
-							"qualifiedName": "Date"
-						},
-						"name": "Date",
-						"package": "typescript"
-					}
-				},
-				{
-					"id": 13950,
-					"name": "deleted_at",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {
-						"isOptional": true
-					},
-					"type": {
-						"type": "union",
-						"types": [
-							{
-								"type": "literal",
-								"value": null
-							},
-							{
-								"type": "reference",
-								"target": {
-									"sourceFileName": "../../node_modules/typescript/lib/lib.es5.d.ts",
-									"qualifiedName": "Date"
-								},
-								"name": "Date",
-								"package": "typescript"
-							}
-						]
-					},
-					"defaultValue": "null"
-				},
-				{
-					"id": 13951,
-					"name": "onCreate",
-					"variant": "declaration",
-					"kind": 2048,
-					"flags": {},
-					"signatures": [
-						{
-							"id": 13952,
-							"name": "onCreate",
-							"variant": "signature",
-							"kind": 4096,
-							"flags": {},
-							"type": {
-								"type": "intrinsic",
-								"name": "void"
-							}
-						}
-					]
-				},
-				{
-					"id": 13953,
-					"name": "onInit",
-					"variant": "declaration",
-					"kind": 2048,
-					"flags": {},
-					"signatures": [
-						{
-							"id": 13954,
-							"name": "onInit",
-							"variant": "signature",
-							"kind": 4096,
-							"flags": {},
-							"type": {
-								"type": "intrinsic",
-								"name": "void"
-							}
-						}
-					]
-				}
-			],
-			"groups": [
-				{
-					"title": "Constructors",
-					"children": [
-						13940
-					]
-				},
-				{
-					"title": "Properties",
-					"children": [
-						13955,
-						13942,
-						13943,
-						13944,
-						13945,
-						13946,
-						13947,
-						13948,
-						13949,
-						13950
-					]
-				},
-				{
-					"title": "Methods",
-					"children": [
-						13951,
-						13953
-					]
-				}
-			]
+				],
+				"name": "DmlEntity",
+				"package": "@medusajs/utils"
+			},
+			"defaultValue": "..."
 		}
 	],
 	"groups": [
 		{
-			"title": "Classes",
+			"title": "Variables",
 			"children": [
-				13956,
-				13939
+				16939,
+				16931
 			]
 		}
 	],
 	"packageName": "@medusajs/user",
 	"symbolIdMap": {
-		"13938": {
+		"16930": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/index.ts",
 			"qualifiedName": ""
 		},
-		"13939": {
+		"16931": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/user.ts",
-			"qualifiedName": "default"
+			"qualifiedName": "User"
 		},
-		"13942": {
+		"16932": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/user.ts",
-			"qualifiedName": "default.id"
+			"qualifiedName": "__object"
 		},
-		"13943": {
+		"16933": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/user.ts",
-			"qualifiedName": "default.first_name"
+			"qualifiedName": "__object.id"
 		},
-		"13944": {
+		"16934": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/user.ts",
-			"qualifiedName": "default.last_name"
+			"qualifiedName": "__object.first_name"
 		},
-		"13945": {
+		"16935": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/user.ts",
-			"qualifiedName": "default.email"
+			"qualifiedName": "__object.last_name"
 		},
-		"13946": {
+		"16936": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/user.ts",
-			"qualifiedName": "default.avatar_url"
+			"qualifiedName": "__object.email"
 		},
-		"13947": {
+		"16937": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/user.ts",
-			"qualifiedName": "default.metadata"
+			"qualifiedName": "__object.avatar_url"
 		},
-		"13948": {
+		"16938": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/user.ts",
-			"qualifiedName": "default.created_at"
+			"qualifiedName": "__object.metadata"
 		},
-		"13949": {
-			"sourceFileName": "../../../../packages/modules/user/src/models/user.ts",
-			"qualifiedName": "default.updated_at"
-		},
-		"13950": {
-			"sourceFileName": "../../../../packages/modules/user/src/models/user.ts",
-			"qualifiedName": "default.deleted_at"
-		},
-		"13951": {
-			"sourceFileName": "../../../../packages/modules/user/src/models/user.ts",
-			"qualifiedName": "default.onCreate"
-		},
-		"13952": {
-			"sourceFileName": "../../../../packages/modules/user/src/models/user.ts",
-			"qualifiedName": "default.onCreate"
-		},
-		"13953": {
-			"sourceFileName": "../../../../packages/modules/user/src/models/user.ts",
-			"qualifiedName": "default.onInit"
-		},
-		"13954": {
-			"sourceFileName": "../../../../packages/modules/user/src/models/user.ts",
-			"qualifiedName": "default.onInit"
-		},
-		"13955": {
-			"sourceFileName": "../../../../packages/modules/user/src/models/user.ts",
-			"qualifiedName": "default.[OptionalProps]"
-		},
-		"13956": {
+		"16939": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/invite.ts",
-			"qualifiedName": "default"
+			"qualifiedName": "Invite"
 		},
-		"13959": {
+		"16940": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/invite.ts",
-			"qualifiedName": "default.id"
+			"qualifiedName": "__object"
 		},
-		"13960": {
+		"16941": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/invite.ts",
-			"qualifiedName": "default.email"
+			"qualifiedName": "__object.id"
 		},
-		"13961": {
+		"16942": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/invite.ts",
-			"qualifiedName": "default.accepted"
+			"qualifiedName": "__object.email"
 		},
-		"13962": {
+		"16943": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/invite.ts",
-			"qualifiedName": "default.token"
+			"qualifiedName": "__object.accepted"
 		},
-		"13963": {
+		"16944": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/invite.ts",
-			"qualifiedName": "default.expires_at"
+			"qualifiedName": "__object.token"
 		},
-		"13964": {
+		"16945": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/invite.ts",
-			"qualifiedName": "default.metadata"
+			"qualifiedName": "__object.expires_at"
 		},
-		"13965": {
+		"16946": {
 			"sourceFileName": "../../../../packages/modules/user/src/models/invite.ts",
-			"qualifiedName": "default.created_at"
-		},
-		"13966": {
-			"sourceFileName": "../../../../packages/modules/user/src/models/invite.ts",
-			"qualifiedName": "default.updated_at"
-		},
-		"13967": {
-			"sourceFileName": "../../../../packages/modules/user/src/models/invite.ts",
-			"qualifiedName": "default.deleted_at"
-		},
-		"13968": {
-			"sourceFileName": "../../../../packages/modules/user/src/models/invite.ts",
-			"qualifiedName": "default.onInit"
-		},
-		"13969": {
-			"sourceFileName": "../../../../packages/modules/user/src/models/invite.ts",
-			"qualifiedName": "default.onInit"
-		},
-		"13970": {
-			"sourceFileName": "../../../../packages/modules/user/src/models/invite.ts",
-			"qualifiedName": "default.beforeCreate"
-		},
-		"13971": {
-			"sourceFileName": "../../../../packages/modules/user/src/models/invite.ts",
-			"qualifiedName": "default.beforeCreate"
-		},
-		"13972": {
-			"sourceFileName": "../../../../packages/modules/user/src/models/invite.ts",
-			"qualifiedName": "default.[OptionalProps]"
+			"qualifiedName": "__object.metadata"
 		}
 	},
 	"files": {
@@ -721,7 +545,7 @@
 			"1": "../../../../packages/modules/user/src/models/index.ts"
 		},
 		"reflections": {
-			"1": 13938
+			"1": 16930
 		}
 	}
 }

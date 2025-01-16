@@ -2,15 +2,12 @@
  * @oas [post] /admin/api-keys
  * operationId: PostApiKeys
  * summary: Create Api Key
- * description: >
+ * description: |
  *   Create a secret or publishable API key.
- * 
  *   A secret API key is used for admin authentication.
- * 
  * 
  *   A publishable API key is used by client applications to set the scope of the request.
  * x-authenticated: true
- * parameters: []
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -25,7 +22,7 @@
  *     label: cURL
  *     source: |-
  *       curl -X POST '{backend_url}/admin/api-keys' \
- *       -H 'x-medusa-access-token: {api_token}' \
+ *       -H 'Authorization: Bearer {access_token}' \
  *       -H 'Content-Type: application/json' \
  *       --data-raw '{
  *         "title": "{value}",

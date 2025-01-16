@@ -1,17 +1,17 @@
-import { IWorkflowEngineService } from "@medusajs/types"
+import { IWorkflowEngineService } from "@medusajs/framework/types"
 import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
-} from "../../../../../../../types/routing"
+} from "@medusajs/framework/http"
 
-import { ModuleRegistrationName } from "@medusajs/utils"
+import { Modules } from "@medusajs/framework/utils"
 
 export const GET = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
   const workflowEngineService: IWorkflowEngineService = req.scope.resolve(
-    ModuleRegistrationName.WORKFLOW_ENGINE
+    Modules.WORKFLOW_ENGINE
   )
 
   const { workflow_id, transaction_id } = req.query as any

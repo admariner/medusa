@@ -1,30 +1,67 @@
-import { IProductModuleService, ProductTypes } from "@medusajs/types"
+import { IProductModuleService, ProductTypes } from "@medusajs/framework/types"
 import {
   MedusaError,
-  ModuleRegistrationName,
+  Modules,
   getSelectsAndRelationsFromObjectArray,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The details of the products update.
+ */
 export type UpdateProductsStepInput =
   | {
+    /**
+     * The filters to select the products to update.
+     */
       selector: ProductTypes.FilterableProductProps
+      /**
+       * The data to update the products with.
+       */
       update: ProductTypes.UpdateProductDTO
     }
   | {
+    /**
+     * The data to create or update products.
+     */
       products: ProductTypes.UpsertProductDTO[]
     }
 
 export const updateProductsStepId = "update-products"
 /**
  * This step updates one or more products.
+ * 
+ * @example
+ * To update products by their ID:
+ * 
+ * ```ts
+ * const data = updateProductsStep({
+ *   products: [
+ *     {
+ *       id: "prod_123",
+ *       title: "Shirt"
+ *     }
+ *   ]
+ * })
+ * ```
+ * 
+ * To update products matching a filter:
+ * 
+ * ```ts
+ * const data = updateProductsStep({
+ *   selector: {
+ *     collection_id: "collection_123",
+ *   },
+ *   update: {
+ *     material: "cotton",
+ *   }
+ * })
+ * ```
  */
 export const updateProductsStep = createStep(
   updateProductsStepId,
   async (data: UpdateProductsStepInput, { container }) => {
-    const service = container.resolve<IProductModuleService>(
-      ModuleRegistrationName.PRODUCT
-    )
+    const service = container.resolve<IProductModuleService>(Modules.PRODUCT)
 
     if ("products" in data) {
       if (data.products.some((p) => !p.id)) {
@@ -63,9 +100,7 @@ export const updateProductsStep = createStep(
       return
     }
 
-    const service = container.resolve<IProductModuleService>(
-      ModuleRegistrationName.PRODUCT
-    )
+    const service = container.resolve<IProductModuleService>(Modules.PRODUCT)
 
     await service.upsertProducts(
       prevData.map((r) => ({

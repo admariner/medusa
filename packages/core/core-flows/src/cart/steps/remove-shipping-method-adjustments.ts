@@ -1,8 +1,14 @@
-import { ICartModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import { ICartModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The details of the shipping method adjustments to remove.
+ */
 export interface RemoveShippingMethodAdjustmentsStepInput {
+  /**
+   * The IDs of the shipping method adjustments to remove.
+   */
   shippingMethodAdjustmentIdsToRemove: string[]
 }
 
@@ -16,7 +22,7 @@ export const removeShippingMethodAdjustmentsStep = createStep(
   async (data: RemoveShippingMethodAdjustmentsStepInput, { container }) => {
     const { shippingMethodAdjustmentIdsToRemove = [] } = data
     const cartModuleService: ICartModuleService = container.resolve(
-      ModuleRegistrationName.CART
+      Modules.CART
     )
 
     await cartModuleService.softDeleteShippingMethodAdjustments(
@@ -27,7 +33,7 @@ export const removeShippingMethodAdjustmentsStep = createStep(
   },
   async (shippingMethodAdjustmentIdsToRemove, { container }) => {
     const cartModuleService: ICartModuleService = container.resolve(
-      ModuleRegistrationName.CART
+      Modules.CART
     )
 
     if (!shippingMethodAdjustmentIdsToRemove?.length) {

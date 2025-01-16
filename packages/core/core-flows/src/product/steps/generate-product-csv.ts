@@ -2,9 +2,9 @@ import {
   HttpTypes,
   IFileModuleService,
   IRegionModuleService,
-} from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 import { normalizeForExport } from "../helpers/normalize-for-export"
 import { convertJsonToCsv } from "../utlils"
 
@@ -58,20 +58,49 @@ const csvSortFunction = (a: string, b: string) => {
   return a.localeCompare(b)
 }
 
+/**
+ * The products to export.
+ */
+export type GenerateProductCsvStepInput = HttpTypes.AdminProduct[]
+
+/**
+ * The export's details.
+ */
+export type GenerateProductCsvStepOutput = {
+  /**
+   * The ID of the generated file as returned by the [File Module Provider](https://docs.medusajs.com/resources/architectural-modules/file).
+   */
+  id: string
+  /**
+   * The name of the generated file as returned by the [File Module Provider](https://docs.medusajs.com/resources/architectural-modules/file).
+   */
+  filename: string
+}
+
 export const generateProductCsvStepId = "generate-product-csv"
 /**
- * This step generates a CSV file to be exported.
+ * This step generates a CSV file that exports products. The CSV
+ * file is created and stored using the registered [File Module Provider](https://docs.medusajs.com/resources/architectural-modules/file).
+ * 
+ * @example
+ * const { data: products } = useQueryGraphStep({
+ *   entity: "product",
+ *   fields: ["*", "variants.*", "collection.*", "categories.*"]
+ * })
+ * 
+ * // @ts-ignore
+ * const data = generateProductCsvStep(products)
  */
 export const generateProductCsvStep = createStep(
   generateProductCsvStepId,
-  async (products: HttpTypes.AdminProduct[], { container }) => {
+  async (products: GenerateProductCsvStepInput, { container }) => {
     const regionService = container.resolve<IRegionModuleService>(
-      ModuleRegistrationName.REGION
+      Modules.REGION
     )
 
     const regions = await regionService.listRegions(
       {},
-      { select: ["id", "name", "currency_code"], take: null }
+      { select: ["id", "name", "currency_code"] }
     )
 
     const normalizedData = normalizeForExport(products, { regions })
@@ -79,9 +108,7 @@ export const generateProductCsvStep = createStep(
       sortHeader: csvSortFunction,
     })
 
-    const fileModule: IFileModuleService = container.resolve(
-      ModuleRegistrationName.FILE
-    )
+    const fileModule: IFileModuleService = container.resolve(Modules.FILE)
 
     const filename = `${Date.now()}-product-exports.csv`
     const file = await fileModule.createFiles({
@@ -90,16 +117,17 @@ export const generateProductCsvStep = createStep(
       content: csvContent,
     })
 
-    return new StepResponse({ id: file.id, filename }, file.id)
+    return new StepResponse(
+      { id: file.id, filename } as GenerateProductCsvStepOutput, 
+      file.id
+    )
   },
   async (fileId, { container }) => {
     if (!fileId) {
       return
     }
 
-    const fileModule: IFileModuleService = container.resolve(
-      ModuleRegistrationName.FILE
-    )
+    const fileModule: IFileModuleService = container.resolve(Modules.FILE)
     await fileModule.deleteFiles(fileId)
   }
 )

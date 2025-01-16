@@ -1,11 +1,10 @@
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { IPricingModuleService, IProductModuleService } from "@medusajs/types"
 import {
   ContainerRegistrationKeys,
-  ModuleRegistrationName,
   Modules,
   remoteQueryObjectFromString,
 } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
 
 jest.setTimeout(50000)
 
@@ -23,8 +22,8 @@ medusaIntegrationTestRunner({
 
       beforeAll(async () => {
         appContainer = getContainer()
-        productModule = appContainer.resolve(ModuleRegistrationName.PRODUCT)
-        pricingModule = appContainer.resolve(ModuleRegistrationName.PRICING)
+        productModule = appContainer.resolve(Modules.PRODUCT)
+        pricingModule = appContainer.resolve(Modules.PRICING)
         remoteQuery = appContainer.resolve(
           ContainerRegistrationKeys.REMOTE_QUERY
         )
@@ -57,7 +56,7 @@ medusaIntegrationTestRunner({
                 amount: 5000,
                 currency_code: "eur",
                 rules: {
-                  customer_group_id: "vip",
+                  "customer.groups.id": "vip",
                 },
               },
             ],
@@ -76,7 +75,7 @@ medusaIntegrationTestRunner({
                 amount: 100,
                 currency_code: "usd",
                 rules: {
-                  customer_group_id: "vip",
+                  "customer.groups.id": "vip",
                 },
               },
             ],
@@ -108,7 +107,9 @@ medusaIntegrationTestRunner({
             "variants.calculated_price": {
               context: {
                 currency_code: "usd",
-                customer_group_id: "vip",
+                customer: {
+                  groups: [{ id: "vip" }],
+                },
               },
             },
           },

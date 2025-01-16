@@ -2,29 +2,28 @@ import { archiveOrderWorkflow } from "@medusajs/core-flows"
 import {
   ContainerRegistrationKeys,
   remoteQueryObjectFromString,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
-} from "../../../../../types/routing"
-import { AdminArchiveOrderType } from "../../validators"
-import { HttpTypes } from "@medusajs/types"
+} from "@medusajs/framework/http"
+import { HttpTypes } from "@medusajs/framework/types"
 
 export const POST = async (
-  req: AuthenticatedMedusaRequest<AdminArchiveOrderType>,
+  req: AuthenticatedMedusaRequest,
   res: MedusaResponse<HttpTypes.AdminOrderResponse>
 ) => {
   const remoteQuery = req.scope.resolve(ContainerRegistrationKeys.REMOTE_QUERY)
   const { id } = req.params
 
   await archiveOrderWorkflow(req.scope).run({
-    input: { orderIds: [req.validatedBody.order_id] },
+    input: { orderIds: [id] },
   })
 
   const queryObject = remoteQueryObjectFromString({
     entryPoint: "order",
     variables: { id },
-    fields: req.remoteQueryConfig.fields,
+    fields: req.queryConfig.fields,
   })
 
   const [order] = await remoteQuery(queryObject)

@@ -1,1 +1,1 @@
-curl -X POST '{backend_url}/auth/customer/{auth_provider}/callback'
+curl -X POST '{backend_url}/auth/customer/google/callback?code=123'

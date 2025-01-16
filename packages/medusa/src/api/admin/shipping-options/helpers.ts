@@ -2,29 +2,25 @@ import {
   BatchMethodResponse,
   MedusaContainer,
   ShippingOptionRuleDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
   ContainerRegistrationKeys,
   promiseAll,
-  remoteQueryObjectFromString,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 
 export const refetchShippingOption = async (
   shippingOptionId: string,
   scope: MedusaContainer,
   fields: string[]
 ) => {
-  const remoteQuery = scope.resolve(ContainerRegistrationKeys.REMOTE_QUERY)
-  const queryObject = remoteQueryObjectFromString({
-    entryPoint: "shipping_option",
-    variables: {
-      filters: { id: shippingOptionId },
-    },
+  const query = scope.resolve(ContainerRegistrationKeys.QUERY)
+  const { data } = await query.graph({
+    entity: "shipping_option",
+    filters: { id: shippingOptionId },
     fields: fields,
   })
 
-  const shippingOptions = await remoteQuery(queryObject)
-  return shippingOptions[0]
+  return data[0]
 }
 
 export const refetchBatchRules = async (
@@ -32,40 +28,38 @@ export const refetchBatchRules = async (
   scope: MedusaContainer,
   fields: string[]
 ) => {
-  const remoteQuery = scope.resolve(ContainerRegistrationKeys.REMOTE_QUERY)
+  const query = scope.resolve(ContainerRegistrationKeys.QUERY)
   let created = Promise.resolve<ShippingOptionRuleDTO[]>([])
   let updated = Promise.resolve<ShippingOptionRuleDTO[]>([])
 
   if (batchResult.created.length) {
-    const createdQuery = remoteQueryObjectFromString({
-      entryPoint: "shipping_option_rule",
-      variables: {
+    created = query
+      .graph({
+        entity: "shipping_option_rule",
         filters: { id: batchResult.created.map((p) => p.id) },
-      },
-      fields: fields,
-    })
-
-    // @ts-expect-error "Remote query can return null"
-    created = remoteQuery(createdQuery)
+        fields: fields,
+      })
+      .then(({ data }) => data)
   }
 
   if (batchResult.updated.length) {
-    const updatedQuery = remoteQueryObjectFromString({
-      entryPoint: "shipping_option_rule",
-      variables: {
+    updated = query
+      .graph({
+        entity: "shipping_option_rule",
         filters: { id: batchResult.updated.map((p) => p.id) },
-      },
-      fields: fields,
-    })
-
-    // @ts-expect-error "Remote query can return null"
-    updated = remoteQuery(updatedQuery)
+        fields: fields,
+      })
+      .then(({ data }) => data)
   }
 
   const [createdRes, updatedRes] = await promiseAll([created, updated])
   return {
     created: createdRes,
     updated: updatedRes,
-    deleted: batchResult.deleted,
+    deleted: {
+      ids: batchResult.deleted,
+      object: "shipping_option_rule",
+      deleted: true,
+    },
   }
 }

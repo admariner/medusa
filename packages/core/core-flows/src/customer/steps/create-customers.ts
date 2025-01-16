@@ -1,6 +1,9 @@
-import { CreateCustomerDTO, ICustomerModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import {
+  CreateCustomerDTO,
+  ICustomerModuleService,
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const createCustomersStepId = "create-customers"
 /**
@@ -9,9 +12,7 @@ export const createCustomersStepId = "create-customers"
 export const createCustomersStep = createStep(
   createCustomersStepId,
   async (data: CreateCustomerDTO[], { container }) => {
-    const service = container.resolve<ICustomerModuleService>(
-      ModuleRegistrationName.CUSTOMER
-    )
+    const service = container.resolve<ICustomerModuleService>(Modules.CUSTOMER)
 
     const createdCustomers = await service.createCustomers(data)
 
@@ -25,9 +26,7 @@ export const createCustomersStep = createStep(
       return
     }
 
-    const service = container.resolve<ICustomerModuleService>(
-      ModuleRegistrationName.CUSTOMER
-    )
+    const service = container.resolve<ICustomerModuleService>(Modules.CUSTOMER)
 
     await service.deleteCustomers(createdCustomerIds)
   }

@@ -1,6 +1,6 @@
-import { IOrderModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { createStep, StepResponse } from "@medusajs/workflows-sdk"
+import { IOrderModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 
 export const deleteReturnReasonStepId = "delete-return-reasons"
 /**
@@ -9,9 +9,7 @@ export const deleteReturnReasonStepId = "delete-return-reasons"
 export const deleteReturnReasonStep = createStep(
   deleteReturnReasonStepId,
   async (ids: string[], { container }) => {
-    const service = container.resolve<IOrderModuleService>(
-      ModuleRegistrationName.ORDER
-    )
+    const service = container.resolve<IOrderModuleService>(Modules.ORDER)
 
     await service.softDeleteReturnReasons(ids)
 
@@ -22,9 +20,7 @@ export const deleteReturnReasonStep = createStep(
       return
     }
 
-    const service = container.resolve<IOrderModuleService>(
-      ModuleRegistrationName.ORDER
-    )
+    const service = container.resolve<IOrderModuleService>(Modules.ORDER)
 
     await service.restoreReturnReasons(prevReturnReasons)
   }

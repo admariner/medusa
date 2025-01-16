@@ -2,13 +2,13 @@ import {
   CustomerUpdatableFields,
   FilterableCustomerProps,
   ICustomerModuleService,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
-  ModuleRegistrationName,
+  Modules,
   getSelectsAndRelationsFromObjectArray,
   promiseAll,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export type UpdateCustomersStepInput = {
   selector: FilterableCustomerProps
@@ -22,9 +22,7 @@ export const updateCustomersStepId = "update-customer"
 export const updateCustomersStep = createStep(
   updateCustomersStepId,
   async (data: UpdateCustomersStepInput, { container }) => {
-    const service = container.resolve<ICustomerModuleService>(
-      ModuleRegistrationName.CUSTOMER
-    )
+    const service = container.resolve<ICustomerModuleService>(Modules.CUSTOMER)
 
     const { selects, relations } = getSelectsAndRelationsFromObjectArray([
       data.update,
@@ -43,9 +41,7 @@ export const updateCustomersStep = createStep(
       return
     }
 
-    const service = container.resolve<ICustomerModuleService>(
-      ModuleRegistrationName.CUSTOMER
-    )
+    const service = container.resolve<ICustomerModuleService>(Modules.CUSTOMER)
 
     await promiseAll(
       prevCustomers.map((c) =>

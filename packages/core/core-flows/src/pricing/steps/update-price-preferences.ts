@@ -1,9 +1,12 @@
-import { PricingWorkflow, IPricingModuleService } from "@medusajs/types"
 import {
-  ModuleRegistrationName,
+  IPricingModuleService,
+  PricingWorkflow,
+} from "@medusajs/framework/types"
+import {
+  Modules,
   getSelectsAndRelationsFromObjectArray,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const updatePricePreferencesStepId = "update-price-preferences"
 /**
@@ -11,10 +14,11 @@ export const updatePricePreferencesStepId = "update-price-preferences"
  */
 export const updatePricePreferencesStep = createStep(
   updatePricePreferencesStepId,
-  async (input: PricingWorkflow.UpdatePricePreferencesWorkflowInput, { container }) => {
-    const service = container.resolve<IPricingModuleService>(
-      ModuleRegistrationName.PRICING
-    )
+  async (
+    input: PricingWorkflow.UpdatePricePreferencesWorkflowInput,
+    { container }
+  ) => {
+    const service = container.resolve<IPricingModuleService>(Modules.PRICING)
 
     const { selects, relations } = getSelectsAndRelationsFromObjectArray([
       input.update,
@@ -37,9 +41,7 @@ export const updatePricePreferencesStep = createStep(
       return
     }
 
-    const service = container.resolve<IPricingModuleService>(
-      ModuleRegistrationName.PRICING
-    )
+    const service = container.resolve<IPricingModuleService>(Modules.PRICING)
 
     await service.upsertPricePreferences(prevData)
   }

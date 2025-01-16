@@ -1,20 +1,27 @@
-import { IOrderModuleService, UpdateOrderExchangeDTO } from "@medusajs/types"
 import {
-  ModuleRegistrationName,
+  IOrderModuleService,
+  UpdateOrderExchangeDTO,
+} from "@medusajs/framework/types"
+import {
+  Modules,
   getSelectsAndRelationsFromObjectArray,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const updateOrderExchangesStepId = "update-order-exchange"
 /**
  * This step updates one or more exchanges.
+ * 
+ * @example
+ * const data = updateOrderExchangesStep([{
+ *   "id": "exchange_123",
+ *   no_notification: true
+ * }])
  */
 export const updateOrderExchangesStep = createStep(
   updateOrderExchangesStepId,
   async (data: UpdateOrderExchangeDTO[], { container }) => {
-    const service = container.resolve<IOrderModuleService>(
-      ModuleRegistrationName.ORDER
-    )
+    const service = container.resolve<IOrderModuleService>(Modules.ORDER)
 
     const { selects, relations } = getSelectsAndRelationsFromObjectArray(data, {
       objectFields: ["metadata"],
@@ -41,9 +48,7 @@ export const updateOrderExchangesStep = createStep(
       return
     }
 
-    const service = container.resolve<IOrderModuleService>(
-      ModuleRegistrationName.ORDER
-    )
+    const service = container.resolve<IOrderModuleService>(Modules.ORDER)
 
     await service.updateOrderExchanges(
       dataBeforeUpdate.map((dt) => {

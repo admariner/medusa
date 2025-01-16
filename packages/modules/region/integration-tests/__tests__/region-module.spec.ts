@@ -1,6 +1,6 @@
-import { IRegionModuleService } from "@medusajs/types"
-import { Module, Modules } from "@medusajs/utils"
-import { moduleIntegrationTestRunner } from "medusa-test-utils"
+import { IRegionModuleService } from "@medusajs/framework/types"
+import { Module, Modules } from "@medusajs/framework/utils"
+import { moduleIntegrationTestRunner } from "@medusajs/test-utils"
 import { RegionModuleService } from "@services"
 
 jest.setTimeout(30000)
@@ -24,6 +24,7 @@ moduleIntegrationTestRunner<IRegionModuleService>({
           region: {
             id: {
               linkable: "region_id",
+              entity: "Region",
               primaryKey: "id",
               serviceName: "region",
               field: "region",
@@ -32,6 +33,7 @@ moduleIntegrationTestRunner<IRegionModuleService>({
           country: {
             iso_2: {
               linkable: "country_iso_2",
+              entity: "Country",
               primaryKey: "iso_2",
               serviceName: "region",
               field: "country",
@@ -41,7 +43,7 @@ moduleIntegrationTestRunner<IRegionModuleService>({
       })
 
       it("should create countries on application start", async () => {
-        const countries = await service.listCountries({}, { take: null })
+        const countries = await service.listCountries({}, {})
         expect(countries.length).toEqual(250)
       })
 
@@ -399,6 +401,32 @@ moduleIntegrationTestRunner<IRegionModuleService>({
         })
 
         expect(resp.countries).toHaveLength(2)
+      })
+
+      it("should delete a region without countries", async () => {
+        const createdRegion = await service.createRegions({
+          name: "North America",
+          currency_code: "USD",
+          countries: [],
+        })
+
+        await service.softDeleteRegions([createdRegion.id])
+
+        const [deletedRegion] = await service.listRegions(
+          { id: createdRegion.id },
+          { withDeleted: true }
+        )
+
+        expect(deletedRegion).toEqual({
+          id: createdRegion.id,
+          name: createdRegion.name,
+          currency_code: createdRegion.currency_code,
+          metadata: null,
+          automatic_taxes: createdRegion.automatic_taxes,
+          created_at: expect.any(Date),
+          updated_at: expect.any(Date),
+          deleted_at: expect.any(Date),
+        })
       })
 
       it("should unset the region ID on the country when soft deleting a region", async () => {

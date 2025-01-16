@@ -1,19 +1,19 @@
-import { IPromotionModuleService } from "@medusajs/types"
+import { IPromotionModuleService } from "@medusajs/framework/types"
 import {
   ApplicationMethodType,
   CampaignBudgetType,
   Module,
   Modules,
   PromotionType,
-} from "@medusajs/utils"
-import { moduleIntegrationTestRunner, SuiteOptions } from "medusa-test-utils"
+} from "@medusajs/framework/utils"
+import { PromotionModuleService } from "@services"
+import { SuiteOptions, moduleIntegrationTestRunner } from "@medusajs/test-utils"
 import { createCampaigns } from "../../../__fixtures__/campaigns"
 import {
   createDefaultPromotion,
   createDefaultPromotions,
   createPromotions,
 } from "../../../__fixtures__/promotion"
-import { PromotionModuleService } from "@services"
 
 jest.setTimeout(30000)
 
@@ -47,6 +47,7 @@ moduleIntegrationTestRunner({
           promotion: {
             id: {
               linkable: "promotion_id",
+              entity: "Promotion",
               primaryKey: "id",
               serviceName: "promotion",
               field: "promotion",
@@ -55,6 +56,7 @@ moduleIntegrationTestRunner({
           campaign: {
             id: {
               linkable: "campaign_id",
+              entity: "Campaign",
               primaryKey: "id",
               serviceName: "promotion",
               field: "campaign",
@@ -63,6 +65,7 @@ moduleIntegrationTestRunner({
           promotionRule: {
             id: {
               linkable: "promotion_rule_id",
+              entity: "PromotionRule",
               primaryKey: "id",
               serviceName: "promotion",
               field: "promotionRule",
@@ -505,7 +508,7 @@ moduleIntegrationTestRunner({
           )
         })
 
-        it("should create a buyget promotion with rules successfully", async () => {
+        it("should create a budget promotion with rules successfully", async () => {
           const createdPromotion = await createDefaultPromotion(service, {
             type: PromotionType.BUYGET,
             application_method: {
@@ -635,7 +638,7 @@ moduleIntegrationTestRunner({
               application_method: expect.objectContaining({
                 target_type: "order",
                 allocation: "across",
-                max_quantity: 0,
+                max_quantity: null,
               }),
             })
           )
@@ -851,6 +854,7 @@ moduleIntegrationTestRunner({
               code: "PROMOTION_1",
               application_method: {
                 id: expect.any(String),
+                promotion_id: expect.any(String),
                 type: "fixed",
               },
             },

@@ -1,11 +1,11 @@
 import { IFulfillmentModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
+import { Modules } from "@medusajs/utils"
 import {
   adminHeaders,
   createAdminUser,
 } from "../../../../helpers/create-admin-user"
 
-const { medusaIntegrationTestRunner } = require("medusa-test-utils")
+const { medusaIntegrationTestRunner } = require("@medusajs/test-utils")
 
 jest.setTimeout(30000)
 
@@ -29,7 +29,7 @@ medusaIntegrationTestRunner({
 
       // TODO: Add support for creating fulfillment sets through HTTP
       const fulfillmentModule: IFulfillmentModuleService =
-        getContainer().resolve(ModuleRegistrationName.FULFILLMENT)
+        getContainer().resolve(Modules.FULFILLMENT)
 
       fulfillmentSet1 = await fulfillmentModule.createFulfillmentSets({
         name: "Test fulfillment set",

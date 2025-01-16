@@ -85,8 +85,8 @@ export class LocalWorkflow {
       container = createMedusaContainer()
 
       for (const mod of modulesLoaded || []) {
-        const registrationName = mod.__definition.registrationName
-        container.register(registrationName, asValue(mod))
+        const keyName = mod.__definition.key
+        container.register(keyName, asValue(mod))
       }
     }
 
@@ -101,8 +101,8 @@ export class LocalWorkflow {
     // eslint-disable-next-line
     const this_ = this
     const originalResolver = container.resolve
-    container.resolve = function (registrationName, opts) {
-      const resolved = originalResolver(registrationName, opts)
+    container.resolve = function (keyName, opts) {
+      const resolved = originalResolver(keyName, opts)
       if (resolved?.constructor?.__type !== MedusaModuleType) {
         return resolved
       }
@@ -131,6 +131,7 @@ export class LocalWorkflow {
         },
       })
     }
+
     return container
   }
 
@@ -369,9 +370,11 @@ export class LocalWorkflow {
 
     await orchestrator.resume(transaction)
 
-    cleanUpEventListeners()
-
-    return transaction
+    try {
+      return transaction
+    } finally {
+      cleanUpEventListeners()
+    }
   }
 
   async getRunningTransaction(uniqueTransactionId: string, context?: Context) {
@@ -406,9 +409,11 @@ export class LocalWorkflow {
 
     await orchestrator.cancelTransaction(transaction)
 
-    cleanUpEventListeners()
-
-    return transaction
+    try {
+      return transaction
+    } finally {
+      cleanUpEventListeners()
+    }
   }
 
   async registerStepSuccess(
@@ -433,9 +438,11 @@ export class LocalWorkflow {
       response
     )
 
-    cleanUpEventListeners()
-
-    return transaction
+    try {
+      return transaction
+    } finally {
+      cleanUpEventListeners()
+    }
   }
 
   async registerStepFailure(
@@ -459,9 +466,11 @@ export class LocalWorkflow {
       handler(this.container_, context)
     )
 
-    cleanUpEventListeners()
-
-    return transaction
+    try {
+      return transaction
+    } finally {
+      cleanUpEventListeners()
+    }
   }
 
   setOptions(options: Partial<TransactionModelOptions>) {

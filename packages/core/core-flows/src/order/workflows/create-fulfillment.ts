@@ -6,8 +6,13 @@ import {
   OrderLineItemDTO,
   OrderWorkflow,
   ReservationItemDTO,
-} from "@medusajs/types"
-import { MathBN, MedusaError, Modules } from "@medusajs/utils"
+} from "@medusajs/framework/types"
+import {
+  MathBN,
+  MedusaError,
+  Modules,
+  OrderWorkflowEvents,
+} from "@medusajs/framework/utils"
 import {
   WorkflowData,
   WorkflowResponse,
@@ -16,8 +21,12 @@ import {
   createWorkflow,
   parallelize,
   transform,
-} from "@medusajs/workflows-sdk"
-import { createRemoteLinkStep, useRemoteQueryStep } from "../../common"
+} from "@medusajs/framework/workflows-sdk"
+import {
+  createRemoteLinkStep,
+  emitEventStep,
+  useRemoteQueryStep,
+} from "../../common"
 import { createFulfillmentWorkflow } from "../../fulfillment"
 import { adjustInventoryLevelsStep } from "../../inventory"
 import {
@@ -26,27 +35,60 @@ import {
 } from "../../reservation"
 import { registerOrderFulfillmentStep } from "../steps"
 import {
+  throwIfItemsAreNotGroupedByShippingRequirement,
   throwIfItemsDoesNotExistsInOrder,
   throwIfOrderIsCancelled,
 } from "../utils/order-validation"
 
 /**
- * This step validates that a fulfillment can be created for an order.
+ * The data to validate the order fulfillment creation.
+ */
+export type CreateFulfillmentValidateOrderStepInput = {
+  /**
+   * The order to create the fulfillment for.
+   */
+  order: OrderDTO
+  /**
+   * The items to fulfill.
+   */
+  inputItems: OrderWorkflow.CreateOrderFulfillmentWorkflowInput["items"]
+}
+
+/**
+ * This step validates that a fulfillment can be created for an order. If the order
+ * is canceled, the items don't exist in the order, or the items aren't grouped by
+ * shipping requirement, the step throws an error.
+ * 
+ * :::note
+ * 
+ * You can retrieve an order's details using [Query](https://docs.medusajs.com/learn/fundamentals/module-links/query),
+ * or [useQueryGraphStep](https://docs.medusajs.com/resources/references/medusa-workflows/steps/useQueryGraphStep).
+ * 
+ * :::
+ * 
+ * @example
+ * const data = createFulfillmentValidateOrder({
+ *   order: {
+ *     id: "order_123",
+ *     // other order details...
+ *   },
+ *   inputItems: [
+ *     {
+ *       id: "orli_123",
+ *       quantity: 1,
+ *     }
+ *   ]
+ * })
  */
 export const createFulfillmentValidateOrder = createStep(
   "create-fulfillment-validate-order",
-  (
-    {
-      order,
-      inputItems,
-    }: {
-      order: OrderDTO
-      inputItems: OrderWorkflow.CreateOrderFulfillmentWorkflowInput["items"]
-    },
-    context
-  ) => {
+  ({
+    order,
+    inputItems,
+  }: CreateFulfillmentValidateOrderStepInput) => {
     throwIfOrderIsCancelled({ order })
     throwIfItemsDoesNotExistsInOrder({ order, inputItems })
+    throwIfItemsAreNotGroupedByShippingRequirement({ order, inputItems })
   }
 )
 
@@ -91,16 +133,29 @@ function prepareFulfillmentData({
   reservations: ReservationItemDTO[]
   itemsList?: OrderLineItemDTO[]
 }) {
-  const inputItems = input.items
+  const fulfillableItems = input.items
   const orderItemsMap = new Map<string, Required<OrderDTO>["items"][0]>(
     (itemsList ?? order.items)!.map((i) => [i.id, i])
   )
+
   const reservationItemMap = new Map<string, ReservationItemDTO>(
     reservations.map((r) => [r.line_item_id as string, r])
   )
-  const fulfillmentItems = inputItems.map((i) => {
+
+  // Note: If any of the items require shipping, we enable fulfillment
+  // unless explicitly set to not require shipping by the item in the request
+  const someItemsRequireShipping = fulfillableItems.length
+    ? fulfillableItems.some((item) => {
+        const orderItem = orderItemsMap.get(item.id)!
+
+        return orderItem.requires_shipping
+      })
+    : true
+
+  const fulfillmentItems = fulfillableItems.map((i) => {
     const orderItem = orderItemsMap.get(i.id)!
     const reservation = reservationItemMap.get(i.id)!
+
     return {
       line_item_id: i.id,
       inventory_item_id: reservation?.inventory_item_id,
@@ -132,11 +187,14 @@ function prepareFulfillmentData({
       location_id: locationId,
       provider_id: shippingOption.provider_id,
       shipping_option_id: shippingOption.id,
+      order: order,
       data: shippingMethod.data,
       items: fulfillmentItems,
+      requires_shipping: someItemsRequireShipping,
       labels: input.labels ?? [],
       delivery_address: shippingAddress as any,
       packed_at: new Date(),
+      metadata: input.metadata,
     },
   }
 }
@@ -179,20 +237,27 @@ function prepareInventoryUpdate({
 
     const inputQuantity = inputItemsMap[item.id]?.quantity ?? item.quantity
 
-    const quantity = reservation.quantity - inputQuantity
+    if (MathBN.gt(inputQuantity, reservation.quantity)) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `Quantity to fulfill exceeds the reserved quantity for the item: ${item.id}`
+      )
+    }
+
+    const remainingReservationQuantity = reservation.quantity - inputQuantity
 
     inventoryAdjustment.push({
       inventory_item_id: reservation.inventory_item_id,
       location_id: input.location_id ?? reservation.location_id,
-      adjustment: MathBN.mult(item.quantity, -1),
+      adjustment: MathBN.mult(inputQuantity, -1),
     })
 
-    if (quantity === 0) {
+    if (remainingReservationQuantity === 0) {
       toDelete.push(reservation.id)
     } else {
       toUpdate.push({
         id: reservation.id,
-        quantity: quantity,
+        quantity: remainingReservationQuantity,
         location_id: input.location_id ?? reservation.location_id,
       })
     }
@@ -205,16 +270,47 @@ function prepareInventoryUpdate({
   }
 }
 
+/**
+ * The details of the fulfillment to create, along with custom data that's passed to the workflow's hooks.
+ */
+export type CreateOrderFulfillmentWorkflowInput = OrderWorkflow.CreateOrderFulfillmentWorkflowInput & AdditionalData
+
 export const createOrderFulfillmentWorkflowId = "create-order-fulfillment"
 /**
- * This creates a fulfillment for an order.
+ * This workflow creates a fulfillment for an order. It's used by the [Create Order Fulfillment Admin API Route](https://docs.medusajs.com/api/admin#orders_postordersidfulfillments).
+ * 
+ * This workflow has a hook that allows you to perform custom actions on the created fulfillment. For example, you can pass under `additional_data` custom data that 
+ * allows you to create custom data models linked to the fulfillment.
+ * 
+ * You can also use this workflow within your customizations or your own custom workflows, allowing you to wrap custom logic around creating a fulfillment.
+ * 
+ * @example
+ * const { result } = await createOrderFulfillmentWorkflow(container)
+ * .run({
+ *   input: {
+ *     order_id: "order_123",
+ *     items: [
+ *       {
+ *         id: "orli_123",
+ *         quantity: 1,
+ *       }
+ *     ],
+ *     additional_data: {
+ *       send_oms: true
+ *     }
+ *   }
+ * })
+ * 
+ * @summary
+ * 
+ * Creates a fulfillment for an order.
+ * 
+ * @property hooks.fulfillmentCreated - This hook is executed after the fulfillment is created. You can consume this hook to perform custom actions on the created fulfillment.
  */
 export const createOrderFulfillmentWorkflow = createWorkflow(
   createOrderFulfillmentWorkflowId,
   (
-    input: WorkflowData<
-      OrderWorkflow.CreateOrderFulfillmentWorkflowInput & AdditionalData
-    >
+    input: WorkflowData<CreateOrderFulfillmentWorkflowInput>
   ) => {
     const order: OrderDTO = useRemoteQueryStep({
       entry_point: "orders",
@@ -226,6 +322,12 @@ export const createOrderFulfillmentWorkflow = createWorkflow(
         "items.*",
         "items.variant.manage_inventory",
         "items.variant.allow_backorder",
+        "items.variant.product.id",
+        "items.variant.weight",
+        "items.variant.length",
+        "items.variant.height",
+        "items.variant.width",
+        "items.variant.material",
         "shipping_address.*",
         "shipping_methods.shipping_option_id",
         "shipping_methods.data",
@@ -337,7 +439,14 @@ export const createOrderFulfillmentWorkflow = createWorkflow(
       registerOrderFulfillmentStep(registerOrderFulfillmentData),
       createRemoteLinkStep(link),
       updateReservationsStep(toUpdate),
-      deleteReservationsStep(toDelete)
+      deleteReservationsStep(toDelete),
+      emitEventStep({
+        eventName: OrderWorkflowEvents.FULFILLMENT_CREATED,
+        data: {
+          order_id: input.order_id,
+          fulfillment_id: fulfillment.id,
+        },
+      })
     )
 
     const fulfillmentCreated = createHook("fulfillmentCreated", {

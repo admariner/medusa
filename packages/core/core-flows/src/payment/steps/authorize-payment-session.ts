@@ -1,11 +1,15 @@
-import { IPaymentModuleService, Logger, PaymentDTO } from "@medusajs/types"
+import {
+  IPaymentModuleService,
+  Logger,
+  PaymentDTO,
+} from "@medusajs/framework/types"
 import {
   ContainerRegistrationKeys,
   MedusaError,
-  ModuleRegistrationName,
+  Modules,
   PaymentSessionStatus,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export type AuthorizePaymentSessionStepInput = {
   id: string
@@ -22,7 +26,7 @@ export const authorizePaymentSessionStep = createStep(
     let payment: PaymentDTO | undefined
     const logger = container.resolve<Logger>(ContainerRegistrationKeys.LOGGER)
     const paymentModule = container.resolve<IPaymentModuleService>(
-      ModuleRegistrationName.PAYMENT
+      Modules.PAYMENT
     )
 
     try {
@@ -36,7 +40,12 @@ export const authorizePaymentSessionStep = createStep(
       )
     }
 
-    const paymentSession = await paymentModule.retrievePaymentSession(input.id)
+    const paymentSession = await paymentModule.retrievePaymentSession(
+      input.id,
+      {
+        relations: ["payment", "payment.captures"],
+      }
+    )
 
     // Throw a special error type when the status is requires_more as it requires a specific further action
     // from the consumer
@@ -66,7 +75,7 @@ export const authorizePaymentSessionStep = createStep(
 
     const logger = container.resolve<Logger>(ContainerRegistrationKeys.LOGGER)
     const paymentModule = container.resolve<IPaymentModuleService>(
-      ModuleRegistrationName.PAYMENT
+      Modules.PAYMENT
     )
 
     // If the payment session status is requires_more, we don't have to revert the payment.

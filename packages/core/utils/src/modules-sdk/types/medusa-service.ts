@@ -25,16 +25,6 @@ export type ModelDTOConfig = {
   model?: DmlEntity<any, any>
   create?: any
   update?: any
-  /**
-   * @internal
-   * @deprecated
-   */
-  singular?: string
-  /**
-   * @internal
-   * @deprecated
-   */
-  plural?: string
 }
 
 export type ModelsConfigTemplate = { [key: string]: ModelDTOConfig }
@@ -51,21 +41,6 @@ export type ModelConfigurationsToConfigTemplate<T extends ModelEntries> = {
       : T[Key] extends IDmlEntity<any, any>
       ? T[Key]
       : never
-    /**
-     * @deprecated
-     */
-    create: any
-    update: any
-    /**
-     * @deprecated
-     */
-    singular: T[Key] extends { singular: string } ? T[Key]["singular"] : Key
-    /**
-     * @deprecated
-     */
-    plural: T[Key] extends { plural: string }
-      ? T[Key]["plural"]
-      : Pluralize<Key & string>
   }
 }
 
@@ -265,4 +240,29 @@ export type MedusaServiceReturnType<ModelsConfig extends Record<string, any>> =
   {
     new (...args: any[]): AbstractModuleService<ModelsConfig>
     $modelObjects: InferModelFromConfig<ModelsConfig>
+    /**
+     * helper function to aggregate events. Will format the message properly and store in
+     * the message aggregator in the context
+     * @param action
+     * @param object
+     * @param eventName optional, can be inferred from the module joiner config + action + object
+     * @param source optional, can be inferred from the module joiner config
+     * @param data
+     * @param context
+     */
+    aggregatedEvents({
+      action,
+      object,
+      eventName,
+      source,
+      data,
+      context,
+    }: {
+      action: string
+      object: string
+      eventName: string
+      source?: string
+      data: { id: any } | { id: any }[]
+      context: Context
+    }): void
   }

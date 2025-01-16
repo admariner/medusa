@@ -3,9 +3,9 @@ import {
   FilterableCustomerAddressProps,
   ICustomerModuleService,
   UpdateCustomerAddressDTO,
-} from "@medusajs/types"
-import { ModuleRegistrationName, isDefined } from "@medusajs/utils"
-import { createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/types"
+import { Modules, isDefined } from "@medusajs/framework/utils"
+import { createStep } from "@medusajs/framework/workflows-sdk"
 import { unsetForCreate, unsetForUpdate } from "./utils"
 
 export type MaybeUnsetDefaultBillingAddressStepInput = {
@@ -25,7 +25,7 @@ export const maybeUnsetDefaultBillingAddressesStep = createStep(
   maybeUnsetDefaultBillingAddressesStepId,
   async (data: MaybeUnsetDefaultBillingAddressStepInput, { container }) => {
     const customerModuleService = container.resolve<ICustomerModuleService>(
-      ModuleRegistrationName.CUSTOMER
+      Modules.CUSTOMER
     )
 
     if (isDefined(data.create)) {
@@ -52,10 +52,10 @@ export const maybeUnsetDefaultBillingAddressesStep = createStep(
     }
 
     const customerModuleService = container.resolve<ICustomerModuleService>(
-      ModuleRegistrationName.CUSTOMER
+      Modules.CUSTOMER
     )
 
-    await customerModuleService.updateAddresses(
+    await customerModuleService.updateCustomerAddresses(
       { id: addressesToSet },
       { is_default_billing: true }
     )

@@ -1,10 +1,10 @@
-import { IUserModuleService } from "@medusajs/types"
-import { Module, Modules, UserEvents } from "@medusajs/utils"
+import { IUserModuleService } from "@medusajs/framework/types"
+import { Module, Modules, UserEvents } from "@medusajs/framework/utils"
+import { UserModuleService } from "@services"
 import {
   MockEventBusService,
   moduleIntegrationTestRunner,
-} from "medusa-test-utils"
-import { UserModuleService } from "@services"
+} from "@medusajs/test-utils"
 
 jest.setTimeout(30000)
 
@@ -25,7 +25,7 @@ moduleIntegrationTestRunner<IUserModuleService>({
     jwt_secret: "test",
   },
   injectedDependencies: {
-    eventBusModuleService: new MockEventBusService(),
+    [Modules.EVENT_BUS]: new MockEventBusService(),
   },
   testSuite: ({ service }) => {
     it(`should export the appropriate linkable configuration`, () => {
@@ -43,6 +43,7 @@ moduleIntegrationTestRunner<IUserModuleService>({
         user: {
           id: {
             linkable: "user_id",
+            entity: "User",
             primaryKey: "id",
             serviceName: "user",
             field: "user",
@@ -51,6 +52,7 @@ moduleIntegrationTestRunner<IUserModuleService>({
         invite: {
           id: {
             linkable: "invite_id",
+            entity: "Invite",
             primaryKey: "id",
             serviceName: "user",
             field: "invite",

@@ -1,8 +1,12 @@
 /**
  * @oas [delete] /store/carts/{id}/line-items/{line_id}
  * operationId: DeleteCartsIdLineItemsLine_id
- * summary: Remove Line Items from Cart
- * description: Remove a list of line items from a cart. This doesn't delete the Line Item, only the association between the Line Item and the cart.
+ * summary: Remove Line Item from Cart
+ * x-sidebar-summary: Remove Line Item
+ * description: Remove a line item from a cart.
+ * externalDocs:
+ *   url: https://docs.medusajs.com/v2/resources/storefront-development/cart/manage-items#remove-line-item-from-cart
+ *   description: "Storefront guide: How to remove line item from cart."
  * x-authenticated: false
  * parameters:
  *   - name: id
@@ -13,18 +17,18 @@
  *       type: string
  *   - name: line_id
  *     in: path
- *     description: The cart's line id.
+ *     description: The line item's ID.
  *     required: true
  *     schema:
  *       type: string
- *   - name: expand
- *     in: query
- *     description: Comma-separated relations that should be expanded in the returned data.
- *     required: false
+ *   - name: x-publishable-api-key
+ *     in: header
+ *     description: Publishable API Key created in the Medusa Admin.
+ *     required: true
  *     schema:
  *       type: string
- *       title: expand
- *       description: Comma-separated relations that should be expanded in the returned data.
+ *       externalDocs:
+ *         url: https://docs.medusajs.com/api/store#publishable-api-key
  *   - name: fields
  *     in: query
  *     description: Comma-separated fields that should be included in the returned data. if a field is prefixed with `+` it will be added to the default fields, using `-` will remove it from the default
@@ -35,34 +39,14 @@
  *       title: fields
  *       description: Comma-separated fields that should be included in the returned data. if a field is prefixed with `+` it will be added to the default fields, using `-` will remove it from the default
  *         fields. without prefix it will replace the entire default fields.
- *   - name: offset
- *     in: query
- *     description: The number of items to skip when retrieving a list.
- *     required: false
- *     schema:
- *       type: number
- *       title: offset
- *       description: The number of items to skip when retrieving a list.
- *   - name: limit
- *     in: query
- *     description: Limit the number of items returned in the list.
- *     required: false
- *     schema:
- *       type: number
- *       title: limit
- *       description: Limit the number of items returned in the list.
- *   - name: order
- *     in: query
- *     description: The field to sort the data by. By default, the sort order is ascending. To change the order to descending, prefix the field name with `-`.
- *     required: false
- *     schema:
- *       type: string
- *       title: order
- *       description: The field to sort the data by. By default, the sort order is ascending. To change the order to descending, prefix the field name with `-`.
+ *       externalDocs:
+ *         url: "#select-fields-and-relations"
  * x-codeSamples:
  *   - lang: Shell
  *     label: cURL
- *     source: curl -X DELETE '{backend_url}/store/carts/{id}/line-items/{line_id}'
+ *     source: |-
+ *       curl -X DELETE '{backend_url}/store/carts/{id}/line-items/{line_id}' \
+ *       -H 'x-publishable-api-key: {your_publishable_api_key}'
  * tags:
  *   - Carts
  * responses:
@@ -73,7 +57,7 @@
  *         schema:
  *           allOf:
  *             - type: object
- *               description: SUMMARY
+ *               description: The deletion's details.
  *               required:
  *                 - id
  *                 - object
@@ -82,21 +66,23 @@
  *                 id:
  *                   type: string
  *                   title: id
- *                   description: The cart's ID.
+ *                   description: The ID of the deleted line item.
  *                 object:
  *                   type: string
  *                   title: object
  *                   description: The name of the deleted object.
+ *                   default: line-item
  *                 deleted:
  *                   type: boolean
  *                   title: deleted
- *                   description: Whether the Cart was deleted.
+ *                   description: Whether the item was deleted.
  *             - type: object
- *               description: SUMMARY
+ *               description: The deletion's details.
  *               properties:
  *                 parent:
  *                   $ref: "#/components/schemas/StoreCart"
- *           description: SUMMARY
+ *                   description: The cart that the item belonged to.
+ *           description: The deletion's details.
  *   "400":
  *     $ref: "#/components/responses/400_error"
  *   "401":

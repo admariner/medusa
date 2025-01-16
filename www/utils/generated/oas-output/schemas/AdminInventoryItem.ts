@@ -1,7 +1,7 @@
 /**
  * @schema AdminInventoryItem
  * type: object
- * description: The inventory item's details.
+ * description: The reservation's inventory item.
  * x-schemaName: AdminInventoryItem
  * required:
  *   - id

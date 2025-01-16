@@ -1,11 +1,11 @@
-import { BigNumberRawValue } from "@medusajs/types"
+import { BigNumberRawValue } from "@medusajs/framework/types"
 import {
   BigNumber,
   createPsqlIndexStatementHelper,
   DALUtils,
   generateEntityId,
   MikroOrmBigNumberProperty,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 import {
   BeforeCreate,
   Cascade,
@@ -53,6 +53,9 @@ export default class OrderShippingMethod {
 
   @Property({ columnType: "boolean" })
   is_tax_inclusive: boolean = false
+
+  @Property({ columnType: "boolean", default: false })
+  is_custom_amount: boolean = false
 
   @Property({
     columnType: "text",

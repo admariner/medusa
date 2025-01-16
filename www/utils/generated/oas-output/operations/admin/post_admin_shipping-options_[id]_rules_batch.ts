@@ -12,14 +12,6 @@
  *     required: true
  *     schema:
  *       type: string
- *   - name: expand
- *     in: query
- *     description: Comma-separated relations that should be expanded in the returned data.
- *     required: false
- *     schema:
- *       type: string
- *       title: expand
- *       description: Comma-separated relations that should be expanded in the returned data.
  *   - name: fields
  *     in: query
  *     description: Comma-separated fields that should be included in the returned data. if a field is prefixed with `+` it will be added to the default fields, using `-` will remove it from the default
@@ -30,30 +22,8 @@
  *       title: fields
  *       description: Comma-separated fields that should be included in the returned data. if a field is prefixed with `+` it will be added to the default fields, using `-` will remove it from the default
  *         fields. without prefix it will replace the entire default fields.
- *   - name: offset
- *     in: query
- *     description: The number of items to skip when retrieving a list.
- *     required: false
- *     schema:
- *       type: number
- *       title: offset
- *       description: The number of items to skip when retrieving a list.
- *   - name: limit
- *     in: query
- *     description: Limit the number of items returned in the list.
- *     required: false
- *     schema:
- *       type: number
- *       title: limit
- *       description: Limit the number of items returned in the list.
- *   - name: order
- *     in: query
- *     description: The field to sort the data by. By default, the sort order is ascending. To change the order to descending, prefix the field name with `-`.
- *     required: false
- *     schema:
- *       type: string
- *       title: order
- *       description: The field to sort the data by. By default, the sort order is ascending. To change the order to descending, prefix the field name with `-`.
+ *       externalDocs:
+ *         url: "#select-fields-and-relations"
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -69,89 +39,12 @@
  *             type: array
  *             description: The shipping option rules to create.
  *             items:
- *               type: object
- *               description: A shipping option's details.
- *               required:
- *                 - operator
- *                 - attribute
- *                 - value
- *               properties:
- *                 operator:
- *                   type: string
- *                   description: The operator used to check whether a rule applies.
- *                   enum:
- *                     - in
- *                     - eq
- *                     - ne
- *                     - gt
- *                     - gte
- *                     - lt
- *                     - lte
- *                     - nin
- *                 attribute:
- *                   type: string
- *                   title: attribute
- *                   description: The name of a property or table that the rule applies to.
- *                   example: customer_group
- *                 value:
- *                   oneOf:
- *                     - type: string
- *                       title: value
- *                       description: A value of the attribute that enables this rule.
- *                       example: cusgroup_123
- *                     - type: array
- *                       description: Values of the attribute that enable this rule.
- *                       items:
- *                         type: string
- *                         title: value
- *                         description: A value of the attribute that enables this rule.
- *                         example: cusgroup_123
+ *               $ref: "#/components/schemas/AdminCreateShippingOptionRule"
  *           update:
  *             type: array
  *             description: The shipping option rules to update.
  *             items:
- *               type: object
- *               description: The properties to update in the shipping option rule.
- *               required:
- *                 - id
- *                 - operator
- *                 - attribute
- *                 - value
- *               properties:
- *                 id:
- *                   type: string
- *                   title: id
- *                   description: The rule's ID.
- *                 operator:
- *                   type: string
- *                   description: The operator used to check whether a rule applies.
- *                   enum:
- *                     - in
- *                     - eq
- *                     - ne
- *                     - gt
- *                     - gte
- *                     - lt
- *                     - lte
- *                     - nin
- *                 attribute:
- *                   type: string
- *                   title: attribute
- *                   description: The name of a property or table that the rule applies to.
- *                   example: customer_group
- *                 value:
- *                   oneOf:
- *                     - type: string
- *                       title: value
- *                       description: A value of the attribute that enables this rule.
- *                       example: cusgroup_123
- *                     - type: array
- *                       description: Values of the attribute that enable this rule.
- *                       items:
- *                         type: string
- *                         title: value
- *                         description: A value of the attribute that enables this rule.
- *                         example: cusgroup_123
+ *               $ref: "#/components/schemas/AdminUpdateShippingOptionRule"
  *           delete:
  *             type: array
  *             description: The shipping option rules to delete.
@@ -164,7 +57,7 @@
  *     label: cURL
  *     source: |-
  *       curl -X POST '{backend_url}/admin/shipping-options/{id}/rules/batch' \
- *       -H 'x-medusa-access-token: {api_token}'
+ *       -H 'Authorization: Bearer {access_token}'
  * tags:
  *   - Shipping Options
  * responses:

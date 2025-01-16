@@ -17,9 +17,9 @@ const customOptions: Record<string, Partial<TypeDocOptions>> = {
     name: "core-flows",
     plugin: ["typedoc-plugin-workflows"],
     enableWorkflowsPlugins: true,
-    enableNamespaceGenerator: true,
+    enablePathNamespaceGenerator: true,
     // @ts-expect-error there's a typing issue in typedoc
-    generateNamespaces: getCoreFlowNamespaces(),
+    generatePathNamespaces: getCoreFlowNamespaces(),
   }),
   "auth-provider": getOptions({
     entryPointPath: "packages/core/utils/src/auth/abstract-auth-provider.ts",
@@ -35,6 +35,7 @@ const customOptions: Record<string, Partial<TypeDocOptions>> = {
     ],
     tsConfigName: "utils.json",
     name: "dml",
+    generateCustomNamespaces: true,
   }),
   file: getOptions({
     entryPointPath: "packages/core/utils/src/file/abstract-file-provider.ts",
@@ -47,6 +48,17 @@ const customOptions: Record<string, Partial<TypeDocOptions>> = {
     tsConfigName: "utils.json",
     name: "fulfillment-provider",
     parentIgnore: true,
+  }),
+  "js-sdk": getOptions({
+    entryPointPath: [
+      "packages/core/js-sdk/src/admin/index.ts",
+      "packages/core/js-sdk/src/auth/index.ts",
+      "packages/core/js-sdk/src/store/index.ts",
+    ],
+    tsConfigName: "js-sdk.json",
+    name: "js-sdk",
+    enableInternalResolve: true,
+    exclude: [...(baseOptions.exclude || []), "**/dist/**"],
   }),
   "helper-steps": getOptions({
     entryPointPath: "packages/core/core-flows/src/common/index.ts",
@@ -61,12 +73,13 @@ const customOptions: Record<string, Partial<TypeDocOptions>> = {
     ],
   }),
   "medusa-config": getOptions({
-    entryPointPath: "packages/framework/framework/src/config/types.ts",
+    entryPointPath: "packages/core/framework/src/config/types.ts",
     tsConfigName: "framework.json",
     name: "medusa-config",
+    exclude: [...(baseOptions.exclude || []), "**/dist/**"],
   }),
   medusa: getOptions({
-    entryPointPath: "packages/medusa/src/index.js",
+    entryPointPath: "packages/medusa/src/index.ts",
     tsConfigName: "medusa.json",
     name: "medusa",
     jsonFileName: "0-medusa",
@@ -123,7 +136,12 @@ const customOptions: Record<string, Partial<TypeDocOptions>> = {
     enableInternalResolve: true,
     exclude: [
       ...(baseOptions.exclude || []),
-      ...modules.map((moduleName) => `**/${moduleName}/**/!(workflows).ts`),
+      ...modules.map((moduleName) =>
+        path.join(
+          rootPathPrefix,
+          `packages/core/types/src/${moduleName}/**/!(workflows).ts`
+        )
+      ),
     ],
   }),
   "modules-sdk": getOptions({
@@ -139,10 +157,13 @@ const customOptions: Record<string, Partial<TypeDocOptions>> = {
     enableInternalResolve: true,
     exclude: [
       ...(baseOptions.exclude || []),
+      "**/dist/**",
       "**/api-key/**",
+      "**/auth/**",
+      "**/bundles/**",
       "**/common/**",
       "**/dal/**/**",
-      "**/decorators/**",
+      "**/dml/**",
       "**/defaults/**",
       "**/**provider.ts",
       "**/event-bus/**",
@@ -150,10 +171,10 @@ const customOptions: Record<string, Partial<TypeDocOptions>> = {
       "**/feature-flags/**",
       "**/modules-sdk/**",
       "**/orchestration/**",
+      "**/pg/**",
       "**/pricing/builders.ts",
       "**/search/**",
       "**/totals/**",
-      "**/dml/**",
     ],
   }),
   workflows: getOptions({

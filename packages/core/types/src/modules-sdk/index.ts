@@ -1,19 +1,31 @@
-import {
-  JoinerRelationship,
-  JoinerServiceConfig,
-  RemoteJoinerOptions,
-  RemoteJoinerQuery,
-} from "../joiner"
+import { JoinerRelationship, JoinerServiceConfig } from "../joiner"
 
 import { MedusaContainer } from "../common"
 import { RepositoryService } from "../dal"
 import { Logger } from "../logger"
+import { ModuleProviderExports } from "./module-provider"
+import {
+  RemoteQueryGraph,
+  RemoteQueryInput,
+  RemoteQueryObjectConfig,
+  RemoteQueryObjectFromStringResult,
+} from "./remote-query-object-from-string"
+
+export {
+  RemoteQueryGraph,
+  RemoteQueryInput,
+  RemoteQueryObjectConfig,
+  RemoteQueryObjectFromStringResult,
+}
 
 export type Constructor<T> = new (...args: any[]) => T | (new () => T)
 
 export * from "../common/medusa-container"
 export * from "./medusa-internal-service"
 export * from "./module-provider"
+export * from "./remote-query"
+export * from "./remote-query-entry-points"
+export * from "./to-remote-query"
 
 export type LogLevel =
   | "query"
@@ -27,7 +39,6 @@ export type LoggerOptions = boolean | "all" | LogLevel[]
 
 export type CustomModuleDefinition = {
   key?: string
-  registrationName?: string
   label?: string
   isQueryable?: boolean // If the module is queryable via Remote Joiner
   dependencies?: string[]
@@ -35,7 +46,6 @@ export type CustomModuleDefinition = {
 
 export type InternalModuleDeclaration = {
   scope: "internal"
-  resources: "shared" | "isolated"
   dependencies?: string[]
   definition?: CustomModuleDefinition // That represent the definition of the module, such as the one we have for the medusa supported modules. This property is used for custom made modules.
   resolve?: string | ModuleExports
@@ -76,14 +86,14 @@ export type ModuleResolution = {
   options?: Record<string, unknown>
   dependencies?: string[]
   moduleDeclaration?: InternalModuleDeclaration | ExternalModuleDeclaration
-  moduleExports?: ModuleExports
+  moduleExports?: ModuleExports | ModuleProviderExports
 }
 
 export type ModuleDefinition = {
   key: string
-  registrationName: string
   defaultPackage: string | false
   label: string
+  resolvePath?: string
   isRequired?: boolean
   isQueryable?: boolean // If the module is queryable via Remote Joiner
   dependencies?: string[]
@@ -96,7 +106,6 @@ export type ModuleDefinition = {
 
 export type LinkModuleDefinition = {
   key: string
-  registrationName: string
   label: string
   dependencies?: string[]
   defaultModuleDeclaration: InternalModuleDeclaration
@@ -190,6 +199,7 @@ export type ModuleJoinerConfig = Omit<
   relationships?: ModuleJoinerRelationship[]
   extends?: {
     serviceName: string
+    entity?: string
     fieldAlias?: Record<
       string,
       | string
@@ -255,6 +265,11 @@ export type ModuleExports<T = Constructor<any>> = {
     options: LoaderOptions<any>,
     moduleDeclaration?: InternalModuleDeclaration
   ): Promise<void>
+  /**
+   * Explicitly set the the true location of the module resources.
+   * Can be used to re-export the module from a different location and specify its original location.
+   */
+  discoveryPath?: string
 }
 
 export interface ModuleServiceInitializeOptions {
@@ -291,12 +306,6 @@ export type ModuleBootstrapDeclaration =
 // TODO: These should be added back when the chain of types are fixed
 // | ModuleServiceInitializeOptions
 // | ModuleServiceInitializeCustomDataLayerOptions
-
-export type RemoteQueryFunction = (
-  query: string | RemoteJoinerQuery | object,
-  variables?: Record<string, unknown>,
-  options?: RemoteJoinerOptions
-) => Promise<any> | null
 
 export interface IModuleService {
   /**

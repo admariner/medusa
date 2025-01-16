@@ -1,10 +1,8 @@
 /**
  * @schema AdminUpdateCustomerGroup
  * type: object
- * description: SUMMARY
+ * description: The details to update in a customer group.
  * x-schemaName: AdminUpdateCustomerGroup
- * required:
- *   - metadata
  * properties:
  *   name:
  *     type: string
@@ -12,7 +10,7 @@
  *     description: The customer group's name.
  *   metadata:
  *     type: object
- *     description: The customer group's metadata.
+ *     description: The customer group's metadata, can hold custom key-value pairs.
  * 
 */
 

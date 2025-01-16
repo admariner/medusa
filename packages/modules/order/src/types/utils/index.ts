@@ -1,4 +1,4 @@
-import { BigNumberInput } from "@medusajs/types"
+import { BigNumberInput } from "@medusajs/framework/types"
 
 export type VirtualOrder = {
   id: string
@@ -11,6 +11,7 @@ export type VirtualOrder = {
     exchange_id?: string
 
     unit_price: BigNumberInput
+    compare_at_unit_price: BigNumberInput | null
     quantity: BigNumberInput
 
     detail: {
@@ -21,9 +22,12 @@ export type VirtualOrder = {
       exchange_id?: string
 
       item_id?: string
+      unit_price?: BigNumberInput
+      compare_at_unit_price?: BigNumberInput | null
       quantity: BigNumberInput
       shipped_quantity: BigNumberInput
       fulfilled_quantity: BigNumberInput
+      delivered_quantity: BigNumberInput
       return_requested_quantity: BigNumberInput
       return_received_quantity: BigNumberInput
       return_dismissed_quantity: BigNumberInput
@@ -50,7 +54,17 @@ export type VirtualOrder = {
     amount: BigNumberInput
   }[]
 
+  credit_lines: {
+    id: string
+    order_id: string
+    reference_id?: string
+    reference?: string
+    amount: BigNumberInput
+  }[]
+
   total: BigNumberInput
+
+  customer_id?: string
 
   transactions?: OrderTransaction[]
   metadata?: Record<string, unknown>
@@ -66,10 +80,11 @@ export interface OrderSummaryCalculated {
   original_order_total: BigNumberInput
   transaction_total: BigNumberInput
   pending_difference: BigNumberInput
-  temporary_difference: BigNumberInput
   difference_sum: BigNumberInput
   paid_total: BigNumberInput
   refunded_total: BigNumberInput
+  credit_line_total: BigNumberInput
+  accounting_total: BigNumberInput
 }
 
 export interface OrderTransaction {
@@ -113,7 +128,6 @@ export type OrderReferences = {
 
 export interface ActionTypeDefinition {
   isDeduction?: boolean
-  awaitRequired?: boolean
   operation?: (obj: OrderReferences) => BigNumberInput | void
   validate?: (obj: OrderReferences) => void
   [key: string]: unknown

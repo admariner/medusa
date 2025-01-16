@@ -1,8 +1,13 @@
-import { faker } from "@faker-js/faker"
 import { OpenAPIV3 } from "openapi-types"
 import { OasArea } from "../kinds/oas.js"
 import { CodeSample } from "../../types/index.js"
-import { capitalize, kebabToCamel, wordsToCamel, wordsToKebab } from "utils"
+import {
+  capitalize,
+  getFakeStrValue,
+  kebabToCamel,
+  wordsToCamel,
+  wordsToKebab,
+} from "utils"
 import { API_ROUTE_PARAM_REGEX } from "../../constants.js"
 
 type CodeSampleData = Omit<CodeSample, "source">
@@ -216,9 +221,13 @@ class OasExamplesGenerator {
     ]
 
     if (isAdminAuthenticated) {
-      exampleArr.push(`-H 'x-medusa-access-token: {api_token}'`)
+      exampleArr.push(`-H 'Authorization: Bearer {access_token}'`)
     } else if (isStoreAuthenticated) {
       exampleArr.push(`-H 'Authorization: Bearer {access_token}'`)
+    }
+
+    if (path.startsWith("/store")) {
+      exampleArr.push(`-H 'x-publishable-api-key: {your_publishable_api_key}'`)
     }
 
     if (requestSchema) {
@@ -270,7 +279,7 @@ class OasExamplesGenerator {
                     ? this.getSchemaRequiredData(
                         typedChildProp as OpenAPIV3.SchemaObject
                       )
-                    : this.getFakeValue({
+                    : getFakeStrValue({
                         name: childName,
                         type: typedChildProp.type,
                         format: typedChildProp.format,
@@ -292,7 +301,7 @@ class OasExamplesGenerator {
                 ? this.getSchemaRequiredData(
                     property.items as OpenAPIV3.SchemaObject
                   )
-                : this.getFakeValue({
+                : getFakeStrValue({
                     name: propertyName,
                     type: propertyItems.type,
                     format: propertyItems.format,
@@ -301,7 +310,7 @@ class OasExamplesGenerator {
           }
         } else if (property.type) {
           // retrieve fake value for all other types
-          value = this.getFakeValue({
+          value = getFakeStrValue({
             name: propertyName,
             type: property.type,
             format: property.format,
@@ -315,64 +324,6 @@ class OasExamplesGenerator {
     }
 
     return data
-  }
-
-  /**
-   * Retrieve the fake value of a property. The value is used in examples.
-   *
-   * @param param0 - The property's details
-   * @returns The fake value
-   */
-  getFakeValue({
-    name,
-    type,
-    format,
-  }: {
-    /**
-     * The name of the property. It can help when generating the fake value.
-     * For example, if the name is `id`, the fake value generated will be of the format `id_<randomstring>`.
-     */
-    name: string
-    /**
-     * The type of the property.
-     */
-    type: OpenAPIV3.NonArraySchemaObjectType | "array"
-    /**
-     * The OAS format of the property. For example, `date-time`.
-     */
-    format?: string
-  }): unknown {
-    let value: unknown
-
-    switch (true) {
-      case type === "string" && format === "date-time":
-        value = faker.date.future().toISOString()
-        break
-      case type === "boolean":
-        value = faker.datatype.boolean()
-        break
-      case type === "integer" || type === "number":
-        value = faker.number.int()
-        break
-      case type === "array":
-        value = []
-        break
-      case type === "string":
-        value = faker.helpers
-          .mustache(`{{${name}}}`, {
-            id: () =>
-              `id_${faker.string.alphanumeric({
-                length: { min: 10, max: 20 },
-              })}`,
-            name: () => faker.person.firstName(),
-            email: () => faker.internet.email(),
-            password: () => faker.internet.password({ length: 8 }),
-            currency: () => faker.finance.currencyCode(),
-          })
-          .replace(`{{${name}}}`, "{value}")
-    }
-
-    return value !== undefined ? value : "{value}"
   }
 }
 

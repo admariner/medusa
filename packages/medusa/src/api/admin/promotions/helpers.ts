@@ -1,10 +1,14 @@
-import { BatchMethodResponse } from "@medusajs/types"
-import { PromotionRuleDTO, MedusaContainer } from "@medusajs/types"
 import {
-  promiseAll,
+  BatchMethodResponse,
+  BatchResponse,
+  MedusaContainer,
+  PromotionRuleDTO,
+} from "@medusajs/framework/types"
+import {
   ContainerRegistrationKeys,
+  promiseAll,
   remoteQueryObjectFromString,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 
 export const refetchPromotion = async (
   promotionId: string,
@@ -28,7 +32,7 @@ export const refetchBatchRules = async (
   batchResult: BatchMethodResponse<PromotionRuleDTO>,
   scope: MedusaContainer,
   fields: string[]
-) => {
+): Promise<BatchResponse<PromotionRuleDTO>> => {
   const remoteQuery = scope.resolve(ContainerRegistrationKeys.REMOTE_QUERY)
   let created = Promise.resolve<PromotionRuleDTO[]>([])
   let updated = Promise.resolve<PromotionRuleDTO[]>([])
@@ -42,7 +46,6 @@ export const refetchBatchRules = async (
       fields: fields,
     })
 
-    // @ts-expect-error "Remote query can return null"
     created = remoteQuery(createdQuery)
   }
 
@@ -55,7 +58,6 @@ export const refetchBatchRules = async (
       fields: fields,
     })
 
-    // @ts-expect-error "Remote query can return null"
     updated = remoteQuery(updatedQuery)
   }
 
@@ -63,6 +65,10 @@ export const refetchBatchRules = async (
   return {
     created: createdRes,
     updated: updatedRes,
-    deleted: batchResult.deleted,
+    deleted: {
+      ids: batchResult.deleted,
+      object: "promotion-rule",
+      deleted: true,
+    },
   }
 }

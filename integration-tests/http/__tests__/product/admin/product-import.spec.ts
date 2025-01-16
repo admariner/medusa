@@ -1,13 +1,16 @@
 import { IEventBusModuleService } from "@medusajs/types"
-import { TestEventUtils, medusaIntegrationTestRunner } from "medusa-test-utils"
+import { CommonEvents, Modules } from "@medusajs/utils"
+import FormData from "form-data"
+import fs from "fs/promises"
+import {
+  medusaIntegrationTestRunner,
+  TestEventUtils,
+} from "@medusajs/test-utils"
+import path from "path"
 import {
   adminHeaders,
   createAdminUser,
 } from "../../../../helpers/create-admin-user"
-import FormData from "form-data"
-import fs from "fs/promises"
-import path from "path"
-import { ModuleRegistrationName } from "@medusajs/utils"
 import { getProductFixture } from "../../../../helpers/fixtures"
 
 jest.setTimeout(50000)
@@ -40,7 +43,7 @@ medusaIntegrationTestRunner({
 
     let eventBus: IEventBusModuleService
     beforeAll(async () => {
-      eventBus = getContainer().resolve(ModuleRegistrationName.EVENT_BUS)
+      eventBus = getContainer().resolve(Modules.EVENT_BUS)
     })
 
     beforeEach(async () => {
@@ -127,7 +130,7 @@ medusaIntegrationTestRunner({
       ].forEach((testcase) => {
         it(`should import a previously exported products CSV file ${testcase.name}`, async () => {
           const subscriberExecution = TestEventUtils.waitSubscribersExecution(
-            "notification.notification.created",
+            `${Modules.NOTIFICATION}.notification.${CommonEvents.CREATED}`,
             eventBus
           )
 
@@ -200,7 +203,7 @@ medusaIntegrationTestRunner({
                 thumbnail: "test-image.png",
                 status: "draft",
                 description: "test-product-description\ntest line 2",
-                options: [
+                options: expect.arrayContaining([
                   expect.objectContaining({
                     title: "size",
                     values: expect.arrayContaining([
@@ -220,7 +223,7 @@ medusaIntegrationTestRunner({
                       }),
                     ]),
                   }),
-                ],
+                ]),
                 images: expect.arrayContaining([
                   expect.objectContaining({
                     url: "test-image.png",
@@ -243,12 +246,12 @@ medusaIntegrationTestRunner({
                 collection: expect.objectContaining({
                   id: baseCollection.id,
                 }),
-                variants: [
+                variants: expect.arrayContaining([
                   expect.objectContaining({
                     title: "Test variant",
                     allow_backorder: false,
                     manage_inventory: true,
-                    prices: [
+                    prices: expect.arrayContaining([
                       expect.objectContaining({
                         currency_code: "dkk",
                         amount: 30,
@@ -261,21 +264,21 @@ medusaIntegrationTestRunner({
                         currency_code: "usd",
                         amount: 100,
                       }),
-                    ],
-                    options: [
+                    ]),
+                    options: expect.arrayContaining([
                       expect.objectContaining({
                         value: "large",
                       }),
                       expect.objectContaining({
                         value: "green",
                       }),
-                    ],
+                    ]),
                   }),
                   expect.objectContaining({
                     title: "Test variant 2",
                     allow_backorder: false,
                     manage_inventory: true,
-                    prices: [
+                    prices: expect.arrayContaining([
                       expect.objectContaining({
                         currency_code: "dkk",
                         amount: 50,
@@ -288,17 +291,17 @@ medusaIntegrationTestRunner({
                         currency_code: "usd",
                         amount: 200,
                       }),
-                    ],
-                    options: [
+                    ]),
+                    options: expect.arrayContaining([
                       expect.objectContaining({
                         value: "small",
                       }),
                       expect.objectContaining({
                         value: "green",
                       }),
-                    ],
+                    ]),
                   }),
-                ],
+                ]),
                 created_at: expect.any(String),
                 updated_at: expect.any(String),
               }),
@@ -309,7 +312,7 @@ medusaIntegrationTestRunner({
                 thumbnail: "test-image.png",
                 status: "proposed",
                 description: "test-product-description",
-                options: [
+                options: expect.arrayContaining([
                   expect.objectContaining({
                     title: "size",
                     values: expect.arrayContaining([
@@ -326,7 +329,7 @@ medusaIntegrationTestRunner({
                       }),
                     ]),
                   }),
-                ],
+                ]),
                 images: expect.arrayContaining([
                   expect.objectContaining({
                     url: "test-image.png",
@@ -344,12 +347,12 @@ medusaIntegrationTestRunner({
                   id: baseType.id,
                 }),
                 collection: null,
-                variants: [
+                variants: expect.arrayContaining([
                   expect.objectContaining({
                     title: "Test variant",
                     allow_backorder: false,
                     manage_inventory: true,
-                    prices: [
+                    prices: expect.arrayContaining([
                       expect.objectContaining({
                         currency_code: "dkk",
                         amount: 30,
@@ -362,17 +365,17 @@ medusaIntegrationTestRunner({
                         currency_code: "usd",
                         amount: 100,
                       }),
-                    ],
-                    options: [
+                    ]),
+                    options: expect.arrayContaining([
                       expect.objectContaining({
                         value: "large",
                       }),
                       expect.objectContaining({
                         value: "green",
                       }),
-                    ],
+                    ]),
                   }),
-                ],
+                ]),
                 created_at: expect.any(String),
                 updated_at: expect.any(String),
               }),
@@ -383,7 +386,7 @@ medusaIntegrationTestRunner({
 
       it("should import product with categories", async () => {
         const subscriberExecution = TestEventUtils.waitSubscribersExecution(
-          "notification.notification.created",
+          `${Modules.NOTIFICATION}.notification.${CommonEvents.CREATED}`,
           eventBus
         )
 
@@ -452,7 +455,7 @@ medusaIntegrationTestRunner({
 
       it("should ignore non-existent fields being present in the CSV that don't start with Product or Variant", async () => {
         const subscriberExecution = TestEventUtils.waitSubscribersExecution(
-          "notification.notification.created",
+          `${Modules.NOTIFICATION}.notification.${CommonEvents.CREATED}`,
           eventBus
         )
 
@@ -502,7 +505,7 @@ medusaIntegrationTestRunner({
 
       it("should fail on non-existent product fields being present in the CSV", async () => {
         const subscriberExecution = TestEventUtils.waitSubscribersExecution(
-          "notification.notification.created",
+          `${Modules.NOTIFICATION}.notification.${CommonEvents.CREATED}`,
           eventBus
         )
 
@@ -552,7 +555,7 @@ medusaIntegrationTestRunner({
 
       it("supports importing the v1 template", async () => {
         const subscriberExecution = TestEventUtils.waitSubscribersExecution(
-          "notification.notification.created",
+          `${Modules.NOTIFICATION}.notification.${CommonEvents.CREATED}`,
           eventBus
         )
 
@@ -613,7 +616,7 @@ medusaIntegrationTestRunner({
               thumbnail: "test-image.png",
               status: "draft",
               description: "test-product-description",
-              options: [
+              options: expect.arrayContaining([
                 expect.objectContaining({
                   title: "Size",
                   values: expect.arrayContaining([
@@ -628,7 +631,7 @@ medusaIntegrationTestRunner({
                     }),
                   ]),
                 }),
-              ],
+              ]),
               images: expect.arrayContaining([
                 expect.objectContaining({
                   url: "test-image.png",
@@ -645,7 +648,7 @@ medusaIntegrationTestRunner({
               collection: expect.objectContaining({
                 id: baseCollection.id,
               }),
-              variants: [
+              variants: expect.arrayContaining([
                 expect.objectContaining({
                   title: "Test variant",
                   sku: "test-sku-2",
@@ -689,7 +692,7 @@ medusaIntegrationTestRunner({
                   barcode: "test-barcode-4",
                   allow_backorder: false,
                   manage_inventory: true,
-                  prices: [
+                  prices: expect.arrayContaining([
                     expect.objectContaining({
                       currency_code: "usd",
                       amount: 100,
@@ -703,14 +706,14 @@ medusaIntegrationTestRunner({
                       currency_code: "dkk",
                       amount: 30,
                     }),
-                  ],
+                  ]),
                   options: [
                     expect.objectContaining({
                       value: "Large",
                     }),
                   ],
                 }),
-              ],
+              ]),
               created_at: expect.any(String),
               updated_at: expect.any(String),
             }),
@@ -723,7 +726,7 @@ medusaIntegrationTestRunner({
               status: "draft",
               description:
                 "Hopper Stripes Bedding, available as duvet cover, pillow sham and sheet.\\n100% organic cotton, soft and crisp to the touch. Made in Portugal.",
-              options: [
+              options: expect.arrayContaining([
                 expect.objectContaining({
                   title: "test-option-1",
                   values: expect.arrayContaining([
@@ -740,7 +743,7 @@ medusaIntegrationTestRunner({
                     }),
                   ]),
                 }),
-              ],
+              ]),
               images: expect.arrayContaining([
                 expect.objectContaining({
                   url: "test-image.png",
@@ -748,14 +751,14 @@ medusaIntegrationTestRunner({
               ]),
               tags: [],
               type: null,
-              variants: [
+              variants: expect.arrayContaining([
                 expect.objectContaining({
                   title: "Test variant",
                   sku: "test-sku-1-1",
                   barcode: "test-barcode-1-1",
                   allow_backorder: false,
                   manage_inventory: true,
-                  prices: [
+                  prices: expect.arrayContaining([
                     expect.objectContaining({
                       currency_code: "usd",
                       rules: {
@@ -767,20 +770,21 @@ medusaIntegrationTestRunner({
                       currency_code: "usd",
                       amount: 1.1,
                     }),
-                  ],
-                  options: [
+                  ]),
+                  options: expect.arrayContaining([
                     expect.objectContaining({
                       value: "option 1 value red",
                     }),
                     expect.objectContaining({
                       value: "option 2 value 1",
                     }),
-                  ],
+                  ]),
                 }),
-              ],
+              ]),
               created_at: expect.any(String),
               updated_at: expect.any(String),
             }),
+
             expect.objectContaining({
               id: expect.any(String),
               title: "Test product",

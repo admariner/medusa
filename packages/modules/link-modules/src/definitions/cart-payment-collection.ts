@@ -1,5 +1,5 @@
-import { ModuleJoinerConfig } from "@medusajs/types"
-import { LINKS, Modules } from "@medusajs/utils"
+import { ModuleJoinerConfig } from "@medusajs/framework/types"
+import { LINKS, Modules } from "@medusajs/framework/utils"
 
 export const CartPaymentCollection: ModuleJoinerConfig = {
   serviceName: LINKS.CartPaymentCollection,
@@ -11,15 +11,14 @@ export const CartPaymentCollection: ModuleJoinerConfig = {
   alias: [
     {
       name: ["cart_payment_collection", "cart_payment_collections"],
-      args: {
-        entity: "LinkCartPaymentCollection",
-      },
+      entity: "LinkCartPaymentCollection",
     },
   ],
   primaryKeys: ["id", "cart_id", "payment_collection_id"],
   relationships: [
     {
       serviceName: Modules.CART,
+      entity: "Cart",
       primaryKey: "id",
       foreignKey: "cart_id",
       alias: "cart",
@@ -29,6 +28,7 @@ export const CartPaymentCollection: ModuleJoinerConfig = {
     },
     {
       serviceName: Modules.PAYMENT,
+      entity: "PaymentCollection",
       primaryKey: "id",
       foreignKey: "payment_collection_id",
       alias: "payment_collection",
@@ -40,6 +40,7 @@ export const CartPaymentCollection: ModuleJoinerConfig = {
   extends: [
     {
       serviceName: Modules.CART,
+      entity: "Cart",
       fieldAlias: {
         payment_collection: "payment_collection_link.payment_collection",
       },
@@ -52,6 +53,7 @@ export const CartPaymentCollection: ModuleJoinerConfig = {
     },
     {
       serviceName: Modules.PAYMENT,
+      entity: "PaymentCollection",
       fieldAlias: {
         cart: "cart_link.cart",
       },

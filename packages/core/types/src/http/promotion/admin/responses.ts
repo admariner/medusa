@@ -1,12 +1,11 @@
-import { BatchMethodResponse } from "../../../common";
-import { DeleteResponse, PaginatedResponse } from "../../common";
-import { 
-  AdminPromotion, 
-  AdminPromotionRule, 
-  AdminRuleAttributeOption, 
-  AdminRuleOperatorOption, 
-  AdminRuleValueOption
-} from "./entities";
+import { BatchResponse, DeleteResponse, PaginatedResponse } from "../../common"
+import {
+  AdminPromotion,
+  AdminPromotionRule,
+  AdminRuleAttributeOption,
+  AdminRuleOperatorOption,
+  AdminRuleValueOption,
+} from "./entities"
 
 export interface AdminPromotionResponse {
   promotion: AdminPromotion
@@ -54,6 +53,6 @@ export type AdminRuleValueOptionsListResponse = {
   values: AdminRuleValueOption[]
 }
 
-export type AdminPromotionRuleBatchResponse = BatchMethodResponse<AdminPromotionRule>
+export type AdminPromotionRuleBatchResponse = BatchResponse<AdminPromotionRule>
 
 export type AdminPromotionDeleteResponse = DeleteResponse<"promotion">

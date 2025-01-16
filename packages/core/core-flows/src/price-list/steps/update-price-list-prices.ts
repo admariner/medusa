@@ -5,12 +5,12 @@ import {
   UpdatePriceListPricesDTO,
   UpdatePriceListPriceWorkflowDTO,
   UpdatePriceListPriceWorkflowStepDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
   buildPriceSetPricesForModule,
-  ModuleRegistrationName,
-} from "@medusajs/utils"
-import { createStep, StepResponse } from "@medusajs/workflows-sdk"
+  Modules,
+} from "@medusajs/framework/utils"
+import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 
 export const updatePriceListPricesStepId = "update-price-list-prices"
 /**
@@ -23,7 +23,7 @@ export const updatePriceListPricesStep = createStep(
     const priceListPricesToUpdate: UpdatePriceListPricesDTO[] = []
     const priceIds: string[] = []
     const pricingModule = container.resolve<IPricingModuleService>(
-      ModuleRegistrationName.PRICING
+      Modules.PRICING
     )
 
     for (const priceListData of data) {
@@ -86,7 +86,7 @@ export const updatePriceListPricesStep = createStep(
     }
 
     const pricingModule = container.resolve<IPricingModuleService>(
-      ModuleRegistrationName.PRICING
+      Modules.PRICING
     )
 
     if (dataBeforePriceUpdate.length) {

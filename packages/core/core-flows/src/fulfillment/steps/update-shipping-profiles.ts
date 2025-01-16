@@ -2,12 +2,12 @@ import {
   FilterableShippingProfileProps,
   IFulfillmentModuleService,
   UpdateShippingProfileDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
-  ModuleRegistrationName,
+  Modules,
   getSelectsAndRelationsFromObjectArray,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export type UpdateShippingProfilesStepInput = {
   update: UpdateShippingProfileDTO
@@ -22,7 +22,7 @@ export const updateShippingProfilesStep = createStep(
   updateShippingProfilesStepId,
   async (input: UpdateShippingProfilesStepInput, { container }) => {
     const service = container.resolve<IFulfillmentModuleService>(
-      ModuleRegistrationName.FULFILLMENT
+      Modules.FULFILLMENT
     )
 
     const { selects, relations } = getSelectsAndRelationsFromObjectArray([
@@ -47,7 +47,7 @@ export const updateShippingProfilesStep = createStep(
     }
 
     const service = container.resolve<IFulfillmentModuleService>(
-      ModuleRegistrationName.FULFILLMENT
+      Modules.FULFILLMENT
     )
 
     await service.upsertShippingProfiles(prevData)

@@ -1,6 +1,6 @@
-import { CreateInviteDTO, IUserModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import { CreateInviteDTO, IUserModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const createInviteStepId = "create-invite-step"
 /**
@@ -9,9 +9,7 @@ export const createInviteStepId = "create-invite-step"
 export const createInviteStep = createStep(
   createInviteStepId,
   async (input: CreateInviteDTO[], { container }) => {
-    const service: IUserModuleService = container.resolve(
-      ModuleRegistrationName.USER
-    )
+    const service: IUserModuleService = container.resolve(Modules.USER)
 
     const createdInvites = await service.createInvites(input)
 
@@ -25,9 +23,7 @@ export const createInviteStep = createStep(
       return
     }
 
-    const service: IUserModuleService = container.resolve(
-      ModuleRegistrationName.USER
-    )
+    const service: IUserModuleService = container.resolve(Modules.USER)
 
     await service.deleteInvites(createdInvitesIds)
   }

@@ -1,15 +1,13 @@
-import { OrderWorkflowDTO } from "@medusajs/types"
+import { OrderWorkflowDTO } from "@medusajs/framework/types"
 import {
   WorkflowData,
   createWorkflow,
   transform,
   when,
-} from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/workflows-sdk"
 import { useRemoteQueryStep } from "../../common"
-import {
-  getOrderItemTaxLinesStep,
-  setOrderTaxLinesForItemsStep,
-} from "../steps"
+import { getItemTaxLinesStep } from "../../tax/steps/get-item-tax-lines"
+import { setOrderTaxLinesForItemsStep } from "../steps"
 
 const completeOrderFields = [
   "id",
@@ -121,18 +119,59 @@ const lineItemFields = [
   "tax_lines.rate",
   "tax_lines.provider_id",
 ]
+/**
+ * The data to update the order's tax lines.
+ */
 export type UpdateOrderTaxLinesWorkflowInput = {
+  /**
+   * The ID of the order to update.
+   */
   order_id: string
+  /**
+   * The IDs of the items to update the tax lines for.
+   */
   item_ids?: string[]
+  /**
+   * The IDs of the shipping methods to update the tax lines for.
+   */
   shipping_method_ids?: string[]
+  /**
+   * Whether to force the tax calculation. If enabled, the tax provider
+   * may send request to a third-party service to retrieve the calculated 
+   * tax rates. This depends on the chosen tax provider in the order's tax region.
+   */
   force_tax_calculation?: boolean
+  /**
+   * Whether to calculate the tax lines for a return.
+   */
   is_return?: boolean
+  /**
+   * The shipping address to use for the tax calculation.
+   */
   shipping_address?: OrderWorkflowDTO["shipping_address"]
 }
 
 export const updateOrderTaxLinesWorkflowId = "update-order-tax-lines"
 /**
- * This workflow updates the tax lines of items and shipping methods in an order.
+ * This workflow updates the tax lines of items and shipping methods in an order. It's used by
+ * other order-related workflows, such as the {@link createOrderWorkflow} to set the order's
+ * tax lines.
+ * 
+ * You can use this workflow within your customizations or your own custom workflows, allowing you to update an
+ * order's tax lines in your custom flows.
+ * 
+ * @example
+ * const { result } = await updateOrderTaxLinesWorkflow(container)
+ * .run({
+ *   input: {
+ *     order_id: "order_123",
+ *     item_ids: ["orli_123", "orli_456"],
+ *   }
+ * })
+ * 
+ * @summary
+ * 
+ * Update the tax lines of items and shipping methods in an order.
  */
 export const updateOrderTaxLinesWorkflow = createWorkflow(
   updateOrderTaxLinesWorkflowId,
@@ -174,7 +213,7 @@ export const updateOrderTaxLinesWorkflow = createWorkflow(
       }).config({ name: "query-order-shipping-methods" })
     })
 
-    const taxLineItems = getOrderItemTaxLinesStep(
+    const taxLineItems = getItemTaxLinesStep(
       transform(
         { input, order, items, shippingMethods, isFullOrder },
         (data) => {
@@ -187,7 +226,7 @@ export const updateOrderTaxLinesWorkflow = createWorkflow(
             : data.items ?? []
 
           return {
-            order: data.order,
+            orderOrCart: data.order,
             items: lineItems,
             shipping_methods: shippingMethods,
             force_tax_calculation: data.input.force_tax_calculation,

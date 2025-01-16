@@ -2,9 +2,9 @@ import {
   BigNumberInput,
   IPaymentModuleService,
   PaymentProviderContext,
-} from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export interface CreatePaymentSessionStepInput {
   payment_collection_id: string
@@ -22,9 +22,7 @@ export const createPaymentSessionStepId = "create-payment-session"
 export const createPaymentSessionStep = createStep(
   createPaymentSessionStepId,
   async (input: CreatePaymentSessionStepInput, { container }) => {
-    const service = container.resolve<IPaymentModuleService>(
-      ModuleRegistrationName.PAYMENT
-    )
+    const service = container.resolve<IPaymentModuleService>(Modules.PAYMENT)
 
     const session = await service.createPaymentSession(
       input.payment_collection_id,
@@ -44,9 +42,7 @@ export const createPaymentSessionStep = createStep(
       return
     }
 
-    const service = container.resolve<IPaymentModuleService>(
-      ModuleRegistrationName.PAYMENT
-    )
+    const service = container.resolve<IPaymentModuleService>(Modules.PAYMENT)
 
     await service.deletePaymentSession(createdSession)
   }

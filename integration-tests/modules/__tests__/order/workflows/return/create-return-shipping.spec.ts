@@ -5,10 +5,10 @@ import {
 import { IFulfillmentModuleService, OrderDTO, ReturnDTO } from "@medusajs/types"
 import {
   ContainerRegistrationKeys,
-  ModuleRegistrationName,
+  Modules,
   remoteQueryObjectFromString,
 } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { createOrderFixture, prepareDataFixtures } from "../__fixtures__"
 
 jest.setTimeout(50000)
@@ -54,7 +54,7 @@ medusaIntegrationTestRunner({
           fields: ["order_id", "id", "status", "order_change_id"],
         })
 
-        service = container.resolve(ModuleRegistrationName.FULFILLMENT)
+        service = container.resolve(Modules.FULFILLMENT)
         ;[returnOrder] = await remoteQuery(remoteQueryObject)
       })
 
@@ -95,7 +95,7 @@ medusaIntegrationTestRunner({
               input: {
                 return_id: returnOrder.id,
                 shipping_option_id: shippingOptionId,
-                custom_price: 20,
+                custom_amount: 20,
               },
             })
 

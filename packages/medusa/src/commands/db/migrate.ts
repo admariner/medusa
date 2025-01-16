@@ -1,11 +1,17 @@
 import { join } from "path"
-import { ContainerRegistrationKeys } from "@medusajs/utils"
-import { LinkLoader, logger, MedusaAppLoader } from "@medusajs/framework"
+import {
+  ContainerRegistrationKeys,
+  mergePluginModules,
+} from "@medusajs/framework/utils"
+import { LinkLoader } from "@medusajs/framework/links"
+import { logger } from "@medusajs/framework/logger"
+import { MedusaAppLoader } from "@medusajs/framework"
 
 import { syncLinks } from "./sync-links"
 import { ensureDbExists } from "../utils"
 import { initializeContainer } from "../../loaders"
 import { getResolvedPlugins } from "../../loaders/helpers/resolve-plugins"
+import { runMigrationScripts } from "./run-scripts"
 
 const TERMINAL_SIZE = process.stdout.columns
 
@@ -16,11 +22,13 @@ const TERMINAL_SIZE = process.stdout.columns
 export async function migrate({
   directory,
   skipLinks,
+  skipScripts,
   executeAllLinks,
   executeSafeLinks,
 }: {
   directory: string
   skipLinks: boolean
+  skipScripts: boolean
   executeAllLinks: boolean
   executeSafeLinks: boolean
 }): Promise<boolean> {
@@ -35,7 +43,9 @@ export async function migrate({
     ContainerRegistrationKeys.CONFIG_MODULE
   )
 
-  const plugins = getResolvedPlugins(directory, configModule, true) || []
+  const plugins = await getResolvedPlugins(directory, configModule, true)
+  mergePluginModules(configModule, plugins)
+
   const linksSourcePaths = plugins.map((plugin) =>
     join(plugin.resolve, "links")
   )
@@ -62,12 +72,24 @@ export async function migrate({
     })
   }
 
+  if (!skipScripts) {
+    /**
+     * Run migration scripts
+     */
+    console.log(new Array(TERMINAL_SIZE).join("-"))
+    await runMigrationScripts({
+      directory,
+      container,
+    })
+  }
+
   return true
 }
 
 const main = async function ({
   directory,
   skipLinks,
+  skipScripts,
   executeAllLinks,
   executeSafeLinks,
 }) {
@@ -75,6 +97,7 @@ const main = async function ({
     const migrated = await migrate({
       directory,
       skipLinks,
+      skipScripts,
       executeAllLinks,
       executeSafeLinks,
     })

@@ -1,18 +1,19 @@
 import {
   BatchMethodResponse,
+  BatchResponse,
   HttpTypes,
   LinkDefinition,
   MedusaContainer,
   PriceDTO,
   ProductDTO,
   ProductVariantDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
   ContainerRegistrationKeys,
   Modules,
   promiseAll,
   remoteQueryObjectFromString,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 import { AdminBatchVariantInventoryItemsType } from "./validators"
 
 const isPricing = (fieldName: string) =>
@@ -125,7 +126,7 @@ export const refetchBatchProducts = async (
   batchResult: BatchMethodResponse<ProductDTO>,
   scope: MedusaContainer,
   fields: string[]
-) => {
+): Promise<BatchResponse<ProductDTO>> => {
   const remoteQuery = scope.resolve(ContainerRegistrationKeys.REMOTE_QUERY)
   let created = Promise.resolve<ProductDTO[]>([])
   let updated = Promise.resolve<ProductDTO[]>([])
@@ -139,7 +140,6 @@ export const refetchBatchProducts = async (
       fields: remapKeysForProduct(fields ?? []),
     })
 
-    // @ts-expect-error "Remote query can return null"
     created = remoteQuery(createdQuery)
   }
 
@@ -152,7 +152,6 @@ export const refetchBatchProducts = async (
       fields: remapKeysForProduct(fields ?? []),
     })
 
-    // @ts-expect-error "Remote query can return null"
     updated = remoteQuery(updatedQuery)
   }
 
@@ -160,7 +159,11 @@ export const refetchBatchProducts = async (
   return {
     created: createdRes,
     updated: updatedRes,
-    deleted: batchResult.deleted,
+    deleted: {
+      ids: batchResult.deleted,
+      object: "product",
+      deleted: true,
+    },
   }
 }
 
@@ -168,7 +171,7 @@ export const refetchBatchVariants = async (
   batchResult: BatchMethodResponse<ProductVariantDTO>,
   scope: MedusaContainer,
   fields: string[]
-) => {
+): Promise<BatchResponse<ProductVariantDTO>> => {
   const remoteQuery = scope.resolve(ContainerRegistrationKeys.REMOTE_QUERY)
   let created = Promise.resolve<ProductVariantDTO[]>([])
   let updated = Promise.resolve<ProductVariantDTO[]>([])
@@ -182,7 +185,6 @@ export const refetchBatchVariants = async (
       fields: remapKeysForVariant(fields ?? []),
     })
 
-    // @ts-expect-error "Remote query can return null"
     created = remoteQuery(createdQuery)
   }
 
@@ -195,7 +197,6 @@ export const refetchBatchVariants = async (
       fields: remapKeysForVariant(fields ?? []),
     })
 
-    // @ts-expect-error "Remote query can return null"
     updated = remoteQuery(updatedQuery)
   }
 
@@ -203,7 +204,11 @@ export const refetchBatchVariants = async (
   return {
     created: createdRes,
     updated: updatedRes,
-    deleted: batchResult.deleted,
+    deleted: {
+      ids: batchResult.deleted,
+      object: "variant",
+      deleted: true,
+    },
   }
 }
 

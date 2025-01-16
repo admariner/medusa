@@ -2,23 +2,32 @@ import {
   ICartModuleService,
   UpdateCartDTO,
   UpdateCartWorkflowInputDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
-  ModuleRegistrationName,
+  Modules,
   getSelectsAndRelationsFromObjectArray,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
+
+/**
+ * The details of the carts to update.
+ */
+export type UpdateCartsStepInput = UpdateCartWorkflowInputDTO[]
 
 export const updateCartsStepId = "update-carts"
 /**
  * This step updates a cart.
+ * 
+ * @example
+ * const data = updateCartsStep([{
+ *   id: "cart_123",
+ *   email: "customer@gmail.com",
+ * }])
  */
 export const updateCartsStep = createStep(
   updateCartsStepId,
-  async (data: UpdateCartWorkflowInputDTO[], { container }) => {
-    const cartModule = container.resolve<ICartModuleService>(
-      ModuleRegistrationName.CART
-    )
+  async (data: UpdateCartsStepInput, { container }) => {
+    const cartModule = container.resolve<ICartModuleService>(Modules.CART)
 
     const { selects, relations } = getSelectsAndRelationsFromObjectArray(data)
     const cartsBeforeUpdate = await cartModule.listCarts(
@@ -35,9 +44,7 @@ export const updateCartsStep = createStep(
       return
     }
 
-    const cartModule = container.resolve<ICartModuleService>(
-      ModuleRegistrationName.CART
-    )
+    const cartModule = container.resolve<ICartModuleService>(Modules.CART)
 
     const dataToUpdate: UpdateCartDTO[] = []
 

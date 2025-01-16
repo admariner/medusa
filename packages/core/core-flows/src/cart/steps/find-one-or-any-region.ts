@@ -1,6 +1,19 @@
-import { IRegionModuleService, IStoreModuleService } from "@medusajs/types"
-import { MedusaError, ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import {
+  IRegionModuleService,
+  IStoreModuleService,
+} from "@medusajs/framework/types"
+import { MedusaError, Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
+
+/**
+ * The details of the region to find.
+ */
+export type FindOneOrAnyRegionStepInput = {
+  /**
+   * The ID of the region to find.
+   */
+  regionId?: string
+}
 
 export const findOneOrAnyRegionStepId = "find-one-or-any-region"
 /**
@@ -8,18 +21,16 @@ export const findOneOrAnyRegionStepId = "find-one-or-any-region"
  */
 export const findOneOrAnyRegionStep = createStep(
   findOneOrAnyRegionStepId,
-  async (data: { regionId?: string }, { container }) => {
-    const service = container.resolve<IRegionModuleService>(
-      ModuleRegistrationName.REGION
-    )
+  async (data: FindOneOrAnyRegionStepInput, { container }) => {
+    const service = container.resolve<IRegionModuleService>(Modules.REGION)
 
-    const storeModule = container.resolve<IStoreModuleService>(
-      ModuleRegistrationName.STORE
-    )
+    const storeModule = container.resolve<IStoreModuleService>(Modules.STORE)
 
     if (data.regionId) {
       try {
-        const region = await service.retrieveRegion(data.regionId)
+        const region = await service.retrieveRegion(data.regionId, {
+          relations: ["countries"],
+        })
         return new StepResponse(region)
       } catch (error) {
         return new StepResponse(null)
@@ -32,9 +43,12 @@ export const findOneOrAnyRegionStep = createStep(
       throw new MedusaError(MedusaError.Types.NOT_FOUND, "Store not found")
     }
 
-    const [region] = await service.listRegions({
-      id: store.default_region_id,
-    })
+    const [region] = await service.listRegions(
+      {
+        id: store.default_region_id,
+      },
+      { relations: ["countries"] }
+    )
 
     if (!region) {
       return new StepResponse(null)

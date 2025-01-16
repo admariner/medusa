@@ -1,9 +1,12 @@
-import { LoaderOptions, Logger, ModulesSdkTypes } from "@medusajs/types"
+import {
+  LoaderOptions,
+  Logger,
+  ModulesSdkTypes,
+} from "@medusajs/framework/types"
 import {
   ContainerRegistrationKeys,
-  ModuleRegistrationName,
   defaultCurrencies,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 import { Currency } from "@models"
 
 export default async ({
@@ -18,7 +21,7 @@ export default async ({
     container.resolve<Logger>(ContainerRegistrationKeys.LOGGER) ?? console
   const { currencyService_ } = container.resolve<{
     currencyService_: ModulesSdkTypes.IMedusaInternalService<typeof Currency>
-  }>(ModuleRegistrationName.CURRENCY)
+  }>("currencyModuleService")
 
   try {
     const normalizedCurrencies = Object.values(defaultCurrencies).map((c) => ({

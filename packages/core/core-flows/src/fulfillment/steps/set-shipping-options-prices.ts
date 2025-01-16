@@ -1,5 +1,6 @@
 import {
   CreatePriceDTO,
+  CreatePriceSetPriceRules,
   CreatePricesDTO,
   FulfillmentWorkflow,
   IPricingModuleService,
@@ -7,15 +8,15 @@ import {
   PriceDTO,
   PriceSetDTO,
   RemoteQueryFunction,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
   ContainerRegistrationKeys,
   LINKS,
-  ModuleRegistrationName,
+  Modules,
   isDefined,
-  remoteQueryObjectFromString,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+  isString,
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 interface PriceRegionId {
   region_id: string
@@ -24,7 +25,7 @@ interface PriceRegionId {
 
 export type SetShippingOptionsPricesStepInput = {
   id: string
-  prices?: FulfillmentWorkflow.UpdateShippingOptionsWorkflowInput["prices"]
+  prices?: FulfillmentWorkflow.UpdateShippingOptionPriceRecord[]
 }[]
 
 async function getCurrentShippingOptionPrices(
@@ -33,16 +34,13 @@ async function getCurrentShippingOptionPrices(
 ): Promise<
   { shipping_option_id: string; price_set_id: string; prices: PriceDTO[] }[]
 > {
-  const query = remoteQueryObjectFromString({
+  const shippingOptionPrices = (await remoteQuery({
     service: LINKS.ShippingOptionPriceSet,
     variables: {
       filters: { shipping_option_id: shippingOptionIds },
-      take: null,
     },
     fields: ["shipping_option_id", "price_set_id", "price_set.prices.*"],
-  })
-
-  const shippingOptionPrices = (await remoteQuery(query)) as {
+  } as any)) as {
     shipping_option_id: string
     price_set_id: string
     price_set: PriceSetDTO
@@ -68,6 +66,26 @@ function buildPrices(
   }
 
   const shippingOptionPrices = prices.map((price) => {
+    const { rules = [] } = price
+    const additionalRules: CreatePriceSetPriceRules = {}
+
+    for (const rule of rules) {
+      let existingPriceRules = additionalRules[rule.attribute]
+
+      if (isString(existingPriceRules)) {
+        continue
+      }
+
+      existingPriceRules ||= []
+
+      existingPriceRules.push({
+        operator: rule.operator,
+        value: rule.value,
+      })
+
+      additionalRules[rule.attribute] = existingPriceRules
+    }
+
     if ("region_id" in price) {
       const currency_code = regionToCurrencyMap.get(price.region_id!)!
       const regionId = price.region_id
@@ -78,6 +96,17 @@ function buildPrices(
         amount: price.amount,
         rules: {
           region_id: regionId,
+          ...additionalRules,
+        },
+      }
+    }
+
+    if ("currency_code" in price) {
+      return {
+        ...price,
+        amount: price.amount,
+        rules: {
+          ...additionalRules,
         },
       }
     }
@@ -109,7 +138,7 @@ export const setShippingOptionsPricesStep = createStep(
 
     if (regionIds.length) {
       const regionService = container.resolve<IRegionModuleService>(
-        ModuleRegistrationName.REGION
+        Modules.REGION
       )
       const regions = await regionService.listRegions(
         {
@@ -146,8 +175,10 @@ export const setShippingOptionsPricesStep = createStep(
             price_set_id: currentShippingOptionDataItem.price_set_id,
           }
         })
+
         const buildPricesData =
           pricesData && buildPrices(pricesData, regionToCurrencyMap)
+
         return [
           currentShippingOptionDataItem.shipping_option_id,
           {
@@ -159,7 +190,7 @@ export const setShippingOptionsPricesStep = createStep(
     )
 
     const pricingService = container.resolve<IPricingModuleService>(
-      ModuleRegistrationName.PRICING
+      Modules.PRICING
     )
 
     for (const data_ of data) {
@@ -182,7 +213,7 @@ export const setShippingOptionsPricesStep = createStep(
     }
 
     const pricingService = container.resolve<IPricingModuleService>(
-      ModuleRegistrationName.PRICING
+      Modules.PRICING
     )
 
     for (const data_ of rollbackData) {

@@ -1,6 +1,6 @@
-import { IFulfillmentModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import { IFulfillmentModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const cancelFulfillmentStepId = "cancel-fulfillment"
 /**
@@ -10,7 +10,7 @@ export const cancelFulfillmentStep = createStep(
   cancelFulfillmentStepId,
   async (id: string, { container }) => {
     const service = container.resolve<IFulfillmentModuleService>(
-      ModuleRegistrationName.FULFILLMENT
+      Modules.FULFILLMENT
     )
 
     await service.cancelFulfillment(id)

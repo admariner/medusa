@@ -33,15 +33,6 @@ export type AuthenticationResponse = {
    * specified location.
    */
   location?: string
-
-  /**
-   * Some authentication providers support redirecting to a specified URL on
-   * success. In those cases, the URL to redirect to is set in this field.
-   *
-   * So, if `success` is true, there's no `location` set, and this field
-   * is set, you can redirect to this URL.
-   */
-  successRedirectUrl?: string
 }
 
 /**
@@ -68,6 +59,10 @@ export type AuthenticationInput = {
 
   /**
    * Body of the incoming authentication request.
+   *
+   * One of the arguments that is suggested to be treated in a standard manner is a `callback_url` field.
+   * The field specifies where the user is redirected to after a successful authentication in the case of Oauth auhentication.
+   * If not passed, the provider will fallback to the callback_url provided in the provider options.
    */
   body?: Record<string, string>
 

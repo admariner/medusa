@@ -1,5 +1,5 @@
-import { MedusaError, ModuleRegistrationName } from "@medusajs/utils"
-import { createStep } from "@medusajs/workflows-sdk"
+import { MedusaError, Modules } from "@medusajs/framework/utils"
+import { createStep } from "@medusajs/framework/workflows-sdk"
 import { CreateCustomerAccountWorkflowInput } from "../workflows"
 
 export const validateCustomerAccountCreationStepId =
@@ -8,7 +8,7 @@ export const validateCustomerAccountCreationStepId =
 export const validateCustomerAccountCreation = createStep(
   validateCustomerAccountCreationStepId,
   async (input: CreateCustomerAccountWorkflowInput, { container }) => {
-    const customerService = container.resolve(ModuleRegistrationName.CUSTOMER)
+    const customerService = container.resolve(Modules.CUSTOMER)
 
     const { email } = input.customerData
 

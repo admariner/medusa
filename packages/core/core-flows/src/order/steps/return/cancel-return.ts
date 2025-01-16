@@ -1,6 +1,9 @@
-import { CancelOrderReturnDTO, IOrderModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import {
+  CancelOrderReturnDTO,
+  IOrderModuleService,
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const cancelOrderReturnStepId = "cancel-order-return"
 /**
@@ -9,9 +12,7 @@ export const cancelOrderReturnStepId = "cancel-order-return"
 export const cancelOrderReturnStep = createStep(
   cancelOrderReturnStepId,
   async (data: CancelOrderReturnDTO, { container }) => {
-    const service = container.resolve<IOrderModuleService>(
-      ModuleRegistrationName.ORDER
-    )
+    const service = container.resolve<IOrderModuleService>(Modules.ORDER)
 
     await service.cancelReturn(data)
     return new StepResponse(void 0, data.order_id)
@@ -21,9 +22,7 @@ export const cancelOrderReturnStep = createStep(
       return
     }
 
-    const service = container.resolve<IOrderModuleService>(
-      ModuleRegistrationName.ORDER
-    )
+    const service = container.resolve<IOrderModuleService>(Modules.ORDER)
 
     await service.revertLastVersion(orderId)
   }

@@ -81,10 +81,11 @@ module.exports = {
         project: [
           "./packages/medusa/tsconfig.json",
 
-          "./packages/admin-next/dashboard/tsconfig.json",
-          "./packages/admin-next/admin-sdk/tsconfig.json",
-          "./packages/admin-next/admin-shared/tsconfig.json",
-          "./packages/admin-next/admin-vite-plugin/tsconfig.json",
+          "./packages/admin/dashboard/tsconfig.json",
+          "./packages/admin/admin-sdk/tsconfig.json",
+          "./packages/admin/admin-shared/tsconfig.json",
+          "./packages/admin/admin-bundler/tsconfig.json",
+          "./packages/admin/admin-vite-plugin/tsconfig.json",
 
           "./packages/cli/create-medusa-app/tsconfig.json",
           "./packages/cli/medusa-cli/tsconfig.spec.json",
@@ -110,6 +111,7 @@ module.exports = {
           "./packages/modules/auth/tsconfig.spec.json",
           "./packages/modules/cart/tsconfig.spec.json",
           "./packages/modules/currency/tsconfig.spec.json",
+          "./packages/modules/index/tsconfig.spec.json",
           "./packages/modules/customer/tsconfig.spec.json",
           "./packages/modules/file/tsconfig.spec.json",
           "./packages/modules/inventory-next/tsconfig.spec.json",
@@ -126,13 +128,16 @@ module.exports = {
           "./packages/modules/workflow-engine-redis/tsconfig.spec.json",
           "./packages/modules/link-modules/tsconfig.spec.json",
           "./packages/modules/user/tsconfig.spec.json",
+          "./packages/modules/locking/tsconfig.spec.json",
 
           "./packages/modules/providers/file-local/tsconfig.spec.json",
           "./packages/modules/providers/file-s3/tsconfig.spec.json",
           "./packages/modules/providers/fulfillment-manual/tsconfig.spec.json",
           "./packages/modules/providers/payment-stripe/tsconfig.spec.json",
+          "./packages/modules/providers/locking-postgres/tsconfig.spec.json",
+          "./packages/modules/providers/locking-redis/tsconfig.spec.json",
 
-          "./packages/framework/framework/tsconfig.json",
+          "./packages/framework/tsconfig.json",
         ],
       },
       rules: {
@@ -218,8 +223,8 @@ module.exports = {
     },
     {
       files: [
-        "packages/admin-next/dashboard/**/*.ts",
-        "packages/admin-next/dashboard/**/*.tsx",
+        "packages/admin/dashboard/**/*.ts",
+        "packages/admin/dashboard/**/*.tsx",
       ],
       plugins: ["unused-imports", "react-refresh"],
       extends: [
@@ -234,56 +239,7 @@ module.exports = {
         },
         ecmaVersion: 2018, // Allows for the parsing of modern ECMAScript features
         sourceType: "module", // Allows for the use of imports
-        project: "./packages/admin-next/dashboard/tsconfig.json",
-      },
-      globals: {
-        __BASE__: "readonly",
-      },
-      env: {
-        browser: true,
-      },
-      rules: {
-        "prettier/prettier": "error",
-        "react/prop-types": "off",
-        "new-cap": "off",
-        "require-jsdoc": "off",
-        "valid-jsdoc": "off",
-        "react-refresh/only-export-components": [
-          "warn",
-          { allowConstantExport: true },
-        ],
-        "no-unused-expressions": "off",
-        "unused-imports/no-unused-imports": "error",
-        "unused-imports/no-unused-vars": [
-          "warn",
-          {
-            vars: "all",
-            varsIgnorePattern: "^_",
-            args: "after-used",
-            argsIgnorePattern: "^_",
-          },
-        ],
-      },
-    },
-    {
-      files: [
-        "packages/admin-next/app/**/*.ts",
-        "packages/admin-next/app/**/*.tsx",
-      ],
-      plugins: ["unused-imports", "react-refresh"],
-      extends: [
-        "plugin:react/recommended",
-        "plugin:react/jsx-runtime",
-        "plugin:react-hooks/recommended",
-      ],
-      parser: "@typescript-eslint/parser",
-      parserOptions: {
-        ecmaFeatures: {
-          jsx: true,
-        },
-        ecmaVersion: 2018, // Allows for the parsing of modern ECMAScript features
-        sourceType: "module", // Allows for the use of imports
-        project: "./packages/admin-next/app/tsconfig.json",
+        project: "./packages/admin/dashboard/tsconfig.json",
       },
       globals: {
         __BASE__: "readonly",

@@ -2,7 +2,7 @@
  * @oas [post] /admin/exchanges/{id}/cancel
  * operationId: PostExchangesIdCancel
  * summary: Cancel an Exchange
- * description: Cancel an exchange and its associated return. 
+ * description: Cancel an exchange and its associated return.
  * x-authenticated: true
  * parameters:
  *   - name: id
@@ -25,7 +25,7 @@
  *     label: cURL
  *     source: |-
  *       curl -X POST '{backend_url}/admin/exchanges/{id}/cancel' \
- *       -H 'x-medusa-access-token: {api_token}'
+ *       -H 'Authorization: Bearer {access_token}'
  * tags:
  *   - Exchanges
  * responses:

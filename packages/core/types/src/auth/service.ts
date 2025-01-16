@@ -2,9 +2,9 @@ import { FindConfig } from "../common"
 import { IModuleService } from "../modules-sdk"
 import { Context } from "../shared-context"
 import {
-  AuthIdentityDTO,
   AuthenticationInput,
   AuthenticationResponse,
+  AuthIdentityDTO,
   CreateAuthIdentityDTO,
   CreateProviderIdentityDTO,
   FilterableAuthIdentityProps,
@@ -23,7 +23,7 @@ export interface IAuthModuleService extends IModuleService {
    * underlying provider is called, passing it the `providerData` parameter as a parameter. The method
    * returns the data returned by the provider.
    *
-   * Refer to [this guide](https://docs.medusajs.com/experimental/auth/auth-flows) to learn more about the authentication flows.
+   * Refer to [this guide](https://docs.medusajs.com/resources/commerce-modules/auth/authentication-route) to learn more about the authentication flows.
    *
    * @param {string} provider - The ID of the provider to authenticate the user with.
    * @param {AuthenticationInput} providerData - The data to pass to the provider to authenticate the user.
@@ -46,12 +46,17 @@ export interface IAuthModuleService extends IModuleService {
    */
   authenticate(
     provider: string,
-    providerData: AuthenticationInput,
+    providerData: AuthenticationInput
   ): Promise<AuthenticationResponse>
 
   register(
     provider: string,
-    providerData: AuthenticationInput,
+    providerData: AuthenticationInput
+  ): Promise<AuthenticationResponse>
+
+  updateProvider(
+    provider: string,
+    providerData: Record<string, unknown>
   ): Promise<AuthenticationResponse>
 
   /**
@@ -65,7 +70,7 @@ export interface IAuthModuleService extends IModuleService {
    * In that API route, you can call this method to validate the third-party provider's
    * callback and authenticate the user.
    *
-   * Learn more about this authentication flow in [this guide](https://docs.medusajs.com/experimental/auth/auth-flows#authentication-with-third-party-service).
+   * Learn more about this authentication flow in [this guide](https://docs.medusajs.com/resources/commerce-modules/auth/authentication-route#2-third-party-service-authenticate-flow).
    *
    * @param {string} provider - The ID of the provider to use to validate the callback.
    * @param {AuthenticationInput} providerData - The data to pass to the provider to validate the callback.
@@ -76,7 +81,7 @@ export interface IAuthModuleService extends IModuleService {
    * `req` is an instance of the `MedusaRequest` object:
    *
    * ```ts
-   * const { success, authIdentity, error, successRedirectUrl } =
+   * const { success, authIdentity, error } =
    *   await authModuleService.validateCallback("google", {
    *     url: req.url,
    *     headers: req.headers,
@@ -244,13 +249,13 @@ export interface IAuthModuleService extends IModuleService {
    * @returns {Promise<AuthIdentityDTO[]>} The updated auths.
    *
    * @example
-   * const authIdentities = await authModuleService.updateAuthIdentites([
+   * const authIdentities = await authModuleService.updateAuthIdentities([
    *   {
    *     id: "authusr_123",
    *   },
    * ])
    */
-  updateAuthIdentites(
+  updateAuthIdentities(
     data: UpdateAuthIdentityDTO[],
     sharedContext?: Context
   ): Promise<AuthIdentityDTO[]>
@@ -263,11 +268,11 @@ export interface IAuthModuleService extends IModuleService {
    * @returns {Promise<AuthIdentityDTO>} The updated auth.
    *
    * @example
-   * const authIdentity = await authModuleService.updateAuthIdentites({
+   * const authIdentity = await authModuleService.updateAuthIdentities({
    *   id: "authusr_123",
    * })
    */
-  updateAuthIdentites(
+  updateAuthIdentities(
     data: UpdateAuthIdentityDTO,
     sharedContext?: Context
   ): Promise<AuthIdentityDTO>
@@ -399,7 +404,7 @@ export interface IAuthModuleService extends IModuleService {
    *   },
    * ])
    */
-  updateProviderIdentites(
+  updateProviderIdentities(
     data: UpdateProviderIdentityDTO[],
     sharedContext?: Context
   ): Promise<ProviderIdentityDTO[]>
@@ -412,11 +417,11 @@ export interface IAuthModuleService extends IModuleService {
    * @returns {Promise<ProviderIdentityDTO>} The updated provider identity.
    *
    * @example
-   * const providerIdentity = await authModuleService.updateProviderIdentites({
+   * const providerIdentity = await authModuleService.updateProviderIdentities({
    *   id: "provider_123",
    * })
    */
-  updateProviderIdentites(
+  updateProviderIdentities(
     data: UpdateProviderIdentityDTO,
     sharedContext?: Context
   ): Promise<ProviderIdentityDTO>
