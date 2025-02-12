@@ -3,21 +3,22 @@
 import React, { useEffect } from "react"
 import { useSidebar } from "../providers/Sidebar"
 import clsx from "clsx"
-import { Bannerv2, MainNav, useIsBrowser } from ".."
+import { MainNav, useIsBrowser, useLayout } from ".."
 
 export type MainContentLayoutProps = {
   mainWrapperClasses?: string
-  showBanner?: boolean
+  contentClassName?: string
   children: React.ReactNode
 }
 
 export const MainContentLayout = ({
   children,
   mainWrapperClasses,
-  showBanner = true,
+  contentClassName,
 }: MainContentLayoutProps) => {
-  const isBrowser = useIsBrowser()
+  const { isBrowser } = useIsBrowser()
   const { desktopSidebarOpen } = useSidebar()
+  const { mainContentRef } = useLayout()
 
   useEffect(() => {
     if (!isBrowser) {
@@ -36,28 +37,30 @@ export const MainContentLayout = ({
         "relative max-w-full",
         "h-full flex-1",
         "flex flex-col",
-        "gap-docs_0.5 lg:pt-docs_0.25 lg:mr-docs_0.25",
+        "gap-docs_0.5 lg:pt-docs_0.25 lg:mr-docs_0.25 scroll-m-docs_0.25",
         !desktopSidebarOpen && "lg:ml-docs_0.25",
         mainWrapperClasses
       )}
     >
-      {showBanner && <Bannerv2 />}
       <div
         className={clsx(
           "bg-medusa-bg-base",
           "flex-col items-center",
           "h-full w-full",
           "overflow-y-scroll overflow-x-hidden",
-          "md:rounded-t-docs_DEFAULT shadow-elevation-card-rest",
+          "md:rounded-t-docs_DEFAULT",
+          "shadow-elevation-card-rest dark:shadow-elevation-card-rest-dark",
           mainWrapperClasses
         )}
         id="main"
+        ref={mainContentRef}
       >
         <MainNav />
         <div
           className={clsx(
             "flex justify-center",
-            "pt-docs_4 lg:pt-docs_6 pb-docs_8 lg:pb-docs_4"
+            "pt-docs_4 lg:pt-docs_6 pb-docs_8 lg:pb-docs_4",
+            contentClassName
           )}
         >
           {children}

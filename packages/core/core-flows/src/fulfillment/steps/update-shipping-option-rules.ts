@@ -2,13 +2,23 @@ import {
   IFulfillmentModuleService,
   UpdateFulfillmentShippingOptionRulesWorkflowDTO,
   UpdateShippingOptionRuleDTO,
-} from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const updateShippingOptionRulesStepId = "update-shipping-option-rules"
 /**
  * This step updates one or more shipping option rules.
+ * 
+ * @example
+ * const data = updateShippingOptionRulesStep({
+ *   data: [
+ *     {
+ *       id: "sor_123",
+ *       operator: "in"
+ *     }
+ *   ]
+ * })
  */
 export const updateShippingOptionRulesStep = createStep(
   updateShippingOptionRulesStepId,
@@ -23,7 +33,7 @@ export const updateShippingOptionRulesStep = createStep(
     const { data } = input
 
     const fulfillmentModule = container.resolve<IFulfillmentModuleService>(
-      ModuleRegistrationName.FULFILLMENT
+      Modules.FULFILLMENT
     )
 
     const ids = data.map((d) => d.id)
@@ -46,7 +56,7 @@ export const updateShippingOptionRulesStep = createStep(
     }
 
     const fulfillmentModule = container.resolve<IFulfillmentModuleService>(
-      ModuleRegistrationName.FULFILLMENT
+      Modules.FULFILLMENT
     )
 
     await fulfillmentModule.updateShippingOptionRules(previousRulesData)

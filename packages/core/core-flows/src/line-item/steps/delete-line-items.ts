@@ -1,6 +1,11 @@
-import { ICartModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import { ICartModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
+
+/**
+ * The IDs of the line items to delete.
+ */
+export type DeleteLineItemsStepInput = string[]
 
 export const deleteLineItemsStepId = "delete-line-items"
 /**
@@ -8,10 +13,8 @@ export const deleteLineItemsStepId = "delete-line-items"
  */
 export const deleteLineItemsStep = createStep(
   deleteLineItemsStepId,
-  async (ids: string[], { container }) => {
-    const service = container.resolve<ICartModuleService>(
-      ModuleRegistrationName.CART
-    )
+  async (ids: DeleteLineItemsStepInput, { container }) => {
+    const service = container.resolve<ICartModuleService>(Modules.CART)
 
     await service.softDeleteLineItems(ids)
 
@@ -21,9 +24,7 @@ export const deleteLineItemsStep = createStep(
     if (!ids?.length) {
       return
     }
-    const service = container.resolve<ICartModuleService>(
-      ModuleRegistrationName.CART
-    )
+    const service = container.resolve<ICartModuleService>(Modules.CART)
 
     await service.restoreLineItems(ids)
   }

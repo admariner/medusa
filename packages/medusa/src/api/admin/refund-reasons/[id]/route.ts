@@ -1,13 +1,13 @@
 import {
-  deleteReturnReasonsWorkflow,
+  deleteRefundReasonsWorkflow,
   updateRefundReasonsWorkflow,
 } from "@medusajs/core-flows"
-import { HttpTypes, RefundReasonResponse } from "@medusajs/types"
+import { HttpTypes, RefundReasonResponse } from "@medusajs/framework/types"
 import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
-} from "../../../../types/routing"
-import { refetchEntity } from "../../../utils/refetch-entity"
+  refetchEntity,
+} from "@medusajs/framework/http"
 import { AdminUpdatePaymentRefundReasonType } from "../validators"
 
 export const GET = async (
@@ -18,7 +18,7 @@ export const GET = async (
     "refund_reason",
     req.params.id,
     req.scope,
-    req.remoteQueryConfig.fields
+    req.queryConfig.fields
   )
 
   res.json({ refund_reason })
@@ -43,7 +43,7 @@ export const POST = async (
     "refund_reason",
     req.params.id,
     req.scope,
-    req.remoteQueryConfig.fields
+    req.queryConfig.fields
   )
 
   res.json({ refund_reason })
@@ -56,7 +56,7 @@ export const DELETE = async (
   const { id } = req.params
   const input = { ids: [id] }
 
-  await deleteReturnReasonsWorkflow(req.scope).run({ input })
+  await deleteRefundReasonsWorkflow(req.scope).run({ input })
 
   res.json({
     id,

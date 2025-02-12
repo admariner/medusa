@@ -23,8 +23,8 @@ const moduleName = "myTestServiceRun"
 const fs = new FileSystem(join(__dirname, "./migrations-run"))
 
 const pgGodCredentials = {
-  user: DB_USERNAME,
-  password: DB_PASSWORD,
+  user: DB_USERNAME ?? "postgres",
+  password: DB_PASSWORD ?? "",
   host: DB_HOST,
 }
 
@@ -70,7 +70,7 @@ describe.skip("Run migrations", () => {
     const results = await migrations.run()
 
     const orm = await MikroORM.init(config)
-    const usersTableExists = await orm.em.getKnex().schema.hasTable("user")
+    const usersTableExists = await orm.em["getKnex"]().schema.hasTable("user")
     await orm.close()
 
     expect(results).toHaveLength(1)
@@ -168,7 +168,7 @@ describe.skip("Run migrations", () => {
     expect(migrations.run()).rejects.toThrow(/.*Migration.*/)
 
     const orm = await MikroORM.init(config)
-    const usersTableExists = await orm.em.getKnex().schema.hasTable("user")
+    const usersTableExists = await orm.em["getKnex"]().schema.hasTable("user")
 
     await orm.close()
 

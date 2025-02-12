@@ -1,35 +1,54 @@
-import { IInventoryService, InventoryTypes } from "@medusajs/types"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import { InventoryTypes } from "@medusajs/framework/types"
+import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 
-import { ModuleRegistrationName } from "@medusajs/utils"
+import { Modules } from "@medusajs/framework/utils"
+
+/**
+ * The data to create reservation items.
+ */
+export type CreateReservationsStepInput = InventoryTypes.CreateReservationItemInput[]
 
 export const createReservationsStepId = "create-reservations-step"
 /**
  * This step creates one or more reservations.
+ * 
+ * @example
+ * const data = createReservationsStep([
+ *   {
+ *     inventory_item_id: "iitem_123",
+ *     location_id: "sloc_123",
+ *     quantity: 1,
+ *   }
+ * ])
  */
 export const createReservationsStep = createStep(
   createReservationsStepId,
-  async (data: InventoryTypes.CreateReservationItemInput[], { container }) => {
-    const service = container.resolve<IInventoryService>(
-      ModuleRegistrationName.INVENTORY
-    )
+  async (data: CreateReservationsStepInput, { container }) => {
+    const service = container.resolve(Modules.INVENTORY)
+    const locking = container.resolve(Modules.LOCKING)
 
-    const created = await service.createReservationItems(data)
+    const inventoryItemIds = data.map((item) => item.inventory_item_id)
 
-    return new StepResponse(
-      created,
-      created.map((reservation) => reservation.id)
-    )
+    const created = await locking.execute(inventoryItemIds, async () => {
+      return await service.createReservationItems(data)
+    })
+
+    return new StepResponse(created, {
+      reservations: created.map((reservation) => reservation.id),
+      inventoryItemIds: inventoryItemIds,
+    })
   },
-  async (createdIds, { container }) => {
-    if (!createdIds?.length) {
+  async (data, { container }) => {
+    if (!data?.reservations?.length) {
       return
     }
 
-    const service = container.resolve<IInventoryService>(
-      ModuleRegistrationName.INVENTORY
-    )
+    const service = container.resolve(Modules.INVENTORY)
+    const locking = container.resolve(Modules.LOCKING)
 
-    await service.deleteReservationItems(createdIds)
+    const inventoryItemIds = data.inventoryItemIds
+    await locking.execute(inventoryItemIds, async () => {
+      await service.deleteReservationItems(data.reservations)
+    })
   }
 )

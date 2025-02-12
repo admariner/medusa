@@ -3,22 +3,15 @@ import { Client } from "../client"
 import { ClientHeaders } from "../types"
 
 export class User {
+  /**
+   * @ignore
+   */
   private client: Client
+  /**
+   * @ignore
+   */
   constructor(client: Client) {
     this.client = client
-  }
-
-  async create(
-    body: HttpTypes.AdminCreateUser,
-    query?: HttpTypes.AdminUserParams,
-    headers?: ClientHeaders
-  ) {
-    return this.client.fetch<HttpTypes.AdminUserResponse>(`/admin/users`, {
-      method: "POST",
-      headers,
-      body,
-      query,
-    })
   }
 
   async update(

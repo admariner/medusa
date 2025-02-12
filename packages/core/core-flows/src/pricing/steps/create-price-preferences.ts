@@ -1,17 +1,34 @@
-import { IPricingModuleService } from "@medusajs/types"
-import { PricingWorkflow } from "@medusajs/types/dist/workflow"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import {
+  IPricingModuleService,
+  PricingWorkflow,
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
+
+/**
+ * The price preferences to create.
+ */
+export type CreatePricePreferencesStepInput = PricingWorkflow.CreatePricePreferencesWorkflowInput[]
 
 export const createPricePreferencesStepId = "create-price-preferences"
 /**
  * This step creates one or more price preferences.
+ * 
+ * @example
+ * const data = createPricePreferencesStep([{
+ *   attribute: "region_id",
+ *   value: "reg_123",
+ *   is_tax_inclusive: true
+ * }])
  */
 export const createPricePreferencesStep = createStep(
   createPricePreferencesStepId,
-  async (data: PricingWorkflow.CreatePricePreferencesWorkflowInput[], { container }) => {
+  async (
+    data: CreatePricePreferencesStepInput,
+    { container }
+  ) => {
     const pricingModule = container.resolve<IPricingModuleService>(
-      ModuleRegistrationName.PRICING
+      Modules.PRICING
     )
 
     const pricePreferences = await pricingModule.createPricePreferences(data)
@@ -27,7 +44,7 @@ export const createPricePreferencesStep = createStep(
     }
 
     const pricingModule = container.resolve<IPricingModuleService>(
-      ModuleRegistrationName.PRICING
+      Modules.PRICING
     )
 
     await pricingModule.deletePricePreferences(pricePreferences)

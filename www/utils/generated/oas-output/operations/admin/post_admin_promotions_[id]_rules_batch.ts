@@ -12,14 +12,6 @@
  *     required: true
  *     schema:
  *       type: string
- *   - name: expand
- *     in: query
- *     description: Comma-separated relations that should be expanded in the returned data.
- *     required: false
- *     schema:
- *       type: string
- *       title: expand
- *       description: Comma-separated relations that should be expanded in the returned data.
  *   - name: fields
  *     in: query
  *     description: Comma-separated fields that should be included in the returned data. if a field is prefixed with `+` it will be added to the default fields, using `-` will remove it from the default
@@ -30,30 +22,8 @@
  *       title: fields
  *       description: Comma-separated fields that should be included in the returned data. if a field is prefixed with `+` it will be added to the default fields, using `-` will remove it from the default
  *         fields. without prefix it will replace the entire default fields.
- *   - name: offset
- *     in: query
- *     description: The number of items to skip when retrieving a list.
- *     required: false
- *     schema:
- *       type: number
- *       title: offset
- *       description: The number of items to skip when retrieving a list.
- *   - name: limit
- *     in: query
- *     description: Limit the number of items returned in the list.
- *     required: false
- *     schema:
- *       type: number
- *       title: limit
- *       description: Limit the number of items returned in the list.
- *   - name: order
- *     in: query
- *     description: The field to sort the data by. By default, the sort order is ascending. To change the order to descending, prefix the field name with `-`.
- *     required: false
- *     schema:
- *       type: string
- *       title: order
- *       description: The field to sort the data by. By default, the sort order is ascending. To change the order to descending, prefix the field name with `-`.
+ *       externalDocs:
+ *         url: "#select-fields-and-relations"
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -69,95 +39,12 @@
  *             type: array
  *             description: The rules to create.
  *             items:
- *               type: object
- *               description: A rule's details.
- *               required:
- *                 - operator
- *                 - description
- *                 - attribute
- *                 - values
- *               properties:
- *                 operator:
- *                   type: string
- *                   description: The operator used to check whether the rule applies on a cart. For example, `eq` means that the cart's value for the specified attribute must match the specified value.
- *                   enum:
- *                     - gte
- *                     - lte
- *                     - gt
- *                     - lt
- *                     - eq
- *                     - ne
- *                     - in
- *                 description:
- *                   type: string
- *                   title: description
- *                   description: The rule's description.
- *                 attribute:
- *                   type: string
- *                   title: attribute
- *                   description: The attribute to compare against when checking whether a promotion can be applied on a cart.
- *                   example: items.product.id
- *                 values:
- *                   oneOf:
- *                     - type: string
- *                       title: values
- *                       description: The attribute's value.
- *                       example: prod_123
- *                     - type: array
- *                       description: The allowed attribute values.
- *                       items:
- *                         type: string
- *                         title: values
- *                         description: An attribute value.
- *                         example: prod_123
+ *               $ref: "#/components/schemas/AdminCreatePromotionRule"
  *           update:
  *             type: array
  *             description: The rules to update.
  *             items:
- *               type: object
- *               description: The properties to update in a rule.
- *               required:
- *                 - id
- *                 - description
- *                 - values
- *               properties:
- *                 id:
- *                   type: string
- *                   title: id
- *                   description: The rule's ID.
- *                 operator:
- *                   type: string
- *                   description: The operator used to check whether the rule applies on a cart. For example, `eq` means that the cart's value for the specified attribute must match the specified value.
- *                   enum:
- *                     - gte
- *                     - lte
- *                     - gt
- *                     - lt
- *                     - eq
- *                     - ne
- *                     - in
- *                 description:
- *                   type: string
- *                   title: description
- *                   description: The rule's description.
- *                 attribute:
- *                   type: string
- *                   title: attribute
- *                   description: The attribute to compare against when checking whether a promotion can be applied on a cart.
- *                   example: items.product.id
- *                 values:
- *                   oneOf:
- *                     - type: string
- *                       title: values
- *                       description: The attribute's value.
- *                       example: prod_123
- *                     - type: array
- *                       description: The allowed attribute values.
- *                       items:
- *                         type: string
- *                         title: values
- *                         description: An attribute value.
- *                         example: prod_123
+ *               $ref: "#/components/schemas/AdminUpdatePromotionRule"
  *           delete:
  *             type: array
  *             description: The rules to delete.
@@ -170,7 +57,7 @@
  *     label: cURL
  *     source: |-
  *       curl -X POST '{backend_url}/admin/promotions/{id}/rules/batch' \
- *       -H 'x-medusa-access-token: {api_token}'
+ *       -H 'Authorization: Bearer {access_token}'
  * tags:
  *   - Promotions
  * responses:
@@ -215,7 +102,7 @@
  *                   type: string
  *                   title: object
  *                   description: The name of the object that was deleted.
- *                   default: "promotion-rule"
+ *                   default: promotion-rule
  *                 deleted:
  *                   type: boolean
  *                   title: deleted

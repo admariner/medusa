@@ -1,10 +1,9 @@
 import {
   ContainerRegistrationKeys,
-  ModuleRegistrationName,
   Modules,
   RuleOperator,
 } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import {
   adminHeaders,
   createAdminUser,
@@ -26,15 +25,29 @@ medusaIntegrationTestRunner({
       const container = getContainer()
       await createAdminUser(dbConnection, adminHeaders, container)
 
+      shippingProfile = (
+        await api.post(
+          `/admin/shipping-profiles`,
+          {
+            name: "Test",
+            type: "default",
+          },
+          adminHeaders
+        )
+      ).data.shipping_profile
+
       const product = (
         await api.post(
           "/admin/products",
           {
             title: "Test product",
+            options: [{ title: "size", values: ["x", "l"] }],
+            shipping_profile_id: shippingProfile.id,
             variants: [
               {
                 title: "Test variant",
                 sku: "test-variant",
+                options: { size: "l" },
                 prices: [
                   {
                     currency_code: "usd",
@@ -60,7 +73,7 @@ medusaIntegrationTestRunner({
         )
       ).data.return_reason
 
-      const orderModule = container.resolve(ModuleRegistrationName.ORDER)
+      const orderModule = container.resolve(Modules.ORDER)
 
       order = await orderModule.createOrders({
         region_id: "test_region_id",
@@ -147,17 +160,6 @@ medusaIntegrationTestRunner({
           },
         ],
       })
-
-      shippingProfile = (
-        await api.post(
-          `/admin/shipping-profiles`,
-          {
-            name: "Test",
-            type: "default",
-          },
-          adminHeaders
-        )
-      ).data.shipping_profile
 
       location = (
         await api.post(
@@ -665,7 +667,7 @@ medusaIntegrationTestRunner({
         result = await api.post(
           `/admin/returns/${returnId}/shipping-method/${updateShippingActionId}`,
           {
-            custom_price: 1002,
+            custom_amount: 1002,
             internal_note: "cx agent note",
           },
           adminHeaders

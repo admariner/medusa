@@ -1,18 +1,10 @@
-import { resolve } from "path"
-import { moduleIntegrationTestRunner } from "medusa-test-utils"
-import { Entity, PrimaryKey } from "@mikro-orm/core"
-import { IFileModuleService } from "@medusajs/types"
-import { Module, Modules } from "@medusajs/utils"
+import { IFileModuleService } from "@medusajs/framework/types"
+import { Module, Modules } from "@medusajs/framework/utils"
+import { moduleIntegrationTestRunner } from "@medusajs/test-utils"
 import { FileModuleService } from "@services"
+import { resolve } from "path"
 
 jest.setTimeout(100000)
-
-// The test runner throws if a model is not passed, so we create a dummy entity
-@Entity({ tableName: "dummy_file_entity" })
-export default class DummyEntity {
-  @PrimaryKey()
-  id: string
-}
 
 const moduleOptions = {
   providers: [
@@ -29,7 +21,6 @@ const moduleOptions = {
 moduleIntegrationTestRunner<IFileModuleService>({
   moduleName: Modules.FILE,
   moduleOptions: moduleOptions,
-  moduleModels: [DummyEntity],
   testSuite: ({ service }) => {
     describe("File Module Service", () => {
       it(`should export the appropriate linkable configuration`, () => {
@@ -37,13 +28,23 @@ moduleIntegrationTestRunner<IFileModuleService>({
           service: FileModuleService,
         }).linkable
 
-        expect(Object.keys(linkable)).toEqual([])
+        expect(Object.keys(linkable)).toEqual(["file"])
 
         Object.keys(linkable).forEach((key) => {
           delete linkable[key].toJSON
         })
 
-        expect(linkable).toEqual({})
+        expect(linkable).toEqual({
+          file: {
+            id: {
+              entity: "File",
+              field: "file",
+              linkable: "file_id",
+              primaryKey: "id",
+              serviceName: "file",
+            },
+          },
+        })
       })
 
       it("creates and gets a file", async () => {

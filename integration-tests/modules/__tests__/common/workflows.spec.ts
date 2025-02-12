@@ -7,7 +7,7 @@ import {
   updateLinksWorkflowId,
 } from "@medusajs/core-flows"
 import { Modules } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import {
   adminHeaders,
   createAdminUser,
@@ -30,14 +30,25 @@ medusaIntegrationTestRunner({
       beforeEach(async () => {
         await createAdminUser(dbConnection, adminHeaders, getContainer())
 
+        const shippingProfile = (
+          await api.post(
+            `/admin/shipping-profiles`,
+            { name: "Test", type: "default" },
+            adminHeaders
+          )
+        ).data.shipping_profile
+
         product = (
           await api.post(
             "/admin/products",
             {
               title: "product 1",
+              shipping_profile_id: shippingProfile.id,
+              options: [{ title: "size", values: ["x", "l"] }],
               variants: [
                 {
                   title: "variant 1",
+                  options: { size: "x" },
                   prices: [{ currency_code: "usd", amount: 100 }],
                 },
               ],

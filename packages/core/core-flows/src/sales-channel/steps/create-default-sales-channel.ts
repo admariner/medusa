@@ -1,23 +1,37 @@
 import {
   CreateSalesChannelDTO,
   ISalesChannelModuleService,
-} from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The data to create a default sales channel.
+ */
 export interface CreateDefaultSalesChannelStepInput {
+  /**
+   * The default sales channel data.
+   */
   data: CreateSalesChannelDTO
 }
 
 export const createDefaultSalesChannelStepId = "create-default-sales-channel"
 /**
- * This step creates a default sales channel.
+ * This step creates a default sales channel if none exist in the application. 
+ * This is useful when creating seed scripts.
+ * 
+ * @example
+ * const data = createDefaultSalesChannelStep({
+ *   data: {
+ *     name: "Webshop",
+ *   }
+ * })
  */
 export const createDefaultSalesChannelStep = createStep(
   createDefaultSalesChannelStepId,
   async (input: CreateDefaultSalesChannelStepInput, { container }) => {
     const salesChannelService = container.resolve<ISalesChannelModuleService>(
-      ModuleRegistrationName.SALES_CHANNEL
+      Modules.SALES_CHANNEL
     )
 
     if (!salesChannelService) {
@@ -44,7 +58,7 @@ export const createDefaultSalesChannelStep = createStep(
     }
 
     const service = container.resolve<ISalesChannelModuleService>(
-      ModuleRegistrationName.SALES_CHANNEL
+      Modules.SALES_CHANNEL
     )
 
     await service.deleteSalesChannels(data.id)

@@ -2,22 +2,41 @@ import {
   FilterablePaymentCollectionProps,
   IPaymentModuleService,
   PaymentCollectionUpdatableFields,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
-  ModuleRegistrationName,
+  Modules,
   getSelectsAndRelationsFromObjectArray,
   isPresent,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The data to update a payment collection.
+ */
 export interface UpdatePaymentCollectionStepInput {
+  /**
+   * The filters to select the payment collections to update.
+   */
   selector: FilterablePaymentCollectionProps
+  /**
+   * The data to update in the selected payment collections.
+   */
   update: PaymentCollectionUpdatableFields
 }
 
 export const updatePaymentCollectionStepId = "update-payment-collection"
 /**
  * This step updates payment collections matching the specified filters.
+ * 
+ * @example
+ * const data = updatePaymentCollectionStep({
+ *   selector: {
+ *     id: "paycol_123",
+ *   },
+ *   update: {
+ *     amount: 10,
+ *   }
+ * })
  */
 export const updatePaymentCollectionStep = createStep(
   updatePaymentCollectionStepId,
@@ -27,7 +46,7 @@ export const updatePaymentCollectionStep = createStep(
     }
 
     const paymentModuleService = container.resolve<IPaymentModuleService>(
-      ModuleRegistrationName.PAYMENT
+      Modules.PAYMENT
     )
 
     const { selects, relations } = getSelectsAndRelationsFromObjectArray([
@@ -54,7 +73,7 @@ export const updatePaymentCollectionStep = createStep(
       return
     }
     const paymentModuleService = container.resolve<IPaymentModuleService>(
-      ModuleRegistrationName.PAYMENT
+      Modules.PAYMENT
     )
 
     await paymentModuleService.upsertPaymentCollections(

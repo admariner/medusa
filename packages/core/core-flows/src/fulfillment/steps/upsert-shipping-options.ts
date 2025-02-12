@@ -3,14 +3,17 @@ import {
   IFulfillmentModuleService,
   ShippingOptionDTO,
   UpsertShippingOptionDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
-  ModuleRegistrationName,
+  Modules,
   arrayDifference,
   getSelectsAndRelationsFromObjectArray,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The data to create or update shipping options.
+ */
 export type UpsertShippingOptionsStepInput = Omit<
   | FulfillmentWorkflow.CreateShippingOptionsWorkflowInput
   | FulfillmentWorkflow.UpdateShippingOptionsWorkflowInput,
@@ -29,7 +32,7 @@ export const upsertShippingOptionsStep = createStep(
     }
 
     const fulfillmentService = container.resolve<IFulfillmentModuleService>(
-      ModuleRegistrationName.FULFILLMENT
+      Modules.FULFILLMENT
     )
 
     const toUpdate: FulfillmentWorkflow.UpdateShippingOptionsWorkflowInput[] =
@@ -85,7 +88,7 @@ export const upsertShippingOptionsStep = createStep(
     }
 
     const fulfillmentService = container.resolve<IFulfillmentModuleService>(
-      ModuleRegistrationName.FULFILLMENT
+      Modules.FULFILLMENT
     )
 
     if (shippingOptionIds.updatedPreviousData.length) {

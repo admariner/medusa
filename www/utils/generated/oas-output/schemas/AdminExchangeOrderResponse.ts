@@ -1,7 +1,7 @@
 /**
  * @schema AdminExchangeOrderResponse
  * type: object
- * description: SUMMARY
+ * description: The exchange's details.
  * x-schemaName: AdminExchangeOrderResponse
  * required:
  *   - order

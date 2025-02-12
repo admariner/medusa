@@ -1,25 +1,42 @@
-import { IProductModuleService, ProductTypes } from "@medusajs/types"
+import { IProductModuleService, ProductTypes } from "@medusajs/framework/types"
 import {
-  ModuleRegistrationName,
+  Modules,
   getSelectsAndRelationsFromObjectArray,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The data to identify and update the product collections.
+ */
 export type UpdateCollectionsStepInput = {
+  /**
+   * The filters to select the collections to update.
+   */
   selector: ProductTypes.FilterableProductCollectionProps
+  /**
+   * The data to update the collections with.
+   */
   update: ProductTypes.UpdateProductCollectionDTO
 }
 
 export const updateCollectionsStepId = "update-collections"
 /**
  * This step updates collections matching the specified filters.
+ * 
+ * @example
+ * const data = updateCollectionsStep({
+ *   selector: {
+ *     id: "collection_123"
+ *   },
+ *   update: {
+ *     title: "Summer Collection"
+ *   }
+ * })
  */
 export const updateCollectionsStep = createStep(
   updateCollectionsStepId,
   async (data: UpdateCollectionsStepInput, { container }) => {
-    const service = container.resolve<IProductModuleService>(
-      ModuleRegistrationName.PRODUCT
-    )
+    const service = container.resolve<IProductModuleService>(Modules.PRODUCT)
 
     const { selects, relations } = getSelectsAndRelationsFromObjectArray([
       data.update,
@@ -41,9 +58,7 @@ export const updateCollectionsStep = createStep(
       return
     }
 
-    const service = container.resolve<IProductModuleService>(
-      ModuleRegistrationName.PRODUCT
-    )
+    const service = container.resolve<IProductModuleService>(Modules.PRODUCT)
 
     await service.upsertProductCollections(
       prevData.map((r) => ({

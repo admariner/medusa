@@ -1,22 +1,23 @@
-import { EntityClass, EntityProperty } from "@mikro-orm/core/typings"
-import { EntityMetadata, EntitySchema, ReferenceType } from "@mikro-orm/core"
+import type {
+  EntityClass,
+  EntityProperty,
+  FindOneOptions,
+  FindOptions,
+} from "@mikro-orm/core"
+import { EntityMetadata, ReferenceKind } from "@mikro-orm/core"
 import { SqlEntityManager } from "@mikro-orm/postgresql"
-import type { FindOneOptions, FindOptions } from "@mikro-orm/core/drivers"
 
-export const FreeTextSearchFilterKey = "freeTextSearch"
+export const FreeTextSearchFilterKeyPrefix = "freeTextSearch_"
 
 interface FilterArgument {
   value: string
   fromEntity: string
 }
 
-function getEntityProperties(entity: EntityClass<any> | EntitySchema): {
+function getEntityProperties(metadata: EntityMetadata<any>): {
   [key: string]: EntityProperty<any>
 } {
-  return (
-    (entity as EntityClass<any>)?.prototype.__meta?.properties ??
-    (entity as EntitySchema).meta?.properties
-  )
+  return metadata.properties
 }
 
 function retrieveRelationsConstraints(
@@ -27,7 +28,7 @@ function retrieveRelationsConstraints(
     type: string
     name: string
   },
-  models: (EntityClass<any> | EntitySchema)[],
+  metadata: EntityMetadata<any>,
   searchValue: string,
   visited: Set<string> = new Set(),
   shouldStop: boolean = false
@@ -42,27 +43,29 @@ function retrieveRelationsConstraints(
 
   const relationFreeTextSearchWhere: any = []
 
-  const relationClass = models.find((m) => m.name === relation.type)!
-  const relationProperties = getEntityProperties(relationClass)
+  const relationProperties = getEntityProperties(metadata)
 
   for (const propertyConfiguration of Object.values(relationProperties)) {
     if (
       !(propertyConfiguration as any).searchable ||
-      propertyConfiguration.reference !== ReferenceType.SCALAR
+      propertyConfiguration.kind !== ReferenceKind.SCALAR
     ) {
       continue
     }
 
+    const isText = propertyConfiguration?.columnTypes?.includes("text")
+    const columnName = isText
+      ? propertyConfiguration.name
+      : `${propertyConfiguration.name}::text`
+
     relationFreeTextSearchWhere.push({
-      [propertyConfiguration.name]: {
+      [columnName]: {
         $ilike: `%${searchValue}%`,
       },
     })
   }
 
-  const innerRelations: EntityProperty[] =
-    (relationClass as EntityClass<any>)?.prototype.__meta?.relations ??
-    (relationClass as EntitySchema).meta?.relations
+  const innerRelations: EntityProperty[] = metadata.relations
 
   for (const innerRelation of innerRelations) {
     const branchVisited = new Set(Array.from(visited))
@@ -99,7 +102,7 @@ function retrieveRelationsConstraints(
         mapToPk: innerRelation.mapToPk,
         type: innerRelation.type,
       },
-      models,
+      innerRelation.targetMeta!,
       searchValue,
       branchVisited,
       isSelfCircularDependency
@@ -119,10 +122,9 @@ function retrieveRelationsConstraints(
   return relationFreeTextSearchWhere
 }
 
-export const mikroOrmFreeTextSearchFilterOptionsFactory = (
-  models: (EntityClass<any> | EntitySchema)[]
-) => {
+export const mikroOrmFreeTextSearchFilterOptionsFactory = (model: string) => {
   return {
+    name: FreeTextSearchFilterKeyPrefix + model,
     cond: (
       freeTextSearchArgs: FilterArgument,
       operation: string,
@@ -135,7 +137,7 @@ export const mikroOrmFreeTextSearchFilterOptionsFactory = (
         return {}
       }
 
-      const { value, fromEntity } = freeTextSearchArgs
+      const { value } = freeTextSearchArgs
 
       if (options?.visited?.size) {
         /**
@@ -149,17 +151,17 @@ export const mikroOrmFreeTextSearchFilterOptionsFactory = (
         }
       }
 
-      const entityMetadata = manager.getDriver().getMetadata().get(fromEntity)
+      const entityMetadata = manager.getDriver().getMetadata().get(model)
 
       const freeTextSearchWhere = retrieveRelationsConstraints(
         {
           targetMeta: entityMetadata,
           mapToPk: false,
           searchable: true,
-          type: fromEntity,
+          type: model,
           name: entityMetadata.name!,
         },
-        models,
+        entityMetadata,
         value
       )
 
@@ -171,8 +173,5 @@ export const mikroOrmFreeTextSearchFilterOptionsFactory = (
         $or: freeTextSearchWhere,
       }
     },
-    default: true,
-    args: false,
-    entity: models.map((m) => m.name) as string[],
   }
 }

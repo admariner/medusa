@@ -15,6 +15,14 @@ type FlowRunOptions<TData = unknown> = {
   events?: Record<string, Function>
 }
 
+export type Acknowledgement = {
+  workflowId: string
+  transactionId: string
+  parentStepIdempotencyKey?: string
+  hasFinished: boolean
+  hasFailed: boolean
+}
+
 export interface WorkflowOrchestratorRunDTO<T = unknown>
   extends FlowRunOptions<T> {
   transactionId?: string
@@ -59,7 +67,7 @@ export interface IWorkflowEngineService extends IModuleService {
     errors: Error[]
     transaction: object
     result: any
-    acknowledgement: object
+    acknowledgement: Acknowledgement
   }>
 
   getRunningTransaction(

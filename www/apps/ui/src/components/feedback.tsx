@@ -3,7 +3,6 @@
 import {
   Feedback as UiFeedback,
   FeedbackProps as UiFeedbackProps,
-  formatReportLink,
 } from "docs-ui"
 import { usePathname } from "next/navigation"
 import { absoluteUrl } from "@/lib/absolute-url"
@@ -20,12 +19,11 @@ export const Feedback = ({ title, ...props }: FeedbackProps) => {
     <UiFeedback
       event="survey"
       pathName={absoluteUrl(pathname)}
-      reportLink={formatReportLink("UI Docs", title, "ui")}
       extraData={{
         section: title,
       }}
       {...props}
-      className={clsx("text-medusa-fg-subtle", props.className)}
+      className={clsx("text-medusa-fg-base", props.className)}
     />
   )
 }

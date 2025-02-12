@@ -1,5 +1,5 @@
-import { WorkflowTypes } from "@medusajs/types"
-import { RegionWorkflowEvents } from "@medusajs/utils"
+import { WorkflowTypes } from "@medusajs/framework/types"
+import { RegionWorkflowEvents } from "@medusajs/framework/utils"
 import {
   createWorkflow,
   parallelize,
@@ -7,7 +7,7 @@ import {
   when,
   WorkflowData,
   WorkflowResponse,
-} from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/workflows-sdk"
 import { emitEventStep } from "../../common/steps/emit-event"
 import { updatePricePreferencesWorkflow } from "../../pricing"
 import { updateRegionsStep } from "../steps"
@@ -15,7 +15,28 @@ import { setRegionsPaymentProvidersStep } from "../steps/set-regions-payment-pro
 
 export const updateRegionsWorkflowId = "update-regions"
 /**
- * This workflow updates regions matching the specified filters.
+ * This workflow updates regions matching the specified filters. It's used by the
+ * [Update Region Admin API Route](https://docs.medusajs.com/api/admin#regions_postregionsid).
+ * 
+ * You can use this workflow within your own customizations or custom workflows, allowing you
+ * to update regions in your custom flows.
+ * 
+ * @example
+ * const { result } = await updateRegionsWorkflow(container)
+ * .run({
+ *   input: {
+ *     selector: {
+ *       id: "reg_123"
+ *     },
+ *     update: {
+ *       name: "United States"
+ *     }
+ *   }
+ * })
+ * 
+ * @summary
+ * 
+ * Update regions.
  */
 export const updateRegionsWorkflow = createWorkflow(
   updateRegionsWorkflowId,

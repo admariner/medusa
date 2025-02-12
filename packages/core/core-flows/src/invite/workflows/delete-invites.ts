@@ -1,16 +1,32 @@
-import { InviteWorkflow } from "@medusajs/types"
-import { InviteWorkflowEvents } from "@medusajs/utils"
+import { InviteWorkflow } from "@medusajs/framework/types"
+import { InviteWorkflowEvents } from "@medusajs/framework/utils"
 import {
   WorkflowData,
   createWorkflow,
   transform,
-} from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/workflows-sdk"
 import { emitEventStep } from "../../common/steps/emit-event"
 import { deleteInvitesStep } from "../steps"
 
 export const deleteInvitesWorkflowId = "delete-invites-workflow"
 /**
- * This workflow deletes one or more invites.
+ * This workflow deletes one or more user invites. It's used by the
+ * [Delete Invites Admin API Route](https://docs.medusajs.com/api/admin#invites_deleteinvitesid).
+ * 
+ * You can use this workflow within your customizations or your own custom workflows, allowing you to
+ * delete invites within your custom flows.
+ * 
+ * @example
+ * const { result } = await deleteInvitesWorkflow(container)
+ * .run({
+ *   input: {
+ *     ids: ["invite_123"]
+ *   }
+ * })
+ * 
+ * @summary
+ * 
+ * Delete one or more user invites.
  */
 export const deleteInvitesWorkflow = createWorkflow(
   deleteInvitesWorkflowId,

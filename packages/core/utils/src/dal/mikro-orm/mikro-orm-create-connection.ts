@@ -1,38 +1,51 @@
 import { ModuleServiceInitializeOptions } from "@medusajs/types"
+import { Filter as MikroORMFilter } from "@mikro-orm/core"
 import { TSMigrationGenerator } from "@mikro-orm/migrations"
 import { isString } from "../../common"
-import { FilterDef } from "@mikro-orm/core/typings"
+import { normalizeMigrationSQL } from "../utils"
+
+type FilterDef = Parameters<typeof MikroORMFilter>[0]
 
 export class CustomTsMigrationGenerator extends TSMigrationGenerator {
+  // TODO: temporary fix to drop unique constraint before creating unique index
+  private dropUniqueConstraintBeforeUniqueIndex(
+    sqlPatches: string[],
+    sql: string
+  ) {
+    // DML unique index
+    const uniqueIndexName = sql.match(/"IDX_(.+?)_unique"/)?.[1]
+    if (!uniqueIndexName) {
+      return
+    }
+
+    // Add drop unique constraint if it exists, using the same name as index without IDX_ prefix
+    const tableName = sql.match(/ON "(.+?)"/)?.[1]
+    if (tableName) {
+      sqlPatches.push(
+        `alter table if exists "${tableName}" drop constraint if exists "${uniqueIndexName}_unique";`
+      )
+    }
+  }
+
+  generateMigrationFile(
+    className: string,
+    diff: { up: string[]; down: string[] }
+  ): string {
+    const sqlPatches: string[] = []
+    for (const sql of diff.up) {
+      this.dropUniqueConstraintBeforeUniqueIndex(sqlPatches, sql)
+    }
+
+    for (const sql of sqlPatches) {
+      diff.up.unshift(sql)
+    }
+
+    return super.generateMigrationFile(className, diff)
+  }
+
   createStatement(sql: string, padLeft: number): string {
     if (isString(sql)) {
-      sql = sql.replace(
-        /create table (?!if not exists)/g,
-        "create table if not exists "
-      )
-      sql = sql.replace(/alter table (?!if exists)/g, "alter table if exists ")
-      sql = sql.replace(
-        /create index (?!if not exists)/g,
-        "create index if not exists "
-      )
-      sql = sql.replace(/drop index (?!if exists)/g, "drop index if exists ")
-      sql = sql.replace(
-        /create unique index (?!if not exists)/g,
-        "create unique index if not exists "
-      )
-      sql = sql.replace(
-        /drop unique index (?!if exists)/g,
-        "drop unique index if exists "
-      )
-      sql = sql.replace(
-        /add column (?!if not exists)/g,
-        "add column if not exists "
-      )
-      sql = sql.replace(/drop column (?!if exists)/g, "drop column if exists ")
-      sql = sql.replace(
-        /drop constraint (?!if exists)/g,
-        "drop constraint if exists "
-      )
+      sql = normalizeMigrationSQL(sql)
     }
 
     return super.createStatement(sql, padLeft)
@@ -68,34 +81,38 @@ export async function mikroOrmCreateConnection(
     schema = database.connection.context?.client?.config?.searchPath
   }
 
-  const { MikroORM } = await import("@mikro-orm/postgresql")
-  return await MikroORM.init({
-    discovery: { disableDynamicFileAccess: true, warnWhenNoEntities: false },
-    entities,
-    debug: database.debug ?? process.env.NODE_ENV?.startsWith("dev") ?? false,
-    baseDir: process.cwd(),
-    clientUrl,
-    schema,
-    driverOptions,
-    tsNode: process.env.APP_ENV === "development",
-    type: "postgresql",
-    filters: database.filters ?? {},
-    migrations: {
-      disableForeignKeys: false,
-      path: pathToMigrations,
-      generator: CustomTsMigrationGenerator,
-      silent: !(
-        database.debug ??
-        process.env.NODE_ENV?.startsWith("dev") ??
-        false
-      ),
-    },
-    schemaGenerator: {
-      disableForeignKeys: false,
-    },
-    pool: {
-      min: 2,
-      ...database.pool,
-    },
-  })
+  const { MikroORM, defineConfig } = await import("@mikro-orm/postgresql")
+  return await MikroORM.init(
+    defineConfig({
+      discovery: { disableDynamicFileAccess: true, warnWhenNoEntities: false },
+      entities,
+      debug: database.debug ?? process.env.NODE_ENV?.startsWith("dev") ?? false,
+      baseDir: process.cwd(),
+      clientUrl,
+      schema,
+      driverOptions,
+      tsNode: process.env.APP_ENV === "development",
+      filters: database.filters ?? {},
+      assign: {
+        convertCustomTypes: true,
+      },
+      migrations: {
+        disableForeignKeys: false,
+        path: pathToMigrations,
+        generator: CustomTsMigrationGenerator,
+        silent: !(
+          database.debug ??
+          process.env.NODE_ENV?.startsWith("dev") ??
+          false
+        ),
+      },
+      schemaGenerator: {
+        disableForeignKeys: false,
+      },
+      pool: {
+        min: 2,
+        ...database.pool,
+      },
+    })
+  )
 }

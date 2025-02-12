@@ -2,28 +2,45 @@ import {
   FilterableApiKeyProps,
   IApiKeyModuleService,
   UpdateApiKeyDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
-  ModuleRegistrationName,
+  Modules,
   getSelectsAndRelationsFromObjectArray,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The data to update API keys.
+ */
 export type UpdateApiKeysStepInput = {
+  /**
+   * The filters to select the API keys to update.
+   */
   selector: FilterableApiKeyProps
+  /**
+   * The data to update the API keys.
+   */
   update: UpdateApiKeyDTO
 }
 
 export const updateApiKeysStepId = "update-api-keys"
 /**
  * This step updates one or more API keys.
+ * 
+ * @example
+ * const data = updateApiKeysStep({
+ *   selector: {
+ *     id: "apk_123"
+ *   },
+ *   update: {
+ *     title: "Storefront"
+ *   }
+ * })
  */
 export const updateApiKeysStep = createStep(
   updateApiKeysStepId,
   async (data: UpdateApiKeysStepInput, { container }) => {
-    const service = container.resolve<IApiKeyModuleService>(
-      ModuleRegistrationName.API_KEY
-    )
+    const service = container.resolve<IApiKeyModuleService>(Modules.API_KEY)
 
     const { selects, relations } = getSelectsAndRelationsFromObjectArray([
       data.update,
@@ -42,9 +59,7 @@ export const updateApiKeysStep = createStep(
       return
     }
 
-    const service = container.resolve<IApiKeyModuleService>(
-      ModuleRegistrationName.API_KEY
-    )
+    const service = container.resolve<IApiKeyModuleService>(Modules.API_KEY)
 
     await service.upsertApiKeys(
       prevData.map((r) => ({

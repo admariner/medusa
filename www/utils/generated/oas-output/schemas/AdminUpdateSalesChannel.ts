@@ -1,11 +1,8 @@
 /**
  * @schema AdminUpdateSalesChannel
  * type: object
- * description: SUMMARY
+ * description: The properties to update in the sales channel.
  * x-schemaName: AdminUpdateSalesChannel
- * required:
- *   - description
- *   - metadata
  * properties:
  *   name:
  *     type: string
@@ -18,10 +15,10 @@
  *   is_disabled:
  *     type: boolean
  *     title: is_disabled
- *     description: The sales channel's is disabled.
+ *     description: Whether the sales channel is disabled.
  *   metadata:
  *     type: object
- *     description: The sales channel's metadata.
+ *     description: The sales channel's metadata, can hold custom key-value pairs.
  * 
 */
 

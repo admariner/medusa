@@ -1,6 +1,11 @@
-import { IFulfillmentModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { createStep, StepResponse } from "@medusajs/workflows-sdk"
+import { IFulfillmentModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
+
+/**
+ * The IDs of the fulfillment sets to delete.
+ */
+export type DeleteFulfillmentSetsStepInput = string[]
 
 export const deleteFulfillmentSetsStepId = "delete-fulfillment-sets"
 /**
@@ -8,9 +13,9 @@ export const deleteFulfillmentSetsStepId = "delete-fulfillment-sets"
  */
 export const deleteFulfillmentSetsStep = createStep(
   deleteFulfillmentSetsStepId,
-  async (ids: string[], { container }) => {
+  async (ids: DeleteFulfillmentSetsStepInput, { container }) => {
     const service = container.resolve<IFulfillmentModuleService>(
-      ModuleRegistrationName.FULFILLMENT
+      Modules.FULFILLMENT
     )
 
     await service.softDeleteFulfillmentSets(ids)
@@ -23,7 +28,7 @@ export const deleteFulfillmentSetsStep = createStep(
     }
 
     const service = container.resolve<IFulfillmentModuleService>(
-      ModuleRegistrationName.FULFILLMENT
+      Modules.FULFILLMENT
     )
 
     await service.restoreFulfillmentSets(prevIds)

@@ -7,7 +7,7 @@ import {
   TokenInputProps,
   TokenOutputProps,
 } from "prism-react-renderer"
-import React, { useCallback, useMemo } from "react"
+import React, { useCallback, useMemo, useRef } from "react"
 import { CodeBlockCollapsibleLines } from "../../components/CodeBlock/Collapsible/Lines"
 import { useCollapsible } from "../use-collapsible"
 
@@ -22,7 +22,7 @@ export type CollapsibleCodeLines = {
     token: Token[][],
     highlightProps: HighlightProps,
     lineNumberOffset?: number
-  ) => React.ReactNode
+  ) => React.JSX.Element[]
 }
 
 export type CollapsedCodeLinesPosition = "start" | "end"
@@ -34,7 +34,7 @@ export const useCollapsibleCodeLines = ({
   const collapsedRange:
     | {
         start: number
-        end: number
+        end: number | undefined
       }
     | undefined = useMemo(() => {
     if (!collapsibleLinesStr) {
@@ -46,8 +46,10 @@ export const useCollapsibleCodeLines = ({
       .map((lineNumber) => parseInt(lineNumber))
 
     if (
-      splitCollapsedLines.length !== 2 ||
-      (splitCollapsedLines[0] !== 1 && splitCollapsedLines[1] < 2)
+      !splitCollapsedLines.length ||
+      (splitCollapsedLines.length >= 2 &&
+        splitCollapsedLines[0] !== 1 &&
+        splitCollapsedLines[1] < 2)
     ) {
       return
     }
@@ -58,6 +60,13 @@ export const useCollapsibleCodeLines = ({
     }
   }, [collapsibleLinesStr])
 
+  const isCollapsible = useCallback(
+    (tokens: Token[][]) => {
+      return collapsedRange && collapsedRange.start < tokens.length
+    },
+    [collapsedRange]
+  )
+
   const type: CollapsedCodeLinesPosition | undefined = useMemo(() => {
     if (!collapsedRange) {
       return undefined
@@ -65,10 +74,12 @@ export const useCollapsibleCodeLines = ({
     return collapsedRange.start === 1 ? "start" : "end"
   }, [collapsedRange])
 
+  const ref = useRef(null)
   const collapsibleHookResult = useCollapsible({
     unmountOnExit: false,
     translateEnabled: false,
     heightAnimation: true,
+    childrenRef: ref,
   })
 
   const getCollapsedLinesElm = useCallback(
@@ -79,7 +90,7 @@ export const useCollapsibleCodeLines = ({
       tokens: Token[][]
       highlightProps: HighlightProps
     }) => {
-      if (!collapsedRange || !type) {
+      if (!collapsedRange || !type || !isCollapsible(tokens)) {
         return <></>
       }
 
@@ -88,7 +99,9 @@ export const useCollapsibleCodeLines = ({
 
       const lines = tokens.slice(
         startIndex,
-        Math.min(collapsedRange.end, tokens.length)
+        collapsedRange.end
+          ? Math.min(collapsedRange.end, tokens.length)
+          : tokens.length
       )
 
       return (
@@ -97,7 +110,7 @@ export const useCollapsibleCodeLines = ({
         </CodeBlockCollapsibleLines>
       )
     },
-    [collapsedRange, collapsibleHookResult]
+    [collapsedRange, collapsibleHookResult, isCollapsible, type]
   )
 
   const getNonCollapsedLinesElm = useCallback(
@@ -108,13 +121,13 @@ export const useCollapsibleCodeLines = ({
       tokens: Token[][]
       highlightProps: HighlightProps
     }) => {
-      if (!collapsedRange) {
+      if (!collapsedRange || !isCollapsible(tokens)) {
         return getLines(tokens, highlightProps)
       }
 
       const isCollapseBeginning = collapsedRange.start === 1
       const lines = tokens.slice(
-        isCollapseBeginning ? collapsedRange.end : 0,
+        isCollapseBeginning ? collapsedRange.end || tokens.length : 0,
         isCollapseBeginning ? undefined : collapsedRange.start
       )
 
@@ -124,13 +137,14 @@ export const useCollapsibleCodeLines = ({
         isCollapseBeginning ? collapsedRange.end : 0
       )
     },
-    [collapsedRange, collapsibleHookResult]
+    [collapsedRange, collapsibleHookResult, isCollapsible]
   )
 
   return {
     getCollapsedLinesElm,
     getNonCollapsedLinesElm,
     type,
+    isCollapsible,
     ...collapsibleHookResult,
   }
 }

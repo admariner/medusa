@@ -1,23 +1,28 @@
 import {
-  AuthIdentityProviderService,
-  AuthTypes,
   AuthenticationInput,
   AuthenticationResponse,
-} from "@medusajs/types"
-import { MedusaError } from "@medusajs/utils"
+  AuthIdentityProviderService,
+  AuthTypes,
+  Logger,
+} from "@medusajs/framework/types"
 import { AuthProviderRegistrationPrefix } from "@types"
 
 type InjectedDependencies = {
   [
     key: `${typeof AuthProviderRegistrationPrefix}${string}`
   ]: AuthTypes.IAuthProvider
+  logger?: Logger
 }
 
 export default class AuthProviderService {
   protected dependencies: InjectedDependencies
+  #logger: Logger
 
   constructor(container: InjectedDependencies) {
     this.dependencies = container
+    this.#logger = container["logger"]
+      ? container.logger
+      : (console as unknown as Logger)
   }
 
   protected retrieveProviderRegistration(
@@ -26,10 +31,17 @@ export default class AuthProviderService {
     try {
       return this.dependencies[`${AuthProviderRegistrationPrefix}${providerId}`]
     } catch (err) {
-      throw new MedusaError(
-        MedusaError.Types.NOT_FOUND,
-        `Could not find a auth provider with id: ${providerId}`
-      )
+      if (err.name === "AwilixResolutionError") {
+        const errMessage = `
+Unable to retrieve the auth provider with id: ${providerId}
+Please make sure that the provider is registered in the container and it is configured correctly in your project configuration file.`
+        throw new Error(errMessage)
+      }
+
+      const errMessage = `Unable to retrieve the auth provider with id: ${providerId}, the following error occurred: ${err.message}`
+      this.#logger.error(errMessage)
+
+      throw new Error(errMessage)
     }
   }
 
@@ -49,6 +61,15 @@ export default class AuthProviderService {
   ): Promise<AuthenticationResponse> {
     const providerHandler = this.retrieveProviderRegistration(provider)
     return await providerHandler.register(auth, authIdentityProviderService)
+  }
+
+  async update(
+    provider: string,
+    data: Record<string, unknown>,
+    authIdentityProviderService: AuthIdentityProviderService
+  ): Promise<AuthenticationResponse> {
+    const providerHandler = this.retrieveProviderRegistration(provider)
+    return await providerHandler.update(data, authIdentityProviderService)
   }
 
   async validateCallback(

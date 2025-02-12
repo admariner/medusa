@@ -1,6 +1,11 @@
-import { ICustomerModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { createStep, StepResponse } from "@medusajs/workflows-sdk"
+import { ICustomerModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
+
+/**
+ * The IDs of the customers to delete.
+ */
+export type DeleteCustomersStepInput = string[]
 
 export const deleteCustomersStepId = "delete-customers"
 /**
@@ -8,10 +13,8 @@ export const deleteCustomersStepId = "delete-customers"
  */
 export const deleteCustomersStep = createStep(
   deleteCustomersStepId,
-  async (ids: string[], { container }) => {
-    const service = container.resolve<ICustomerModuleService>(
-      ModuleRegistrationName.CUSTOMER
-    )
+  async (ids: DeleteCustomersStepInput, { container }) => {
+    const service = container.resolve<ICustomerModuleService>(Modules.CUSTOMER)
 
     await service.softDeleteCustomers(ids)
 
@@ -22,9 +25,7 @@ export const deleteCustomersStep = createStep(
       return
     }
 
-    const service = container.resolve<ICustomerModuleService>(
-      ModuleRegistrationName.CUSTOMER
-    )
+    const service = container.resolve<ICustomerModuleService>(Modules.CUSTOMER)
 
     await service.restoreCustomers(prevCustomerIds)
   }

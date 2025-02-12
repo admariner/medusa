@@ -1,8 +1,8 @@
-import { CreateOrderDTO, IOrderModuleService } from "@medusajs/types"
-import { ClaimType, Modules } from "@medusajs/utils"
-import { SuiteOptions, moduleIntegrationTestRunner } from "medusa-test-utils"
+import { CreateOrderDTO, IOrderModuleService } from "@medusajs/framework/types"
+import { ClaimType, Modules } from "@medusajs/framework/utils"
+import { SuiteOptions, moduleIntegrationTestRunner } from "@medusajs/test-utils"
 
-jest.setTimeout(100000)
+jest.setTimeout(1000000)
 
 moduleIntegrationTestRunner({
   moduleName: Modules.ORDER,
@@ -21,6 +21,7 @@ moduleIntegrationTestRunner({
             product_description: "Description 1",
             product_subtitle: "Product Subtitle 1",
             product_type: "Type 1",
+            product_type_id: "type_1",
             product_collection: "Collection 1",
             product_handle: "handle1",
             variant_id: "variant1",
@@ -139,9 +140,9 @@ moduleIntegrationTestRunner({
           internal_note: "user wants to return all items",
           shipping_methods: [
             {
+              shipping_option_id: "shipping_dhl_id",
               name: "Claim method",
               amount: 35,
-              provider_id: "dhl",
             },
           ],
           claim_items: [

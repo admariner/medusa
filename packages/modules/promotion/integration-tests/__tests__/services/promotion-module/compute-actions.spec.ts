@@ -1,6 +1,11 @@
-import { IPromotionModuleService } from "@medusajs/types"
-import { ApplicationMethodType, Modules, PromotionType } from "@medusajs/utils"
-import { moduleIntegrationTestRunner, SuiteOptions } from "medusa-test-utils"
+import { IPromotionModuleService } from "@medusajs/framework/types"
+import {
+  ApplicationMethodType,
+  Modules,
+  PromotionStatus,
+  PromotionType,
+} from "@medusajs/framework/utils"
+import { moduleIntegrationTestRunner, SuiteOptions } from "@medusajs/test-utils"
 import { createCampaigns } from "../../../__fixtures__/campaigns"
 import { createDefaultPromotion } from "../../../__fixtures__/promotion"
 
@@ -17,9 +22,72 @@ moduleIntegrationTestRunner({
         await createCampaigns(MikroOrmWrapper.forkManager())
       })
 
+      it("should return empty array when promotion is not active (draft or inactive)", async () => {
+        const promotion = await createDefaultPromotion(service, {
+          status: PromotionStatus.DRAFT,
+          rules: [
+            {
+              attribute: "customer.customer_group.id",
+              operator: "in",
+              values: ["VIP", "top100"],
+            },
+          ],
+          application_method: {
+            type: "fixed",
+            target_type: "items",
+            allocation: "each",
+            value: 200,
+            max_quantity: 1,
+            target_rules: [
+              {
+                attribute: "product_category.id",
+                operator: "eq",
+                values: ["catg_cotton"],
+              },
+            ],
+          },
+        })
+
+        const result = await service.computeActions([promotion.code!], {
+          currency_code: "usd",
+          customer: {
+            customer_group: {
+              id: "VIP",
+            },
+          },
+          items: [
+            {
+              id: "item_cotton_tshirt",
+              quantity: 1,
+              subtotal: 100,
+              product_category: {
+                id: "catg_cotton",
+              },
+              product: {
+                id: "prod_tshirt",
+              },
+            },
+            {
+              id: "item_cotton_sweater",
+              quantity: 5,
+              subtotal: 750,
+              product_category: {
+                id: "catg_cotton",
+              },
+              product: {
+                id: "prod_sweater",
+              },
+            },
+          ],
+        })
+
+        expect(result).toEqual([])
+      })
+
       describe("when code is not present in database", () => {
         it("should return empty array when promotion does not exist", async () => {
           const response = await service.computeActions(["DOES_NOT_EXIST"], {
+            currency_code: "usd",
             customer: {
               customer_group: {
                 id: "VIP",
@@ -53,68 +121,6 @@ moduleIntegrationTestRunner({
 
           expect(response).toEqual([])
         })
-
-        it("should throw error when code in items adjustment does not exist", async () => {
-          await createDefaultPromotion(service, {})
-
-          const error = await service
-            .computeActions(["PROMOTION_TEST"], {
-              items: [
-                {
-                  id: "item_cotton_tshirt",
-                  quantity: 1,
-                  subtotal: 100,
-                  adjustments: [
-                    {
-                      id: "test-adjustment",
-                      code: "DOES_NOT_EXIST",
-                    },
-                  ],
-                },
-                {
-                  id: "item_cotton_sweater",
-                  quantity: 5,
-                  subtotal: 750,
-                },
-              ],
-            })
-            .catch((e) => e)
-
-          expect(error.message).toContain(
-            "Applied Promotion for code (DOES_NOT_EXIST) not found"
-          )
-        })
-
-        it("should throw error when code in shipping adjustment does not exist", async () => {
-          await createDefaultPromotion(service, {})
-
-          const error = await service
-            .computeActions(["PROMOTION_TEST"], {
-              items: [
-                {
-                  id: "item_cotton_tshirt",
-                  quantity: 1,
-                  subtotal: 100,
-                },
-                {
-                  id: "item_cotton_sweater",
-                  quantity: 5,
-                  subtotal: 750,
-                  adjustments: [
-                    {
-                      id: "test-adjustment",
-                      code: "DOES_NOT_EXIST",
-                    },
-                  ],
-                },
-              ],
-            })
-            .catch((e) => e)
-
-          expect(error.message).toContain(
-            "Applied Promotion for code (DOES_NOT_EXIST) not found"
-          )
-        })
       })
 
       describe("when promotion is for items and allocation is each", () => {
@@ -145,6 +151,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions(["PROMOTION_TEST"], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -190,6 +197,41 @@ moduleIntegrationTestRunner({
                 code: "PROMOTION_TEST",
               },
             ])
+
+            const resultWithoutCustomer = await service.computeActions(
+              ["PROMOTION_TEST"],
+              {
+                currency_code: "usd",
+                items: [
+                  {
+                    id: "item_cotton_tshirt",
+                    quantity: 1,
+                    subtotal: 100,
+                    product_category: {
+                      id: "catg_cotton",
+                    },
+                    product: {
+                      id: "prod_tshirt",
+                    },
+                  },
+                  {
+                    id: "item_cotton_sweater",
+                    quantity: 5,
+                    subtotal: 750,
+                    product_category: {
+                      id: "catg_cotton",
+                    },
+                    product: {
+                      id: "prod_sweater",
+                    },
+                  },
+                ],
+              }
+            )
+
+            expect(JSON.parse(JSON.stringify(resultWithoutCustomer))).toEqual(
+              []
+            )
           })
 
           it("should compute the correct item amendments when there are multiple promotions to apply", async () => {
@@ -245,6 +287,7 @@ moduleIntegrationTestRunner({
             const result = await service.computeActions(
               ["PROMOTION_TEST", "PROMOTION_TEST_2"],
               {
+                currency_code: "usd",
                 customer: {
                   customer_group: {
                     id: "VIP",
@@ -281,19 +324,7 @@ moduleIntegrationTestRunner({
               {
                 action: "addItemAdjustment",
                 item_id: "item_cotton_tshirt",
-                amount: 30,
-                code: "PROMOTION_TEST",
-              },
-              {
-                action: "addItemAdjustment",
-                item_id: "item_cotton_sweater",
-                amount: 30,
-                code: "PROMOTION_TEST",
-              },
-              {
-                action: "addItemAdjustment",
-                item_id: "item_cotton_tshirt",
-                amount: 20,
+                amount: 50,
                 code: "PROMOTION_TEST_2",
               },
               {
@@ -301,6 +332,12 @@ moduleIntegrationTestRunner({
                 item_id: "item_cotton_sweater",
                 amount: 50,
                 code: "PROMOTION_TEST_2",
+              },
+              {
+                action: "addItemAdjustment",
+                item_id: "item_cotton_sweater",
+                amount: 30,
+                code: "PROMOTION_TEST",
               },
             ])
           })
@@ -358,6 +395,7 @@ moduleIntegrationTestRunner({
             const result = await service.computeActions(
               ["PROMOTION_TEST", "PROMOTION_TEST_2"],
               {
+                currency_code: "usd",
                 customer: {
                   customer_group: {
                     id: "VIP",
@@ -432,6 +470,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions(["PROMOTION_TEST"], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -493,6 +532,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions(["PROMOTION_TEST"], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -546,6 +586,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions(["PROMOTION_TEST"], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -646,6 +687,7 @@ moduleIntegrationTestRunner({
             const result = await service.computeActions(
               ["PROMOTION_TEST", "PROMOTION_TEST_2"],
               {
+                currency_code: "usd",
                 customer: {
                   customer_group: {
                     id: "VIP",
@@ -759,6 +801,7 @@ moduleIntegrationTestRunner({
             const result = await service.computeActions(
               ["PROMOTION_TEST", "PROMOTION_TEST_2"],
               {
+                currency_code: "usd",
                 customer: {
                   customer_group: {
                     id: "VIP",
@@ -833,6 +876,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions(["PROMOTION_TEST"], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -890,6 +934,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions(["PROMOTION_TEST"], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -945,6 +990,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions(["PROMOTION_TEST"], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -1018,6 +1064,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions([], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -1117,6 +1164,7 @@ moduleIntegrationTestRunner({
             const result = await service.computeActions(
               ["PROMOTION_TEST", "PROMOTION_TEST_2"],
               {
+                currency_code: "usd",
                 customer: {
                   customer_group: {
                     id: "VIP",
@@ -1153,18 +1201,6 @@ moduleIntegrationTestRunner({
               {
                 action: "addItemAdjustment",
                 item_id: "item_cotton_tshirt",
-                amount: 7.5,
-                code: "PROMOTION_TEST",
-              },
-              {
-                action: "addItemAdjustment",
-                item_id: "item_cotton_sweater",
-                amount: 22.5,
-                code: "PROMOTION_TEST",
-              },
-              {
-                action: "addItemAdjustment",
-                item_id: "item_cotton_tshirt",
                 amount: 12.5,
                 code: "PROMOTION_TEST_2",
               },
@@ -1173,6 +1209,18 @@ moduleIntegrationTestRunner({
                 item_id: "item_cotton_sweater",
                 amount: 37.5,
                 code: "PROMOTION_TEST_2",
+              },
+              {
+                action: "addItemAdjustment",
+                item_id: "item_cotton_tshirt",
+                amount: 7.5,
+                code: "PROMOTION_TEST",
+              },
+              {
+                action: "addItemAdjustment",
+                item_id: "item_cotton_sweater",
+                amount: 22.5,
+                code: "PROMOTION_TEST",
               },
             ])
           })
@@ -1229,6 +1277,7 @@ moduleIntegrationTestRunner({
             const result = await service.computeActions(
               ["PROMOTION_TEST", "PROMOTION_TEST_2"],
               {
+                currency_code: "usd",
                 customer: {
                   customer_group: {
                     id: "VIP",
@@ -1302,6 +1351,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions(["PROMOTION_TEST"], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -1358,6 +1408,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions(["PROMOTION_TEST"], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -1410,6 +1461,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions(["PROMOTION_TEST"], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -1483,6 +1535,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions([], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -1581,6 +1634,7 @@ moduleIntegrationTestRunner({
             const result = await service.computeActions(
               ["PROMOTION_TEST", "PROMOTION_TEST_2"],
               {
+                currency_code: "usd",
                 customer: {
                   customer_group: {
                     id: "VIP",
@@ -1692,6 +1746,7 @@ moduleIntegrationTestRunner({
             const result = await service.computeActions(
               ["PROMOTION_TEST", "PROMOTION_TEST_2"],
               {
+                currency_code: "usd",
                 customer: {
                   customer_group: {
                     id: "VIP",
@@ -1777,6 +1832,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions(["PROMOTION_TEST"], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -1833,6 +1889,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions(["PROMOTION_TEST"], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -1888,6 +1945,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions(["PROMOTION_TEST"], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -1961,6 +2019,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions([], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -2036,6 +2095,7 @@ moduleIntegrationTestRunner({
             const result = await service.computeActions(
               [],
               {
+                currency_code: "usd",
                 customer: {
                   customer_group: {
                     id: "VIP",
@@ -2124,6 +2184,7 @@ moduleIntegrationTestRunner({
             const result = await service.computeActions(
               ["PROMOTION_TEST", "PROMOTION_TEST_2"],
               {
+                currency_code: "usd",
                 customer: {
                   customer_group: {
                     id: "VIP",
@@ -2230,6 +2291,7 @@ moduleIntegrationTestRunner({
             const result = await service.computeActions(
               ["PROMOTION_TEST", "PROMOTION_TEST_2"],
               {
+                currency_code: "usd",
                 customer: {
                   customer_group: {
                     id: "VIP",
@@ -2303,6 +2365,7 @@ moduleIntegrationTestRunner({
             })
 
             const result = await service.computeActions(["PROMOTION_TEST"], {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -3998,6 +4061,7 @@ moduleIntegrationTestRunner({
           const result = await service.computeActions(
             ["PROMOTION_TEST", "PROMOTION_TEST_2"],
             {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -4034,18 +4098,6 @@ moduleIntegrationTestRunner({
             {
               action: "addItemAdjustment",
               item_id: "item_cotton_tshirt",
-              amount: 7.5,
-              code: "PROMOTION_TEST",
-            },
-            {
-              action: "addItemAdjustment",
-              item_id: "item_cotton_sweater",
-              amount: 22.5,
-              code: "PROMOTION_TEST",
-            },
-            {
-              action: "addItemAdjustment",
-              item_id: "item_cotton_tshirt",
               amount: 12.5,
               code: "PROMOTION_TEST_2",
             },
@@ -4054,6 +4106,18 @@ moduleIntegrationTestRunner({
               item_id: "item_cotton_sweater",
               amount: 37.5,
               code: "PROMOTION_TEST_2",
+            },
+            {
+              action: "addItemAdjustment",
+              item_id: "item_cotton_tshirt",
+              amount: 7.5,
+              code: "PROMOTION_TEST",
+            },
+            {
+              action: "addItemAdjustment",
+              item_id: "item_cotton_sweater",
+              amount: 22.5,
+              code: "PROMOTION_TEST",
             },
           ])
         })
@@ -4097,6 +4161,7 @@ moduleIntegrationTestRunner({
           const result = await service.computeActions(
             ["PROMOTION_TEST", "PROMOTION_TEST_2"],
             {
+              currency_code: "usd",
               customer: {
                 customer_group: {
                   id: "VIP",
@@ -4688,6 +4753,389 @@ moduleIntegrationTestRunner({
           )
 
           expect(JSON.parse(JSON.stringify(result))).toEqual([])
+        })
+
+        describe("when scenario is buy x get x", () => {
+          let buyXGetXPromotion
+          let product1 = "prod_tshirt_1"
+          let product2 = "prod_tshirt_2"
+
+          beforeEach(async () => {
+            buyXGetXPromotion = await createDefaultPromotion(service, {
+              type: PromotionType.BUYGET,
+              application_method: {
+                type: "fixed",
+                target_type: "items",
+                value: 2000,
+                allocation: "each",
+                max_quantity: 2,
+                apply_to_quantity: 2,
+                buy_rules_min_quantity: 2,
+                target_rules: [
+                  {
+                    attribute: "product.id",
+                    operator: "eq",
+                    values: [product1],
+                  },
+                ],
+                buy_rules: [
+                  {
+                    attribute: "product.id",
+                    operator: "eq",
+                    values: [product1],
+                  },
+                ],
+              } as any,
+            })
+          })
+
+          it("should compute adjustment accurately for a single item", async () => {
+            const context = {
+              currency_code: "usd",
+              items: [
+                {
+                  id: "item_cotton_tshirt",
+                  quantity: 4,
+                  subtotal: 1000,
+                  product: { id: product1 },
+                },
+                {
+                  id: "item_cotton_tshirt2",
+                  quantity: 2,
+                  subtotal: 2000,
+                  product: { id: product2 },
+                },
+              ],
+            }
+
+            const result = await service.computeActions(
+              [buyXGetXPromotion.code!],
+              context
+            )
+
+            expect(JSON.parse(JSON.stringify(result))).toEqual([
+              {
+                action: "addItemAdjustment",
+                item_id: "item_cotton_tshirt",
+                amount: 500,
+                code: "PROMOTION_TEST",
+              },
+            ])
+          })
+
+          it("should compute adjustment accurately for a single item when multiple buyget promos are applied", async () => {
+            const buyXGetXPromotionBulk1 = await createDefaultPromotion(
+              service,
+              {
+                code: "BUY50GET1000",
+                type: PromotionType.BUYGET,
+                campaign_id: null,
+                application_method: {
+                  type: "fixed",
+                  target_type: "items",
+                  value: 20000,
+                  allocation: "each",
+                  max_quantity: 1000,
+                  apply_to_quantity: 1000,
+                  buy_rules_min_quantity: 50,
+                  target_rules: [
+                    {
+                      attribute: "product.id",
+                      operator: "eq",
+                      values: [product1],
+                    },
+                  ],
+                  buy_rules: [
+                    {
+                      attribute: "product.id",
+                      operator: "eq",
+                      values: [product1],
+                    },
+                  ],
+                } as any,
+              }
+            )
+
+            const buyXGetXPromotionBulk2 = await createDefaultPromotion(
+              service,
+              {
+                code: "BUY10GET20",
+                type: PromotionType.BUYGET,
+                campaign_id: null,
+                application_method: {
+                  type: "fixed",
+                  target_type: "items",
+                  value: 20000,
+                  allocation: "each",
+                  max_quantity: 20,
+                  apply_to_quantity: 20,
+                  buy_rules_min_quantity: 10,
+                  target_rules: [
+                    {
+                      attribute: "product.id",
+                      operator: "eq",
+                      values: [product1],
+                    },
+                  ],
+                  buy_rules: [
+                    {
+                      attribute: "product.id",
+                      operator: "eq",
+                      values: [product1],
+                    },
+                  ],
+                } as any,
+              }
+            )
+
+            const context = {
+              currency_code: "usd",
+              items: [
+                {
+                  id: "item_cotton_tshirt",
+                  quantity: 1080,
+                  subtotal: 2700,
+                  product: { id: product1 },
+                },
+              ],
+            }
+
+            const result = await service.computeActions(
+              [buyXGetXPromotionBulk1.code!, buyXGetXPromotionBulk2.code!],
+              context
+            )
+
+            expect(JSON.parse(JSON.stringify(result))).toEqual([
+              {
+                action: "addItemAdjustment",
+                item_id: "item_cotton_tshirt",
+                amount: 2500,
+                code: "BUY50GET1000",
+              },
+              {
+                action: "addItemAdjustment",
+                amount: 50,
+                code: "BUY10GET20",
+                item_id: "item_cotton_tshirt",
+              },
+            ])
+          })
+
+          it("should compute adjustment accurately for multiple items when multiple buyget promos are applied", async () => {
+            const buyXGetXPromotionBulk1 = await createDefaultPromotion(
+              service,
+              {
+                code: "BUY50GET1000",
+                type: PromotionType.BUYGET,
+                campaign_id: null,
+                application_method: {
+                  type: "fixed",
+                  target_type: "items",
+                  value: 20000,
+                  allocation: "each",
+                  max_quantity: 1000,
+                  apply_to_quantity: 1000,
+                  buy_rules_min_quantity: 50,
+                  target_rules: [
+                    {
+                      attribute: "product.id",
+                      operator: "eq",
+                      values: [product1],
+                    },
+                  ],
+                  buy_rules: [
+                    {
+                      attribute: "product.id",
+                      operator: "eq",
+                      values: [product1],
+                    },
+                  ],
+                } as any,
+              }
+            )
+
+            const buyXGetXPromotionBulk2 = await createDefaultPromotion(
+              service,
+              {
+                code: "BUY10GET20",
+                type: PromotionType.BUYGET,
+                campaign_id: null,
+                application_method: {
+                  type: "fixed",
+                  target_type: "items",
+                  value: 20000,
+                  allocation: "each",
+                  max_quantity: 20,
+                  apply_to_quantity: 20,
+                  buy_rules_min_quantity: 10,
+                  target_rules: [
+                    {
+                      attribute: "product.id",
+                      operator: "eq",
+                      values: [product1],
+                    },
+                  ],
+                  buy_rules: [
+                    {
+                      attribute: "product.id",
+                      operator: "eq",
+                      values: [product1],
+                    },
+                  ],
+                } as any,
+              }
+            )
+
+            const context = {
+              currency_code: "usd",
+              items: [
+                {
+                  id: "item_cotton_tshirt",
+                  quantity: 540,
+                  subtotal: 1350,
+                  product: { id: product1 },
+                },
+                {
+                  id: "item_cotton_tshirt2",
+                  quantity: 540,
+                  subtotal: 1350,
+                  product: { id: product1 },
+                },
+              ],
+            }
+
+            const result = await service.computeActions(
+              [buyXGetXPromotionBulk1.code!, buyXGetXPromotionBulk2.code!],
+              context
+            )
+
+            expect(JSON.parse(JSON.stringify(result))).toEqual([
+              {
+                action: "addItemAdjustment",
+                item_id: "item_cotton_tshirt2",
+                amount: 1225,
+                code: "BUY50GET1000",
+              },
+              {
+                action: "addItemAdjustment",
+                item_id: "item_cotton_tshirt",
+                amount: 1275,
+                code: "BUY50GET1000",
+              },
+              {
+                action: "addItemAdjustment",
+                item_id: "item_cotton_tshirt2",
+                amount: 50,
+                code: "BUY10GET20",
+              },
+            ])
+          })
+
+          it("should compute adjustment accurately across items", async () => {
+            const context = {
+              currency_code: "usd",
+              items: [
+                {
+                  id: "item_cotton_tshirt",
+                  quantity: 1,
+                  subtotal: 500,
+                  product: { id: product1 },
+                },
+                {
+                  id: "item_cotton_tshirt1",
+                  quantity: 1,
+                  subtotal: 500,
+                  product: { id: product1 },
+                },
+                {
+                  id: "item_cotton_tshirt2",
+                  quantity: 1,
+                  subtotal: 1000,
+                  product: { id: product1 },
+                },
+                {
+                  id: "item_cotton_tshirt3",
+                  quantity: 1,
+                  subtotal: 1000,
+                  product: { id: product1 },
+                },
+              ],
+            }
+
+            const result = await service.computeActions(
+              [buyXGetXPromotion.code!],
+              context
+            )
+
+            expect(JSON.parse(JSON.stringify(result))).toEqual([
+              {
+                action: "addItemAdjustment",
+                item_id: "item_cotton_tshirt1",
+                amount: 500,
+                code: "PROMOTION_TEST",
+              },
+              {
+                action: "addItemAdjustment",
+                item_id: "item_cotton_tshirt",
+                amount: 500,
+                code: "PROMOTION_TEST",
+              },
+            ])
+          })
+
+          it("should not compute adjustment when required quantity for target isn't met", async () => {
+            const context = {
+              currency_code: "usd",
+              items: [
+                {
+                  id: "item_cotton_tshirt",
+                  quantity: 3,
+                  subtotal: 1000,
+                  product: { id: product1 },
+                },
+              ],
+            }
+
+            const result = await service.computeActions(
+              [buyXGetXPromotion.code!],
+              context
+            )
+
+            expect(JSON.parse(JSON.stringify(result))).toEqual([])
+          })
+
+          it("should not compute adjustment when required quantity for target isn't met across items", async () => {
+            const context = {
+              currency_code: "usd",
+              items: [
+                {
+                  id: "item_cotton_tshirt",
+                  quantity: 1,
+                  subtotal: 1000,
+                  product: { id: product1 },
+                },
+                {
+                  id: "item_cotton_tshirt1",
+                  quantity: 1,
+                  subtotal: 1000,
+                  product: { id: product1 },
+                },
+                {
+                  id: "item_cotton_tshirt2",
+                  quantity: 1,
+                  subtotal: 1000,
+                  product: { id: product1 },
+                },
+              ],
+            }
+
+            const result = await service.computeActions(
+              [buyXGetXPromotion.code!],
+              context
+            )
+
+            expect(JSON.parse(JSON.stringify(result))).toEqual([])
+          })
         })
       })
     })

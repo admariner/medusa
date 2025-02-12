@@ -5,12 +5,12 @@ import {
   AuthIdentityProviderService,
   EmailPassAuthProviderOptions,
   Logger,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
   AbstractAuthModuleProvider,
   isString,
   MedusaError,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 import Scrypt from "scrypt-kdf"
 
 type InjectedDependencies = {
@@ -20,6 +20,9 @@ type InjectedDependencies = {
 interface LocalServiceConfig extends EmailPassAuthProviderOptions {}
 
 export class EmailPassAuthService extends AbstractAuthModuleProvider {
+  static identifier = "emailpass"
+  static DISPLAY_NAME = "Email/Password Authentication"
+
   protected config_: LocalServiceConfig
   protected logger_: Logger
 
@@ -27,22 +30,62 @@ export class EmailPassAuthService extends AbstractAuthModuleProvider {
     { logger }: InjectedDependencies,
     options: EmailPassAuthProviderOptions
   ) {
-    super(
-      {},
-      { provider: "emailpass", displayName: "Email/Password Authentication" }
-    )
+    // @ts-ignore
+    super(...arguments)
     this.config_ = options
     this.logger_ = logger
   }
 
-  protected async createAuthIdentity({ email, password, authIdentityService }) {
+  protected async hashPassword(password: string) {
     const hashConfig = this.config_.hashConfig ?? { logN: 15, r: 8, p: 1 }
     const passwordHash = await Scrypt.kdf(password, hashConfig)
+    return passwordHash.toString("base64")
+  }
+
+  async update(
+    data: { password: string; entity_id: string },
+    authIdentityService: AuthIdentityProviderService
+  ) {
+    const { password, entity_id } = data ?? {}
+
+    if (!entity_id) {
+      return {
+        success: false,
+        error: `Cannot update ${this.provider} provider identity without entity_id`,
+      }
+    }
+
+    if (!password || !isString(password)) {
+      return { success: true }
+    }
+
+    let authIdentity
+
+    try {
+      const passwordHash = await this.hashPassword(password)
+
+      authIdentity = await authIdentityService.update(entity_id, {
+        provider_metadata: {
+          password: passwordHash,
+        },
+      })
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+
+    return {
+      success: true,
+      authIdentity,
+    }
+  }
+
+  protected async createAuthIdentity({ email, password, authIdentityService }) {
+    const passwordHash = await this.hashPassword(password)
 
     const createdAuthIdentity = await authIdentityService.create({
       entity_id: email,
       provider_metadata: {
-        password: passwordHash.toString("base64"),
+        password: passwordHash,
       },
     })
 

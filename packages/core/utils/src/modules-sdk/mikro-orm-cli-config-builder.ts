@@ -1,13 +1,14 @@
-import { MikroORMOptions } from "@mikro-orm/core/utils/Configuration"
-import { DmlEntity, toMikroOrmEntities } from "../dml"
-import { CustomTsMigrationGenerator } from "../dal"
 import type {
   AnyEntity,
   EntityClass,
   EntityClassGroup,
-} from "@mikro-orm/core/typings"
-import type { EntitySchema } from "@mikro-orm/core/metadata/EntitySchema"
+  EntitySchema,
+  MikroORMOptions,
+} from "@mikro-orm/core"
+import { defineConfig } from "@mikro-orm/postgresql"
 import { kebabCase } from "../common"
+import { CustomTsMigrationGenerator } from "../dal"
+import { DmlEntity, toMikroOrmEntities } from "../dml"
 
 type Options = Partial<Omit<MikroORMOptions, "entities" | "entitiesTs">> & {
   entities: (
@@ -21,7 +22,6 @@ type Options = Partial<Omit<MikroORMOptions, "entities" | "entitiesTs">> & {
 
 type ReturnedOptions = Partial<MikroORMOptions> & {
   entities: MikroORMOptions["entities"]
-  type: MikroORMOptions["type"]
   migrations: MikroORMOptions["migrations"]
 }
 
@@ -43,7 +43,7 @@ export function defineMikroOrmCliConfig(
 
   const dmlEntities = options.entities.filter(DmlEntity.isDmlEntity)
   const nonDmlEntities = options.entities.filter(
-    (entity) => !DmlEntity.isDmlEntity(entity)
+    (entity) => entity && !DmlEntity.isDmlEntity(entity)
   )
 
   const entities = nonDmlEntities.concat(
@@ -53,17 +53,16 @@ export function defineMikroOrmCliConfig(
   const normalizedModuleName = kebabCase(moduleName.replace("Service", ""))
   const databaseName = `medusa-${normalizedModuleName}`
 
-  return {
-    type: "postgresql",
+  return defineConfig({
     dbName: databaseName,
     host: "127.0.0.1",
     user: "postgres",
     password: "",
-    ...options,
-    entities,
+    ...(options as any),
+    entities: entities.filter(Boolean),
     migrations: {
       generator: CustomTsMigrationGenerator,
       ...options.migrations,
     },
-  }
+  }) as ReturnedOptions
 }

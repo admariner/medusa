@@ -31,10 +31,8 @@
  *               description: A price's details.
  *               required:
  *                 - currency_code
- *                 - amount
  *                 - variant_id
- *                 - min_quantity
- *                 - max_quantity
+ *                 - amount
  *               properties:
  *                 currency_code:
  *                   type: string
@@ -70,8 +68,6 @@
  *               required:
  *                 - id
  *                 - variant_id
- *                 - min_quantity
- *                 - max_quantity
  *               properties:
  *                 id:
  *                   type: string
@@ -114,7 +110,7 @@
  *     label: cURL
  *     source: |-
  *       curl -X POST '{backend_url}/admin/price-lists/{id}/prices/batch' \
- *       -H 'x-medusa-access-token: {api_token}'
+ *       -H 'Authorization: Bearer {access_token}'
  * tags:
  *   - Price Lists
  * responses:

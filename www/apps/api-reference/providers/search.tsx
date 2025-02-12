@@ -3,9 +3,7 @@
 import {
   usePageLoading,
   SearchProvider as UiSearchProvider,
-  searchFiltersV2,
-  AiAssistantIcon,
-  AiAssistantProvider,
+  searchFilters,
 } from "docs-ui"
 import { config } from "../config"
 import basePathUrl from "../utils/base-path-url"
@@ -51,30 +49,8 @@ const SearchProvider = ({ children }: SearchProviderProps) => {
         checkInternalPattern: new RegExp(
           `^${config.baseUrl}${basePathUrl(`/(admin|store)`)}`
         ),
-        filterOptions: searchFiltersV2,
+        filterOptions: searchFilters,
       }}
-      commands={[
-        {
-          name: "ai-assistant",
-          icon: <AiAssistantIcon />,
-          component: (
-            <AiAssistantProvider
-              apiUrl={process.env.NEXT_PUBLIC_AI_ASSISTANT_URL || "temp"}
-              websiteId={process.env.NEXT_PUBLIC_AI_WEBSITE_ID || "temp"}
-              recaptchaSiteKey={
-                process.env.NEXT_PUBLIC_AI_API_ASSISTANT_RECAPTCHA_SITE_KEY ||
-                "temp"
-              }
-            />
-          ),
-          title: "AI Assistant",
-          badge: {
-            variant: "blue",
-            badgeType: "shaded",
-            children: "Beta",
-          },
-        },
-      ]}
     >
       {children}
     </UiSearchProvider>

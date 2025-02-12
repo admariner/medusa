@@ -1,34 +1,56 @@
 import {
   ICartModuleService,
   UpdateLineItemWithSelectorDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
-  ModuleRegistrationName,
+  Modules,
   getSelectsAndRelationsFromObjectArray,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The details of the line items to update.
+ */
 export interface UpdateLineItemsStepInput {
+  /**
+   * The ID of the cart that the line items belong to.
+   */
   id: string
+  /**
+   * The line items to update.
+   */
   items: UpdateLineItemWithSelectorDTO[]
 }
 
 export const updateLineItemsStepId = "update-line-items-step"
 /**
  * This step updates a cart's line items.
+ * 
+ * @example
+ * const data = updateLineItemsStep({
+ *   id: "cart_123",
+ *   items: [
+ *     {
+ *       selector: {
+ *         id: "line_item_123"
+ *       },
+ *       data: {
+ *         quantity: 2
+ *       }
+ *     }
+ *   ]
+ * })
  */
 export const updateLineItemsStep = createStep(
   updateLineItemsStepId,
   async (input: UpdateLineItemsStepInput, { container }) => {
-    const { id, items = [] } = input
+    const { items = [] } = input
 
     if (!items?.length) {
       return new StepResponse([], [])
     }
 
-    const cartModule = container.resolve<ICartModuleService>(
-      ModuleRegistrationName.CART
-    )
+    const cartModule = container.resolve<ICartModuleService>(Modules.CART)
 
     const { selects, relations } = getSelectsAndRelationsFromObjectArray(
       items.map((item) => item.data)
@@ -50,9 +72,7 @@ export const updateLineItemsStep = createStep(
       return
     }
 
-    const cartModule: ICartModuleService = container.resolve(
-      ModuleRegistrationName.CART
-    )
+    const cartModule: ICartModuleService = container.resolve(Modules.CART)
 
     if (itemsBeforeUpdate.length) {
       const itemsToUpdate: UpdateLineItemWithSelectorDTO[] = []

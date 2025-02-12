@@ -1,6 +1,4 @@
-import { getMobileSidebarItems } from "docs-ui"
 import { SidebarSectionItems } from "types"
-import { siteConfig } from "./site"
 
 type DocsConfig = {
   sidebar: SidebarSectionItems
@@ -35,13 +33,6 @@ export const docsConfig: DocsConfig = {
             type: "link",
             title: "Standalone Project",
             path: "/installation/standalone-project",
-            isPathHref: true,
-            loaded: true,
-          },
-          {
-            type: "link",
-            title: "Upgrade Guides",
-            path: `${process.env.NEXT_PUBLIC_DOCS_URL}/upgrade-guides/medusa-ui`,
             isPathHref: true,
             loaded: true,
           },
@@ -157,6 +148,13 @@ export const docsConfig: DocsConfig = {
             type: "link",
             title: "Currency Input",
             path: "/components/currency-input",
+            isPathHref: true,
+            loaded: true,
+          },
+          {
+            type: "link",
+            title: "Data Table",
+            path: "/components/data-table",
             isPathHref: true,
             loaded: true,
           },
@@ -359,9 +357,6 @@ export const docsConfig: DocsConfig = {
         ],
       },
     ],
-    mobile: getMobileSidebarItems({
-      baseUrl: siteConfig.baseUrl,
-      version: "v1",
-    }),
+    mobile: [],
   },
 }

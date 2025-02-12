@@ -1,10 +1,13 @@
-import { OrderChangeActionDTO } from "@medusajs/types"
+import {
+  InferEntityType,
+  OrderChangeActionDTO,
+} from "@medusajs/framework/types"
 import {
   ChangeActionType,
   MathBN,
   createRawPropertiesFromBigNumber,
   isDefined,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 import { OrderItem, OrderShippingMethod } from "@models"
 import { calculateOrderChange } from "./calculate-order-change"
 
@@ -22,10 +25,18 @@ export function applyChangesToOrder(
     addActionReferenceToObject?: boolean
   }
 ) {
-  const itemsToUpsert: OrderItem[] = []
-  const shippingMethodsToUpsert: OrderShippingMethod[] = []
+  const itemsToUpsert: InferEntityType<typeof OrderItem>[] = []
+  const shippingMethodsToUpsert: InferEntityType<typeof OrderShippingMethod>[] =
+    []
   const summariesToUpsert: any[] = []
   const orderToUpdate: any[] = []
+
+  const orderEditableAttributes = [
+    "customer_id",
+    "sales_channel_id",
+    "email",
+    "no_notification",
+  ]
 
   const calculatedOrders = {}
   for (const order of orders) {
@@ -41,6 +52,17 @@ export function applyChangesToOrder(
     calculatedOrders[order.id] = calculated
 
     const version = actionsMap[order.id]?.[0]?.version ?? order.version
+    const orderAttributes: {
+      version?: number
+      customer_id?: string
+    } = {}
+
+    // Editable attributes that have changed
+    for (const attr of orderEditableAttributes) {
+      if (order[attr] !== calculated.order[attr]) {
+        orderAttributes[attr] = calculated.order[attr]
+      }
+    }
 
     for (const item of calculated.order.items) {
       if (MathBN.lte(item.quantity, 0)) {
@@ -51,20 +73,26 @@ export function applyChangesToOrder(
       const orderItem = isExistingItem ? (item.detail as any) : item
       const itemId = isExistingItem ? orderItem.item_id : item.id
 
-      itemsToUpsert.push({
+      const itemToUpsert = {
         id: orderItem.version === version ? orderItem.id : undefined,
         item_id: itemId,
         order_id: order.id,
         version,
         quantity: orderItem.quantity,
+        unit_price: item.unit_price ?? orderItem.unit_price,
+        compare_at_unit_price:
+          item.compare_at_unit_price ?? orderItem.compare_at_unit_price,
         fulfilled_quantity: orderItem.fulfilled_quantity ?? 0,
+        delivered_quantity: orderItem.delivered_quantity ?? 0,
         shipped_quantity: orderItem.shipped_quantity ?? 0,
         return_requested_quantity: orderItem.return_requested_quantity ?? 0,
         return_received_quantity: orderItem.return_received_quantity ?? 0,
         return_dismissed_quantity: orderItem.return_dismissed_quantity ?? 0,
         written_off_quantity: orderItem.written_off_quantity ?? 0,
         metadata: orderItem.metadata,
-      } as OrderItem)
+      } as any
+
+      itemsToUpsert.push(itemToUpsert)
     }
 
     const orderSummary = order.summary as any
@@ -109,12 +137,16 @@ export function applyChangesToOrder(
         }
       }
 
+      orderAttributes.version = version
+    }
+
+    if (Object.keys(orderAttributes).length > 0) {
       orderToUpdate.push({
         selector: {
           id: order.id,
         },
         data: {
-          version,
+          ...orderAttributes,
         },
       })
     }

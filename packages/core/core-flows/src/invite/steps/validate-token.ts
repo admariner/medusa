@@ -1,16 +1,22 @@
-import { IUserModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import { IUserModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
+
+/**
+ * The token to validate.
+ */
+export type ValidateTokenStepInput = string
 
 export const validateTokenStepId = "validate-invite-token-step"
 /**
  * This step validates a specified token and returns its associated invite.
+ * If not valid, the step throws an error.
  */
 export const validateTokenStep = createStep(
   validateTokenStepId,
-  async (input: string, { container }) => {
+  async (input: ValidateTokenStepInput, { container }) => {
     const userModuleService: IUserModuleService = container.resolve(
-      ModuleRegistrationName.USER
+      Modules.USER
     )
 
     const invite = await userModuleService.validateInviteToken(input)

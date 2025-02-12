@@ -1,4 +1,4 @@
-import { logger } from "@medusajs/framework"
+import { logger } from "@medusajs/framework/logger"
 import { dbCreate } from "./create"
 import { migrate } from "./migrate"
 
@@ -7,6 +7,7 @@ const main = async function ({
   interactive,
   db,
   skipLinks,
+  skipScripts,
   executeAllLinks,
   executeSafeLinks,
 }) {
@@ -19,6 +20,7 @@ const main = async function ({
     const migrated = await migrate({
       directory,
       skipLinks,
+      skipScripts,
       executeAllLinks,
       executeSafeLinks,
     })

@@ -21,7 +21,7 @@
  *     label: cURL
  *     source: |-
  *       curl -X DELETE '{backend_url}/admin/customer-groups/{id}' \
- *       -H 'x-medusa-access-token: {api_token}'
+ *       -H 'Authorization: Bearer {access_token}'
  * tags:
  *   - Customer Groups
  * responses:
@@ -31,7 +31,7 @@
  *       application/json:
  *         schema:
  *           type: object
- *           description: SUMMARY
+ *           description: The deletion's details.
  *           required:
  *             - id
  *             - object

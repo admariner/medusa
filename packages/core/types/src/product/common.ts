@@ -596,6 +596,10 @@ export interface ProductImageDTO {
    */
   url: string
   /**
+   * The rank of the product image.
+   */
+  rank: number
+  /**
    * Holds custom data in key-value pairs.
    */
   metadata?: MetadataType
@@ -694,9 +698,17 @@ export interface FilterableProductProps
    */
   handle?: string | string[]
   /**
+   * The skus to filter products by.
+   */
+  sku?: string | string[]
+  /**
    * The IDs to filter products by.
    */
   id?: string | string[]
+  /**
+   * The external IDs to filter products by.
+   */
+  external_id?: string | string[]
   /**
    * Filters only or excluding gift card products
    */
@@ -817,6 +829,30 @@ export interface FilterableProductOptionProps
    * Filter the product options by their associated products' IDs.
    */
   product_id?: string | string[]
+}
+
+/**
+ * @interface
+ *
+ * The filters to apply on retrieved product option values.
+ *
+ * @prop id - The IDs to filter product options by.
+ * @prop value - The values to filter product options by.
+ */
+export interface FilterableProductOptionValueProps
+  extends BaseFilterable<FilterableProductOptionValueProps> {
+  /**
+   * Search through the option values' values.
+   */
+  q?: string
+  /**
+   * The IDs to filter product options values by.
+   */
+  id?: string | string[]
+  /**
+   * The values to filter product option values by.
+   */
+  value?: string | string[]
 }
 
 /**
@@ -1154,6 +1190,17 @@ export interface CreateProductOptionDTO {
   product_id?: string
 }
 
+export interface CreateProductOptionValueDTO {
+  /**
+   * The value of the product option value.
+   */
+  value: string
+  /**
+   * The metadata of the product option value.
+   */
+  metadata?: MetadataType
+}
+
 /**
  * @interface
  *
@@ -1181,6 +1228,27 @@ export interface UpdateProductOptionDTO {
    * The ID of the associated product.
    */
   product_id?: string
+}
+
+export interface UpdateProductOptionValueDTO {
+  /**
+   * The value of the product option value.
+   */
+  value?: string
+  /**
+   * The metadata of the product option value.
+   */
+  metadata?: MetadataType
+}
+
+/**
+ * @interface
+ *
+ * Inventory kit for creating a product variant.
+ */
+export interface CreateProductVariantInventoryKit {
+  inventory_item_id: string
+  required_quantity?: number
 }
 
 /**
@@ -1221,6 +1289,11 @@ export interface CreateProductVariantDTO {
    *  Whether the product variant's inventory should be managed by the core system.
    */
   manage_inventory?: boolean
+  /**
+   * The variant's inventory items. It's only
+   * available if `manage_inventory` is enabled.
+   */
+  inventory_items?: CreateProductVariantInventoryKit[]
   /**
    * The HS Code of the product variant.
    */
@@ -1408,6 +1481,10 @@ export interface CreateProductDTO {
    */
   images?: UpsertProductImageDTO[]
   /**
+   * The id of the product in an external system
+   */
+  external_id?: string
+  /**
    * The product type id to associate with the product.
    */
   type_id?: string
@@ -1523,6 +1600,10 @@ export interface UpdateProductDTO {
    * The associated images to create or update.
    */
   images?: UpsertProductImageDTO[]
+  /**
+   * The id of the product in an external system
+   */
+  external_id?: string | null
   /**
    * The product type to associate with the product.
    */

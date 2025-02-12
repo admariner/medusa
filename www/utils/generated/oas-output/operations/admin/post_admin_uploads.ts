@@ -1,10 +1,9 @@
 /**
  * @oas [post] /admin/uploads
  * operationId: PostUploads
- * summary: Create Upload
- * description: Create a upload.
+ * summary: Upload Files
+ * description: Upload files to the configured File Module Provider.
  * x-authenticated: true
- * parameters: []
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -15,7 +14,7 @@
  *       schema:
  *         oneOf:
  *           - type: object
- *             description: SUMMARY
+ *             description: The files to upload
  *             required:
  *               - files
  *             properties:
@@ -38,15 +37,28 @@
  *                           type: string
  *                           title: content
  *                           description: The file's content.
- *                     - $ref: "#/components/schemas/File"
- *           - $ref: "#/components/schemas/FileList"
- *         description: SUMMARY
+ *                     - type: object
+ *                       description: A File to upload.
+ *                       externalDocs:
+ *                         url: https://developer.mozilla.org/en-US/docs/Web/API/File
+ *                         description: Learn more about the File API
+ *                       title: files
+ *           - type: array
+ *             description: list of files to upload.
+ *             items:
+ *               type: object
+ *               description: A File to upload.
+ *               externalDocs:
+ *                 url: https://developer.mozilla.org/en-US/docs/Web/API/File
+ *                 description: Learn more about the File API
+ *             title: FileList
+ *         description: The files to upload.
  * x-codeSamples:
  *   - lang: Shell
  *     label: cURL
  *     source: |-
  *       curl -X POST '{backend_url}/admin/uploads' \
- *       -H 'x-medusa-access-token: {api_token}'
+ *       -H 'Authorization: Bearer {access_token}'
  * tags:
  *   - Uploads
  * responses:

@@ -2,27 +2,46 @@ import {
   FilterableShippingProfileProps,
   IFulfillmentModuleService,
   UpdateShippingProfileDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
-  ModuleRegistrationName,
+  Modules,
   getSelectsAndRelationsFromObjectArray,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The data to update a shipping profile.
+ */
 export type UpdateShippingProfilesStepInput = {
+  /**
+   * The data to update in the shipping profiles.
+   */
   update: UpdateShippingProfileDTO
+  /**
+   * The filters to select the shipping profiles to update.
+   */
   selector: FilterableShippingProfileProps
 }
 
 export const updateShippingProfilesStepId = "update-shipping-profiles"
 /**
  * This step updates shipping profiles matching the specified filters.
+ * 
+ * @example
+ * const data = updateShippingProfilesStep({
+ *   selector: {
+ *     id: "sp_123"
+ *   },
+ *   update: {
+ *     name: "Standard"
+ *   }
+ * })
  */
 export const updateShippingProfilesStep = createStep(
   updateShippingProfilesStepId,
   async (input: UpdateShippingProfilesStepInput, { container }) => {
     const service = container.resolve<IFulfillmentModuleService>(
-      ModuleRegistrationName.FULFILLMENT
+      Modules.FULFILLMENT
     )
 
     const { selects, relations } = getSelectsAndRelationsFromObjectArray([
@@ -47,7 +66,7 @@ export const updateShippingProfilesStep = createStep(
     }
 
     const service = container.resolve<IFulfillmentModuleService>(
-      ModuleRegistrationName.FULFILLMENT
+      Modules.FULFILLMENT
     )
 
     await service.upsertShippingProfiles(prevData)

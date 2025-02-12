@@ -7,7 +7,6 @@ const defaultStoreCustomersFields = [
   "phone",
   "metadata",
   "has_account",
-  "created_by",
   "deleted_at",
   "created_at",
   "updated_at",
@@ -16,6 +15,10 @@ const defaultStoreCustomersFields = [
 
 export const retrieveTransformQueryConfig = {
   defaults: defaultStoreCustomersFields,
+  allowed: [
+    ...defaultStoreCustomersFields.map((f) => f.replace("*", "")),
+    "orders",
+  ],
   isList: false,
 }
 
@@ -33,6 +36,8 @@ export const defaultStoreCustomerAddressFields = [
   "country_code",
   "phone",
   "metadata",
+  "is_default_shipping",
+  "is_default_billing",
   "created_at",
   "updated_at",
 ]

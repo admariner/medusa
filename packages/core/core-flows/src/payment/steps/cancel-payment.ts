@@ -1,12 +1,18 @@
-import { IPaymentModuleService, Logger } from "@medusajs/types"
+import { IPaymentModuleService, Logger } from "@medusajs/framework/types"
 import {
   ContainerRegistrationKeys,
-  ModuleRegistrationName,
+  Modules,
   promiseAll,
-} from "@medusajs/utils"
-import { createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The data to cancel one or more payments.
+ */
 export type CancelPaymentStepInput = {
+  /**
+   * The ID(s) of the payment(s) to cancel.
+   */
   paymentIds: string | string[]
 }
 
@@ -19,7 +25,7 @@ export const cancelPaymentStep = createStep(
   async (input: CancelPaymentStepInput, { container }) => {
     const logger = container.resolve<Logger>(ContainerRegistrationKeys.LOGGER)
     const paymentModule = container.resolve<IPaymentModuleService>(
-      ModuleRegistrationName.PAYMENT
+      Modules.PAYMENT
     )
 
     const paymentIds = Array.isArray(input.paymentIds)
@@ -27,6 +33,7 @@ export const cancelPaymentStep = createStep(
       : [input.paymentIds]
 
     const promises: Promise<any>[] = []
+
     for (const id of paymentIds) {
       promises.push(
         paymentModule.cancelPayment(id).catch((e) => {
@@ -36,6 +43,7 @@ export const cancelPaymentStep = createStep(
         })
       )
     }
+
     await promiseAll(promises)
   }
 )

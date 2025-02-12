@@ -3,14 +3,14 @@ import {
   OrderChangeDTO,
   OrderDTO,
   OrderPreviewDTO,
-} from "@medusajs/types"
-import { ChangeActionType, OrderChangeStatus } from "@medusajs/utils"
+} from "@medusajs/framework/types"
+import { ChangeActionType, OrderChangeStatus } from "@medusajs/framework/utils"
 import {
   WorkflowResponse,
   createStep,
   createWorkflow,
   transform,
-} from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/workflows-sdk"
 import { useRemoteQueryStep } from "../../../common"
 import { previewOrderChangeStep } from "../../steps"
 import { createOrderShippingMethods } from "../../steps/create-order-shipping-methods"
@@ -18,38 +18,102 @@ import {
   throwIfIsCancelled,
   throwIfOrderChangeIsNotActive,
 } from "../../utils/order-validation"
+import { prepareShippingMethod } from "../../utils/prepare-shipping-method"
 import { createOrderChangeActionsWorkflow } from "../create-order-change-actions"
 import { updateOrderTaxLinesWorkflow } from "../update-tax-lines"
 
 /**
+ * The data to validate that a shipping method can be created for an order edit.
+ */
+export type CreateOrderEditShippingMethodValidationStepInput = {
+  /**
+   * The order's details.
+   */
+  order: OrderDTO
+  /**
+   * The order change's details.
+   */
+  orderChange: OrderChangeDTO
+}
+
+/**
  * This step validates that a shipping method can be created for an order edit.
+ * If the order is canceled or the order change is not active, the step will throw an error.
+ * 
+ * :::note
+ * 
+ * You can retrieve an order and order change details using [Query](https://docs.medusajs.com/learn/fundamentals/module-links/query),
+ * or [useQueryGraphStep](https://docs.medusajs.com/resources/references/medusa-workflows/steps/useQueryGraphStep).
+ * 
+ * :::
+ * 
+ * @example
+ * const data = createOrderEditShippingMethodValidationStep({
+ *   order: {
+ *     id: "order_123",
+ *     // other order details...
+ *   },
+ *   orderChange: {
+ *     id: "orch_123",
+ *     // other order change details...
+ *   }
+ * })
  */
 export const createOrderEditShippingMethodValidationStep = createStep(
   "validate-create-order-edit-shipping-method",
   async function ({
     order,
     orderChange,
-  }: {
-    order: OrderDTO
-    orderChange: OrderChangeDTO
-  }) {
+  }: CreateOrderEditShippingMethodValidationStepInput) {
     throwIfIsCancelled(order, "Order")
     throwIfOrderChangeIsNotActive({ orderChange })
   }
 )
 
+/**
+ * The data to create a shipping method for an order edit.
+ */
+export type CreateOrderEditShippingMethodWorkflowInput = {
+  /**
+   * The ID of the order to create the shipping method for.
+   */
+  order_id: string
+  /**
+   * The ID of the shipping option to create the shipping method from.
+   */
+  shipping_option_id: string
+  /**
+   * The custom amount to create the shipping method with.
+   * If not provided, the shipping option's amount is used.
+   */
+  custom_amount?: BigNumberInput | null
+}
+
 export const createOrderEditShippingMethodWorkflowId =
   "create-order-edit-shipping-method"
 /**
- * This workflow creates a shipping method for an order edit.
+ * This workflow creates a shipping method for an order edit. It's used by the
+ * [Add Shipping Method API Route](https://docs.medusajs.com/api/admin#order-edits_postordereditsidshippingmethod).
+ * 
+ * You can use this workflow within your customizations or your own custom workflows, allowing you to create a shipping method
+ * for an order edit in your in your own custom flows.
+ * 
+ * @example
+ * const { result } = await createOrderEditShippingMethodWorkflow(container)
+ * .run({
+ *   input: {
+ *     order_id: "order_123",
+ *     shipping_option_id: "so_123",
+ *   }
+ * })
+ * 
+ * @summary
+ * 
+ * Create a shipping method for an order edit.
  */
 export const createOrderEditShippingMethodWorkflow = createWorkflow(
   createOrderEditShippingMethodWorkflowId,
-  function (input: {
-    order_id: string
-    shipping_option_id: string
-    custom_price?: BigNumberInput
-  }): WorkflowResponse<OrderPreviewDTO> {
+  function (input: CreateOrderEditShippingMethodWorkflowInput): WorkflowResponse<OrderPreviewDTO> {
     const order: OrderDTO = useRemoteQueryStep({
       entry_point: "orders",
       fields: ["id", "status", "currency_code", "canceled_at"],
@@ -89,25 +153,11 @@ export const createOrderEditShippingMethodWorkflow = createWorkflow(
     const shippingMethodInput = transform(
       {
         shippingOptions,
-        customPrice: input.custom_price,
+        customPrice: input.custom_amount,
         orderChange,
         input,
       },
-      (data) => {
-        const option = data.shippingOptions[0]
-        const orderChange = data.orderChange
-
-        return {
-          shipping_option_id: option.id,
-          amount: data.customPrice ?? option.calculated_price.calculated_amount,
-          is_tax_inclusive:
-            !!option.calculated_price.is_calculated_price_tax_inclusive,
-          data: option.data ?? {},
-          name: option.name,
-          version: orderChange.version,
-          order_id: data.input.order_id,
-        }
-      }
+      prepareShippingMethod()
     )
 
     const createdMethods = createOrderShippingMethods({
@@ -130,7 +180,7 @@ export const createOrderEditShippingMethodWorkflow = createWorkflow(
         order,
         shippingOptions,
         createdMethods,
-        customPrice: input.custom_price,
+        customPrice: input.custom_amount,
         orderChange,
         input,
       },

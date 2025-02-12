@@ -1,15 +1,17 @@
 import { RemoteLink } from "@medusajs/modules-sdk"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ICartModuleService, IPromotionModuleService } from "@medusajs/types"
 import {
   ContainerRegistrationKeys,
-  ModuleRegistrationName,
   Modules,
+  PromotionStatus,
   PromotionType,
 } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
 import {
   adminHeaders,
   createAdminUser,
+  generatePublishableKey,
+  generateStoreHeaders,
 } from "../../../../helpers/create-admin-user"
 
 jest.setTimeout(50000)
@@ -24,20 +26,21 @@ medusaIntegrationTestRunner({
       let cartModuleService: ICartModuleService
       let promotionModuleService: IPromotionModuleService
       let remoteLinkService: RemoteLink
+      let storeHeaders
 
       beforeAll(async () => {
         appContainer = getContainer()
-        cartModuleService = appContainer.resolve(ModuleRegistrationName.CART)
+        cartModuleService = appContainer.resolve(Modules.CART)
         remoteLinkService = appContainer.resolve(
           ContainerRegistrationKeys.REMOTE_LINK
         )
-        promotionModuleService = appContainer.resolve(
-          ModuleRegistrationName.PROMOTION
-        )
+        promotionModuleService = appContainer.resolve(Modules.PROMOTION)
       })
 
       beforeEach(async () => {
         await createAdminUser(dbConnection, adminHeaders, appContainer)
+        const publishableKey = await generatePublishableKey(appContainer)
+        storeHeaders = generateStoreHeaders({ publishableKey })
       })
 
       describe("DELETE /store/carts/:id/promotions", () => {
@@ -46,11 +49,12 @@ medusaIntegrationTestRunner({
             await promotionModuleService.createPromotions({
               code: "PROMOTION_APPLIED",
               type: PromotionType.STANDARD,
+              status: PromotionStatus.ACTIVE,
               application_method: {
                 type: "fixed",
                 target_type: "items",
                 allocation: "each",
-                value: "300",
+                value: 300,
                 apply_to_quantity: 1,
                 currency_code: "usd",
                 max_quantity: 1,
@@ -68,11 +72,12 @@ medusaIntegrationTestRunner({
             await promotionModuleService.createPromotions({
               code: "PROMOTION_APPLIED_TO_REMOVE",
               type: PromotionType.STANDARD,
+              status: PromotionStatus.ACTIVE,
               application_method: {
                 type: "fixed",
                 target_type: "items",
                 allocation: "each",
-                value: "300",
+                value: 300,
                 apply_to_quantity: 1,
                 currency_code: "usd",
                 max_quantity: 1,
@@ -147,6 +152,7 @@ medusaIntegrationTestRunner({
               data: {
                 promo_codes: [appliedPromotionToRemove.code],
               },
+              ...storeHeaders,
             }
           )
 
@@ -177,6 +183,7 @@ medusaIntegrationTestRunner({
           const appliedPromotion =
             await promotionModuleService.createPromotions({
               code: "PROMOTION_APPLIED",
+              status: PromotionStatus.ACTIVE,
               type: PromotionType.STANDARD,
               rules: [
                 {
@@ -194,7 +201,7 @@ medusaIntegrationTestRunner({
                 type: "fixed",
                 target_type: "shipping_methods",
                 allocation: "each",
-                value: "100",
+                value: 100,
                 max_quantity: 1,
                 currency_code: "usd",
                 target_rules: [
@@ -211,6 +218,7 @@ medusaIntegrationTestRunner({
             await promotionModuleService.createPromotions({
               code: "PROMOTION_APPLIED_TO_REMOVE",
               type: PromotionType.STANDARD,
+              status: PromotionStatus.ACTIVE,
               rules: [
                 {
                   attribute: "customer_id",
@@ -227,7 +235,7 @@ medusaIntegrationTestRunner({
                 type: "fixed",
                 target_type: "shipping_methods",
                 allocation: "each",
-                value: "100",
+                value: 100,
                 max_quantity: 1,
                 currency_code: "usd",
                 target_rules: [
@@ -295,6 +303,7 @@ medusaIntegrationTestRunner({
             `/store/carts/${cart.id}/promotions`,
             {
               data: { promo_codes: [appliedPromotionToRemove.code] },
+              ...storeHeaders,
             }
           )
 

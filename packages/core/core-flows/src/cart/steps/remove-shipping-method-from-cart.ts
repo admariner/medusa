@@ -1,10 +1,22 @@
-import { ICartModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import { ICartModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The details of the shipping methods to remove.
+ */
 export interface RemoveShippingMethodFromCartStepInput {
+  /**
+   * The IDs of the shipping methods to remove.
+   */
   shipping_method_ids: string[]
 }
+
+/**
+ * The shipping methods removed from the cart, along with IDs of related records
+ * that were removed.
+ */
+export type RemoveShippingMethodFromCartStepOutput = Record<string, string[]> | void
 
 export const removeShippingMethodFromCartStepId =
   "remove-shipping-method-to-cart-step"
@@ -14,24 +26,27 @@ export const removeShippingMethodFromCartStepId =
 export const removeShippingMethodFromCartStep = createStep(
   removeShippingMethodFromCartStepId,
   async (data: RemoveShippingMethodFromCartStepInput, { container }) => {
-    const cartService = container.resolve<ICartModuleService>(
-      ModuleRegistrationName.CART
-    )
+    const cartService = container.resolve<ICartModuleService>(Modules.CART)
+
+    if (!data?.shipping_method_ids?.length) {
+      return new StepResponse(null, [])
+    }
 
     const methods = await cartService.softDeleteShippingMethods(
       data.shipping_method_ids
     )
 
-    return new StepResponse(methods, data.shipping_method_ids)
+    return new StepResponse(
+      methods as RemoveShippingMethodFromCartStepOutput, 
+      data.shipping_method_ids
+    )
   },
   async (ids, { container }) => {
-    if (!ids) {
+    if (!ids?.length) {
       return
     }
 
-    const cartService: ICartModuleService = container.resolve(
-      ModuleRegistrationName.CART
-    )
+    const cartService: ICartModuleService = container.resolve(Modules.CART)
 
     await cartService.restoreShippingMethods(ids)
   }

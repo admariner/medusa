@@ -1,10 +1,25 @@
-import { BigNumberInput, IPaymentModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import {
+  BigNumberInput,
+  IPaymentModuleService,
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The data to refund a payment.
+ */
 export type RefundPaymentStepInput = {
+  /**
+   * The ID of the payment to refund.
+   */
   payment_id: string
+  /**
+   * The ID of the user that refunded the payment.
+   */
   created_by?: string
+  /**
+   * The amount to refund. If not provided, the full refundable amount is refunded.
+   */
   amount?: BigNumberInput
 }
 
@@ -16,11 +31,13 @@ export const refundPaymentStep = createStep(
   refundPaymentStepId,
   async (input: RefundPaymentStepInput, { container }) => {
     const paymentModule = container.resolve<IPaymentModuleService>(
-      ModuleRegistrationName.PAYMENT
+      Modules.PAYMENT
     )
 
     const payment = await paymentModule.refundPayment(input)
 
     return new StepResponse(payment)
   }
+  // We don't want to compensate a refund automatically as the actual funds have already been sent
+  // And in most cases we can't simply do another capture/authorization
 )

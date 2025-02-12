@@ -2,23 +2,30 @@ import {
   IPaymentModuleService,
   Logger,
   PaymentSessionDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
   ContainerRegistrationKeys,
-  ModuleRegistrationName,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+  Modules,
+  promiseAll,
+} from "@medusajs/framework/utils"
+import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The data to delete payment sessions.
+ */
 export interface DeletePaymentSessionStepInput {
+  /**
+   * The IDs of the payment sessions to delete.
+   */
   ids: string[]
 }
 
 export const deletePaymentSessionsStepId = "delete-payment-sessions"
 /**
  * This step deletes one or more payment sessions.
- * 
+ *
  * Note: This step should not be used alone as it doesn't consider a revert
- * Use deletePaymentSessionsWorkflow instead that uses this step
+ * Use {@link deletePaymentSessionsWorkflow} instead, which uses this step.
  */
 export const deletePaymentSessionsStep = createStep(
   deletePaymentSessionsStepId,
@@ -26,39 +33,47 @@ export const deletePaymentSessionsStep = createStep(
     const { ids = [] } = input
     const deleted: PaymentSessionDTO[] = []
     const logger = container.resolve<Logger>(ContainerRegistrationKeys.LOGGER)
-    const service = container.resolve<IPaymentModuleService>(
-      ModuleRegistrationName.PAYMENT
-    )
+    const service = container.resolve<IPaymentModuleService>(Modules.PAYMENT)
 
     if (!ids?.length) {
       return new StepResponse([], null)
     }
 
-    for (const id of ids) {
-      const select = [
-        "provider_id",
-        "currency_code",
-        "amount",
-        "data",
-        "context",
-        "payment_collection.id",
-      ]
+    const select = [
+      "provider_id",
+      "currency_code",
+      "amount",
+      "data",
+      "context",
+      "payment_collection.id",
+    ]
 
-      const [session] = await service.listPaymentSessions({ id }, { select })
+    const sessions = await service.listPaymentSessions({ id: ids }, { select })
+    const sessionMap = new Map(sessions.map((s) => [s.id, s]))
+
+    const promises: Promise<void>[] = []
+
+    for (const id of ids) {
+      const session = sessionMap.get(id)!
 
       // As this requires an external method call, we will try to delete as many successful calls
       // as possible and pass them over to the compensation step to be recreated if any of the
       // payment sessions fails to delete.
-      try {
-        await service.deletePaymentSession(id)
+      const promise = service
+        .deletePaymentSession(id)
+        .then((res) => {
+          deleted.push(session)
+        })
+        .catch((e) => {
+          logger.error(
+            `Encountered an error when trying to delete payment session - ${id} - ${e}`
+          )
+        })
 
-        deleted.push(session)
-      } catch (e) {
-        logger.error(
-          `Encountered an error when trying to delete payment session - ${id} - ${e}`
-        )
-      }
+      promises.push(promise)
     }
+
+    await promiseAll(promises)
 
     return new StepResponse(
       deleted.map((d) => d.id),
@@ -67,9 +82,7 @@ export const deletePaymentSessionsStep = createStep(
   },
   async (deletedPaymentSessions, { container }) => {
     const logger = container.resolve<Logger>(ContainerRegistrationKeys.LOGGER)
-    const service = container.resolve<IPaymentModuleService>(
-      ModuleRegistrationName.PAYMENT
-    )
+    const service = container.resolve<IPaymentModuleService>(Modules.PAYMENT)
 
     if (!deletedPaymentSessions?.length) {
       return

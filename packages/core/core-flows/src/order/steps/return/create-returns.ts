@@ -1,6 +1,9 @@
-import { CreateOrderReturnDTO, IOrderModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import {
+  CreateOrderReturnDTO,
+  IOrderModuleService,
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const createReturnsStepId = "create-returns"
 /**
@@ -9,9 +12,7 @@ export const createReturnsStepId = "create-returns"
 export const createReturnsStep = createStep(
   createReturnsStepId,
   async (data: CreateOrderReturnDTO[], { container }) => {
-    const service = container.resolve<IOrderModuleService>(
-      ModuleRegistrationName.ORDER
-    )
+    const service = container.resolve<IOrderModuleService>(Modules.ORDER)
 
     const orderReturns = await service.createReturns(data)
 
@@ -24,9 +25,7 @@ export const createReturnsStep = createStep(
       return
     }
 
-    const service = container.resolve<IOrderModuleService>(
-      ModuleRegistrationName.ORDER
-    )
+    const service = container.resolve<IOrderModuleService>(Modules.ORDER)
 
     await service.deleteReturns(returnIds)
   }

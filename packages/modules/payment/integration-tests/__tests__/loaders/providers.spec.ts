@@ -1,7 +1,7 @@
-import { IPaymentModuleService } from "@medusajs/types"
+import { IPaymentModuleService } from "@medusajs/framework/types"
 
-import { moduleIntegrationTestRunner } from "medusa-test-utils"
-import { Modules } from "@medusajs/utils"
+import { moduleIntegrationTestRunner } from "@medusajs/test-utils"
+import { Modules } from "@medusajs/framework/utils"
 
 jest.setTimeout(30000)
 
@@ -15,7 +15,6 @@ moduleIntegrationTestRunner<IPaymentModuleService>({
             .createPaymentCollections([
               {
                 amount: 200,
-                region_id: "req_123",
               } as any,
             ])
             .catch((e) => e)
@@ -28,7 +27,7 @@ moduleIntegrationTestRunner<IPaymentModuleService>({
         it("should create a payment collection successfully", async () => {
           const [createdPaymentCollection] =
             await service.createPaymentCollections([
-              { currency_code: "USD", amount: 200, region_id: "reg_123" },
+              { currency_code: "USD", amount: 200 },
             ])
 
           expect(createdPaymentCollection).toEqual(

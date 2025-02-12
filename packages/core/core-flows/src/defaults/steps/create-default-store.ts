@@ -1,20 +1,44 @@
-import { CreateStoreDTO, IStoreModuleService, StoreDTO } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import {
+  CreateStoreDTO,
+  IStoreModuleService,
+  StoreDTO,
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 import { createStoresWorkflow } from "../../store"
 
+/**
+ * The data to create a default store.
+ */
 type CreateDefaultStoreStepInput = {
+  /**
+   * The store to create.
+   */
   store: CreateStoreDTO
 }
 
 export const createDefaultStoreStepId = "create-default-store"
 /**
- * This step creates a default store.
+ * This step creates a default store. Useful if creating a workflow
+ * that seeds data into Medusa.
+ * 
+ * @example
+ * const data = createDefaultStoreStep({
+ *   store: {
+ *     name: "Acme",
+ *     supported_currencies: [
+ *       {
+ *         currency_code: "usd",
+ *         is_default: true
+ *       }
+ *     ],
+ *   }
+ * })
  */
 export const createDefaultStoreStep = createStep(
   createDefaultStoreStepId,
   async (data: CreateDefaultStoreStepInput, { container }) => {
-    const storeService = container.resolve(ModuleRegistrationName.STORE)
+    const storeService = container.resolve(Modules.STORE)
 
     if (!storeService) {
       return new StepResponse(void 0)
@@ -59,9 +83,7 @@ export const createDefaultStoreStep = createStep(
       return
     }
 
-    const service = container.resolve<IStoreModuleService>(
-      ModuleRegistrationName.STORE
-    )
+    const service = container.resolve<IStoreModuleService>(Modules.STORE)
 
     await service.deleteStores(data.storeId)
   }

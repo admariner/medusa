@@ -3,6 +3,7 @@ import {
   createOrderFulfillmentWorkflow,
   createShippingOptionsWorkflow,
 } from "@medusajs/core-flows"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import {
   FulfillmentWorkflow,
   IOrderModuleService,
@@ -17,11 +18,9 @@ import {
 import {
   BigNumber,
   ContainerRegistrationKeys,
-  ModuleRegistrationName,
   Modules,
   remoteQueryObjectFromString,
 } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
 
 jest.setTimeout(500000)
 
@@ -31,17 +30,13 @@ const variantSkuWithInventory = "test-variant"
 let inventoryItem
 
 async function prepareDataFixtures({ container }) {
-  const fulfillmentService = container.resolve(
-    ModuleRegistrationName.FULFILLMENT
-  )
-  const salesChannelService = container.resolve(
-    ModuleRegistrationName.SALES_CHANNEL
-  )
+  const fulfillmentService = container.resolve(Modules.FULFILLMENT)
+  const salesChannelService = container.resolve(Modules.SALES_CHANNEL)
   const stockLocationModule: IStockLocationService = container.resolve(
-    ModuleRegistrationName.STOCK_LOCATION
+    Modules.STOCK_LOCATION
   )
-  const productModule = container.resolve(ModuleRegistrationName.PRODUCT)
-  const inventoryModule = container.resolve(ModuleRegistrationName.INVENTORY)
+  const productModule = container.resolve(Modules.PRODUCT)
+  const inventoryModule = container.resolve(Modules.INVENTORY)
 
   const shippingProfile = await fulfillmentService.createShippingProfiles({
     name: "test",
@@ -65,7 +60,7 @@ async function prepareDataFixtures({ container }) {
   })
 
   const regionService = container.resolve(
-    ModuleRegistrationName.REGION
+    Modules.REGION
   ) as IRegionModuleService
 
   const [region] = await regionService.createRegions([
@@ -131,6 +126,17 @@ async function prepareDataFixtures({ container }) {
       },
       [Modules.FULFILLMENT]: {
         fulfillment_provider_id: "manual_test-provider",
+      },
+    },
+  ])
+
+  await remoteLink.create([
+    {
+      [Modules.PRODUCT]: {
+        product_id: product.id,
+      },
+      [Modules.FULFILLMENT]: {
+        shipping_profile_id: shippingProfile.id,
       },
     },
   ])
@@ -226,9 +232,7 @@ async function prepareDataFixtures({ container }) {
 }
 
 async function createOrderFixture({ container, product, location }) {
-  const orderService: IOrderModuleService = container.resolve(
-    ModuleRegistrationName.ORDER
-  )
+  const orderService: IOrderModuleService = container.resolve(Modules.ORDER)
   let order = await orderService.createOrders({
     region_id: "test_region_id",
     email: "foo@bar.com",
@@ -310,14 +314,17 @@ async function createOrderFixture({ container, product, location }) {
     customer_id: "joe",
   })
 
-  const inventoryModule = container.resolve(ModuleRegistrationName.INVENTORY)
+  const inventoryModule = container.resolve(Modules.INVENTORY)
 
+  const itemWithInventory = order.items!.find(
+    (o) => o.variant_sku === variantSkuWithInventory
+  )!
   const reservation = await inventoryModule.createReservationItems([
     {
-      line_item_id: order.items![0].id,
+      line_item_id: itemWithInventory.id,
       inventory_item_id: inventoryItem.id,
       location_id: location.id,
-      quantity: order.items![0].quantity,
+      quantity: itemWithInventory.quantity,
     },
   ])
 
@@ -355,13 +362,11 @@ medusaIntegrationTestRunner({
         location = fixtures.location
         product = fixtures.product
 
-        orderService = container.resolve(ModuleRegistrationName.ORDER)
+        orderService = container.resolve(Modules.ORDER)
       })
 
       it("should create a order fulfillment and cancel it", async () => {
-        const inventoryModule = container.resolve(
-          ModuleRegistrationName.INVENTORY
-        )
+        const inventoryModule = container.resolve(Modules.INVENTORY)
 
         const order = await createOrderFixture({ container, product, location })
         const itemWithInventory = order.items!.find(
@@ -381,6 +386,7 @@ medusaIntegrationTestRunner({
             ],
             no_notification: false,
             location_id: undefined,
+            metadata: { meta_key: "meta_value" },
           }
 
         await createOrderFulfillmentWorkflow(container).run({
@@ -415,6 +421,9 @@ medusaIntegrationTestRunner({
         expect(orderFulfillItemWithInventory.detail.fulfilled_quantity).toEqual(
           1
         )
+        expect(orderFulfill.fulfillments[0].metadata).toEqual({
+          meta_key: "meta_value",
+        })
 
         const reservation = await inventoryModule.listReservationItems({
           line_item_id: itemWithInventory.id,
@@ -445,7 +454,6 @@ medusaIntegrationTestRunner({
             id: order.id,
           },
           fields: [
-            "*",
             "items.*",
             "shipping_methods.*",
             "total",
@@ -463,14 +471,15 @@ medusaIntegrationTestRunner({
         )!
 
         expect(orderFulfillAfterCancelled.fulfillments).toHaveLength(1)
-        expect(orderFulfillItemWithInventory.detail.fulfilled_quantity).toEqual(
-          0
-        )
+        expect(
+          orderFulfillItemWithInventory.detail.fulfilled_quantity.valueOf()
+        ).toEqual(0)
 
         const stockAvailabilityAfterCancelled =
           await inventoryModule.retrieveStockedQuantity(inventoryItem.id, [
             location.id,
           ])
+
         expect(stockAvailabilityAfterCancelled.valueOf()).toEqual(2)
       })
 
@@ -534,9 +543,7 @@ medusaIntegrationTestRunner({
         expect(orderFulfill.fulfillments).toHaveLength(1)
         expect(orderFulfill.items[0].detail.fulfilled_quantity).toEqual(1)
 
-        const inventoryModule = container.resolve(
-          ModuleRegistrationName.INVENTORY
-        )
+        const inventoryModule = container.resolve(Modules.INVENTORY)
         const reservation = await inventoryModule.listReservationItems({
           line_item_id: order.items![0].id,
         })

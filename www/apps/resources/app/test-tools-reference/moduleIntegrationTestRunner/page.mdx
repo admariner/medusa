@@ -6,12 +6,12 @@ export const metadata = {
 
 # {metadata.title}
 
-This document provides a reference to the `moduleIntegrationTestRunner` function provided by the `medusa-test-utils` package.
+This document provides a reference to the `moduleIntegrationTestRunner` function provided by the `@medusajs/test-utils` package.
 
 ## Example
 
 ```ts
-import { moduleIntegrationTestRunner } from "medusa-test-utils"
+import { moduleIntegrationTestRunner } from "@medusajs/test-utils"
 import { HELLO_MODULE } from ".."
 import HelloModuleService from "../service"
 import MyCustom from "../models/my-custom"
@@ -19,10 +19,10 @@ import MyCustom from "../models/my-custom"
 moduleIntegrationTestRunner<HelloModuleService>({
   moduleName: HELLO_MODULE,
   moduleModels: [MyCustom],
-  resolve: "./modules/hello",
+  resolve: "./src/modules/hello",
   testSuite: ({ service }) => {
     // TODO write tests
-  }
+  },
 })
 ```
 
@@ -126,7 +126,7 @@ The function passed to `testSuite` accepts the following parameters:
           description: "Utility functions to query and manage the database.",
           children: [
             {
-              type: `[SqlEntityManager](https://mikro-orm.io/api/5.9/knex/class/EntityManager)`,
+              type: `[SqlEntityManager](https://mikro-orm.io/api/knex/class/EntityManager)`,
               name: "manager",
               description: "An instance of MikroORM's entity manager, which can be used to run queries and perform other database tasks."
             },

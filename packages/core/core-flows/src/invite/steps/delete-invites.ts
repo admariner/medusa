@@ -1,6 +1,11 @@
-import { IUserModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import { IUserModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
+
+/**
+ * The IDs of the invites to delete.
+ */
+export type DeleteInvitesStepInput = string[]
 
 export const deleteInvitesStepId = "delete-invites-step"
 /**
@@ -8,10 +13,8 @@ export const deleteInvitesStepId = "delete-invites-step"
  */
 export const deleteInvitesStep = createStep(
   deleteInvitesStepId,
-  async (input: string[], { container }) => {
-    const service: IUserModuleService = container.resolve(
-      ModuleRegistrationName.USER
-    )
+  async (input: DeleteInvitesStepInput, { container }) => {
+    const service: IUserModuleService = container.resolve(Modules.USER)
 
     await service.softDeleteInvites(input)
 
@@ -22,9 +25,7 @@ export const deleteInvitesStep = createStep(
       return
     }
 
-    const service: IUserModuleService = container.resolve(
-      ModuleRegistrationName.USER
-    )
+    const service: IUserModuleService = container.resolve(Modules.USER)
 
     await service.restoreInvites(deletedInviteIds)
   }

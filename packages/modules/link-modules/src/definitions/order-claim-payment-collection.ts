@@ -1,5 +1,5 @@
-import { ModuleJoinerConfig } from "@medusajs/types"
-import { LINKS, Modules } from "@medusajs/utils"
+import { ModuleJoinerConfig } from "@medusajs/framework/types"
+import { LINKS, Modules } from "@medusajs/framework/utils"
 
 export const OrderClaimPaymentCollection: ModuleJoinerConfig = {
   serviceName: LINKS.OrderClaimPaymentCollection,
@@ -14,15 +14,14 @@ export const OrderClaimPaymentCollection: ModuleJoinerConfig = {
         "order_claim_payment_collection",
         "order_claim_payment_collections",
       ],
-      args: {
-        entity: "LinkOrderClaimPaymentCollection",
-      },
+      entity: "LinkOrderClaimPaymentCollection",
     },
   ],
   primaryKeys: ["id", "claim_id", "payment_collection_id"],
   relationships: [
     {
       serviceName: Modules.ORDER,
+      entity: "OrderClaim",
       primaryKey: "id",
       foreignKey: "claim_id",
       alias: "order",
@@ -32,6 +31,7 @@ export const OrderClaimPaymentCollection: ModuleJoinerConfig = {
     },
     {
       serviceName: Modules.PAYMENT,
+      entity: "PaymentCollection",
       primaryKey: "id",
       foreignKey: "payment_collection_id",
       alias: "payment_collection",
@@ -43,6 +43,7 @@ export const OrderClaimPaymentCollection: ModuleJoinerConfig = {
   extends: [
     {
       serviceName: Modules.ORDER,
+      entity: "OrderClaim",
       fieldAlias: {
         claim_payment_collections: {
           path: "claim_payment_collections_link.payment_collection",
@@ -58,6 +59,7 @@ export const OrderClaimPaymentCollection: ModuleJoinerConfig = {
     },
     {
       serviceName: Modules.PAYMENT,
+      entity: "PaymentCollection",
       fieldAlias: {
         claim: "order_claim_link.order",
       },

@@ -1,4 +1,4 @@
-import { generateJwtToken, MedusaError } from "@medusajs/utils"
+import { generateJwtToken, MedusaError } from "@medusajs/framework/utils"
 import { GoogleAuthService } from "../../src/services/google"
 import { http, HttpResponse } from "msw"
 import { setupServer } from "msw/node"
@@ -28,6 +28,22 @@ const encodedIdToken = generateJwtToken(sampleIdPayload, {
 })
 
 const baseUrl = "https://someurl.com"
+const callbackUrl = encodeURIComponent(
+  "https://someurl.com/auth/google/callback"
+)
+
+let state = {}
+const defaultSpies = {
+  retrieve: jest.fn(),
+  create: jest.fn(),
+  update: jest.fn(),
+  setState: jest.fn().mockImplementation((key, value) => {
+    state[key] = value
+  }),
+  getState: jest.fn().mockImplementation((key) => {
+    return Promise.resolve(state[key])
+  }),
+}
 
 // This is just a network-layer mocking, it doesn't start an actual server
 const server = setupServer(
@@ -37,7 +53,7 @@ const server = setupServer(
       const url = request.url
       if (
         url ===
-        "https://oauth2.googleapis.com/token?client_id=test&client_secret=test&code=invalid-code&redirect_uri=https%3A%2F%2Fsomeurl.com%2Fauth%2Fgoogle%2Fcallback&grant_type=authorization_code"
+        `https://oauth2.googleapis.com/token?client_id=test&client_secret=test&code=invalid-code&redirect_uri=${callbackUrl}&grant_type=authorization_code`
       ) {
         return new HttpResponse(null, {
           status: 401,
@@ -47,7 +63,7 @@ const server = setupServer(
 
       if (
         url ===
-        "https://oauth2.googleapis.com/token?client_id=test&client_secret=test&code=valid-code&redirect_uri=https%3A%2F%2Fsomeurl.com%2Fauth%2Fgoogle%2Fcallback&grant_type=authorization_code"
+        `https://oauth2.googleapis.com/token?client_id=test&client_secret=test&code=valid-code&redirect_uri=${callbackUrl}&grant_type=authorization_code`
       ) {
         return new HttpResponse(
           JSON.stringify({
@@ -78,10 +94,9 @@ describe("Google auth provider", () => {
         logger: console as any,
       },
       {
-        clientID: "test",
+        clientId: "test",
         clientSecret: "test",
-        successRedirectUrl: baseUrl,
-        callbackURL: `${baseUrl}/auth/google/callback`,
+        callbackUrl: `${baseUrl}/auth/google/callback`,
       }
     )
 
@@ -91,6 +106,7 @@ describe("Google auth provider", () => {
   afterEach(() => {
     server.resetHandlers()
     jest.restoreAllMocks()
+    state = {}
   })
 
   afterAll(() => server.close())
@@ -99,7 +115,7 @@ describe("Google auth provider", () => {
     let msg = ""
     try {
       GoogleAuthService.validateOptions({
-        clientID: "test",
+        clientId: "test",
         clientSecret: "test",
       } as any)
     } catch (e) {
@@ -110,11 +126,27 @@ describe("Google auth provider", () => {
   })
 
   it("returns a redirect URL on authenticate", async () => {
-    const res = await googleService.authenticate({})
+    const res = await googleService.authenticate({}, defaultSpies)
     expect(res).toEqual({
       success: true,
-      location:
-        "https://accounts.google.com/o/oauth2/v2/auth?redirect_uri=https%3A%2F%2Fsomeurl.com%2Fauth%2Fgoogle%2Fcallback&client_id=test&response_type=code&scope=email+profile+openid",
+      location: `https://accounts.google.com/o/oauth2/v2/auth?redirect_uri=${callbackUrl}&client_id=test&response_type=code&scope=email+profile+openid&state=${
+        Object.keys(state)[0]
+      }`,
+    })
+  })
+
+  it("returns a custom redirect_uri on authenticate", async () => {
+    const res = await googleService.authenticate(
+      {
+        body: { callback_url: "https://someotherurl.com" },
+      },
+      defaultSpies
+    )
+    expect(res).toEqual({
+      success: true,
+      location: `https://accounts.google.com/o/oauth2/v2/auth?redirect_uri=https%3A%2F%2Fsomeotherurl.com&client_id=test&response_type=code&scope=email+profile+openid&state=${
+        Object.keys(state)[0]
+      }`,
     })
   })
 
@@ -123,7 +155,7 @@ describe("Google auth provider", () => {
       {
         query: {},
       },
-      {} as any
+      defaultSpies
     )
     expect(res).toEqual({
       success: false,
@@ -131,14 +163,52 @@ describe("Google auth provider", () => {
     })
   })
 
+  it("validate callback should return an error on missing state", async () => {
+    const res = await googleService.validateCallback(
+      {
+        query: {
+          code: "valid-code",
+        },
+      },
+      defaultSpies
+    )
+    expect(res).toEqual({
+      success: false,
+      error: "No state provided, or session expired",
+    })
+  })
+
+  it("validate callback should return an error on expired/invalid state", async () => {
+    const res = await googleService.validateCallback(
+      {
+        query: {
+          code: "valid-code",
+          state: "somekey",
+        },
+      },
+      defaultSpies
+    )
+    expect(res).toEqual({
+      success: false,
+      error: "No state provided, or session expired",
+    })
+  })
+
   it("validate callback should return on a missing access token for code", async () => {
+    state = {
+      somekey: {
+        callback_url: callbackUrl,
+      },
+    }
+
     const res = await googleService.validateCallback(
       {
         query: {
           code: "invalid-code",
+          state: "somekey",
         },
       },
-      {} as any
+      defaultSpies
     )
 
     expect(res).toEqual({
@@ -149,6 +219,7 @@ describe("Google auth provider", () => {
 
   it("validate callback should return successfully on a correct code for a new user", async () => {
     const authServiceSpies = {
+      ...defaultSpies,
       retrieve: jest.fn().mockImplementation(() => {
         throw new MedusaError(MedusaError.Types.NOT_FOUND, "Not found")
       }),
@@ -156,18 +227,28 @@ describe("Google auth provider", () => {
         return {
           provider_identities: [
             {
-              entity_id: "test@admin.com",
+              entity_id: "113664482950786663866",
               provider: "google",
             },
           ],
         }
       }),
+      update: jest.fn().mockImplementation(() => {
+        return {}
+      }),
+    }
+
+    state = {
+      somekey: {
+        callback_url: callbackUrl,
+      },
     }
 
     const res = await googleService.validateCallback(
       {
         query: {
           code: "valid-code",
+          state: "somekey",
         },
       },
       authServiceSpies
@@ -175,11 +256,10 @@ describe("Google auth provider", () => {
 
     expect(res).toEqual({
       success: true,
-      successRedirectUrl: baseUrl,
       authIdentity: {
         provider_identities: [
           {
-            entity_id: "test@admin.com",
+            entity_id: "113664482950786663866",
             provider: "google",
           },
         ],
@@ -189,11 +269,12 @@ describe("Google auth provider", () => {
 
   it("validate callback should return successfully on a correct code for an existing user", async () => {
     const authServiceSpies = {
+      ...defaultSpies,
       retrieve: jest.fn().mockImplementation(() => {
         return {
           provider_identities: [
             {
-              entity_id: "test@admin.com",
+              entity_id: "113664482950786663866",
               provider: "google",
             },
           ],
@@ -202,12 +283,22 @@ describe("Google auth provider", () => {
       create: jest.fn().mockImplementation(() => {
         return {}
       }),
+      update: jest.fn().mockImplementation(() => {
+        return {}
+      }),
+    }
+
+    state = {
+      somekey: {
+        callback_url: callbackUrl,
+      },
     }
 
     const res = await googleService.validateCallback(
       {
         query: {
           code: "valid-code",
+          state: "somekey",
         },
       },
       authServiceSpies
@@ -215,11 +306,10 @@ describe("Google auth provider", () => {
 
     expect(res).toEqual({
       success: true,
-      successRedirectUrl: baseUrl,
       authIdentity: {
         provider_identities: [
           {
-            entity_id: "test@admin.com",
+            entity_id: "113664482950786663866",
             provider: "google",
           },
         ],

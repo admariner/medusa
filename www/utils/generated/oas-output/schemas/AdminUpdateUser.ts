@@ -1,12 +1,8 @@
 /**
  * @schema AdminUpdateUser
  * type: object
- * description: SUMMARY
+ * description: The properties to update in a user.
  * x-schemaName: AdminUpdateUser
- * required:
- *   - first_name
- *   - last_name
- *   - avatar_url
  * properties:
  *   first_name:
  *     type: string
@@ -19,7 +15,10 @@
  *   avatar_url:
  *     type: string
  *     title: avatar_url
- *     description: The user's avatar url.
+ *     description: The URL of the user's avatar.
+ *   metadata:
+ *     type: object
+ *     description: The user's metadata, can hold custom key-value pairs.
  * 
 */
 

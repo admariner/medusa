@@ -1,13 +1,12 @@
-import { ClaimType, ModuleRegistrationName } from "@medusajs/utils"
-import { adminHeaders } from "../../../../helpers/create-admin-user"
-import { seedStorefrontDefaults } from "../../../../helpers/seed-storefront-defaults"
-import { setupTaxStructure } from "../../../../modules/__tests__/fixtures"
-
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
-import { createAdminUser } from "../../../../helpers/create-admin-user"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
+import { ClaimType } from "@medusajs/utils"
+import {
+  adminHeaders,
+  createAdminUser,
+} from "../../../../helpers/create-admin-user"
 import { createOrderSeeder } from "../../fixtures/order"
 
-jest.setTimeout(30000)
+jest.setTimeout(50000)
 
 medusaIntegrationTestRunner({
   testSuite: ({ dbConnection, getContainer, api }) => {
@@ -39,7 +38,23 @@ medusaIntegrationTestRunner({
     beforeEach(async () => {
       container = getContainer()
       await createAdminUser(dbConnection, adminHeaders, container)
-      order = await createOrderSeeder({ api })
+
+      const inventoryItemOverride = (
+        await api.post(
+          `/admin/inventory-items`,
+          { sku: "test-variant", requires_shipping: false },
+          adminHeaders
+        )
+      ).data.inventory_item
+
+      const seeders = await createOrderSeeder({
+        api,
+        container,
+        inventoryItemOverride,
+        withoutShipping: true,
+      })
+
+      order = seeders.order
 
       await api.post(
         `/admin/orders/${order.id}/fulfillments`,
@@ -77,6 +92,92 @@ medusaIntegrationTestRunner({
           })
         )
         expect(response.status).toEqual(200)
+      })
+
+      it("should throw if capture amount is greater than authorized amount", async () => {
+        const payment = order.payment_collections[0].payments[0]
+
+        const response = await api.post(
+          `/admin/payments/${payment.id}/capture`,
+          { amount: 75 },
+          adminHeaders
+        )
+
+        expect(response.data.payment).toEqual(
+          expect.objectContaining({
+            id: payment.id,
+            captured_at: null, // not fully captured yet
+            captures: [
+              expect.objectContaining({
+                id: expect.any(String),
+                amount: 75,
+              }),
+            ],
+            refunds: [],
+            amount: 100,
+          })
+        )
+        expect(response.status).toEqual(200)
+
+        const errResponse = await api
+          .post(
+            `/admin/payments/${payment.id}/capture`,
+            { amount: 75 },
+            adminHeaders
+          )
+          .catch((e) => e)
+
+        expect(errResponse.response.data.message).toEqual(
+          "You cannot capture more than the authorized amount substracted by what is already captured."
+        )
+      })
+
+      it("should return payment if payment is already fully captured", async () => {
+        const payment = order.payment_collections[0].payments[0]
+
+        const response = await api.post(
+          `/admin/payments/${payment.id}/capture`,
+          undefined,
+          adminHeaders
+        )
+
+        expect(response.data.payment).toEqual(
+          expect.objectContaining({
+            id: payment.id,
+            captured_at: expect.any(String),
+            captures: [
+              expect.objectContaining({
+                id: expect.any(String),
+                amount: 100,
+              }),
+            ],
+            refunds: [],
+            amount: 100,
+          })
+        )
+        expect(response.status).toEqual(200)
+
+        const anotherResponse = await api.post(
+          `/admin/payments/${payment.id}/capture`,
+          undefined,
+          adminHeaders
+        )
+
+        expect(anotherResponse.data.payment).toEqual(
+          expect.objectContaining({
+            id: payment.id,
+            captured_at: expect.any(String),
+            captures: [
+              expect.objectContaining({
+                id: expect.any(String),
+                amount: 100,
+              }),
+            ],
+            refunds: [],
+            amount: 100,
+          })
+        )
+        expect(anotherResponse.status).toEqual(200)
       })
 
       it("should refund a captured payment", async () => {
@@ -226,60 +327,6 @@ medusaIntegrationTestRunner({
 
         expect(e.response.data.message).toEqual(
           "Cannot refund more than pending difference - 75"
-        )
-      })
-
-      it("should not update payment collection of other orders", async () => {
-        await setupTaxStructure(container.resolve(ModuleRegistrationName.TAX))
-        await seedStorefrontDefaults(container, "dkk")
-
-        let order1 = await createOrderSeeder({ api })
-
-        expect(order1).toEqual(
-          expect.objectContaining({
-            id: expect.any(String),
-            payment_status: "authorized",
-          })
-        )
-
-        const order1Payment = order1.payment_collections[0].payments[0]
-
-        await api.post(
-          `/admin/payments/${order1Payment.id}/capture?fields=*payment_collection`,
-          { amount: order1Payment.amount },
-          adminHeaders
-        )
-
-        order1 = (await api.get(`/admin/orders/${order1.id}`, adminHeaders))
-          .data.order
-
-        expect(order1).toEqual(
-          expect.objectContaining({
-            id: order1.id,
-            payment_status: "captured",
-          })
-        )
-
-        let order2 = await createOrderSeeder({ api })
-
-        order2 = (await api.get(`/admin/orders/${order2.id}`, adminHeaders))
-          .data.order
-
-        expect(order2).toEqual(
-          expect.objectContaining({
-            id: expect.any(String),
-            payment_status: "authorized",
-          })
-        )
-
-        order1 = (await api.get(`/admin/orders/${order1.id}`, adminHeaders))
-          .data.order
-
-        expect(order1).toEqual(
-          expect.objectContaining({
-            id: expect.any(String),
-            payment_status: "captured",
-          })
         )
       })
     })

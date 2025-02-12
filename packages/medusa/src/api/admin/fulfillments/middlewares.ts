@@ -1,9 +1,10 @@
-import { MiddlewareRoute } from "@medusajs/framework"
-import { validateAndTransformBody } from "../../utils/validate-body"
-import { validateAndTransformQuery } from "../../utils/validate-query"
+import { MiddlewareRoute } from "@medusajs/framework/http"
+import {
+  validateAndTransformBody,
+  validateAndTransformQuery,
+} from "@medusajs/framework"
 import * as QueryConfig from "./query-config"
 import {
-  AdminCancelFulfillment,
   AdminCreateFulfillment,
   AdminCreateShipment,
   AdminFulfillmentParams,
@@ -14,7 +15,6 @@ export const adminFulfillmentsRoutesMiddlewares: MiddlewareRoute[] = [
     method: ["POST"],
     matcher: "/admin/fulfillments/:id/cancel",
     middlewares: [
-      validateAndTransformBody(AdminCancelFulfillment),
       validateAndTransformQuery(
         AdminFulfillmentParams,
         QueryConfig.retrieveTransformQueryConfig

@@ -1,16 +1,27 @@
-import { CreateCampaignDTO, IPromotionModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import {
+  CreateCampaignDTO,
+  IPromotionModuleService,
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const createCampaignsStepId = "create-campaigns"
 /**
  * This step cancels one or more campaigns.
+ * 
+ * @example
+ * const data = createCampaignsStep([
+ *   {
+ *     name: "Sale Campaign",
+ *     campaign_identifier: "GA-123456"
+ *   }
+ * ])
  */
 export const createCampaignsStep = createStep(
   createCampaignsStepId,
   async (data: CreateCampaignDTO[], { container }) => {
     const promotionModule = container.resolve<IPromotionModuleService>(
-      ModuleRegistrationName.PROMOTION
+      Modules.PROMOTION
     )
 
     const createdCampaigns = await promotionModule.createCampaigns(data)
@@ -26,7 +37,7 @@ export const createCampaignsStep = createStep(
     }
 
     const promotionModule = container.resolve<IPromotionModuleService>(
-      ModuleRegistrationName.PROMOTION
+      Modules.PROMOTION
     )
 
     await promotionModule.deleteCampaigns(createdCampaignIds)

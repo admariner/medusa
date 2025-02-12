@@ -18,23 +18,14 @@ get:
       required: true
       schema:
         type: string
-    - name: expand
-      in: query
-      description: Comma-separated relations that should be expanded in the returned data.
-      required: false
-      schema:
-        type: string
-        title: expand
-        description: >-
-          Comma-separated relations that should be expanded in the returned
-          data.
     - name: fields
       in: query
       description: >-
         Comma-separated fields that should be included in the returned data. if
         a field is prefixed with `+` it will be added to the default fields,
         using `-` will remove it from the default fields. without prefix it will
-        replace the entire default fields.
+        replace the entire default fields. NOTE: This route doesn't allow
+        expanding custom relations.
       required: false
       schema:
         type: string
@@ -43,36 +34,10 @@ get:
           Comma-separated fields that should be included in the returned data.
           if a field is prefixed with `+` it will be added to the default
           fields, using `-` will remove it from the default fields. without
-          prefix it will replace the entire default fields.
-    - name: offset
-      in: query
-      description: The number of items to skip when retrieving a list.
-      required: false
-      schema:
-        type: number
-        title: offset
-        description: The number of items to skip when retrieving a list.
-    - name: limit
-      in: query
-      description: Limit the number of items returned in the list.
-      required: false
-      schema:
-        type: number
-        title: limit
-        description: Limit the number of items returned in the list.
-    - name: order
-      in: query
-      description: >-
-        The field to sort the data by. By default, the sort order is ascending.
-        To change the order to descending, prefix the field name with `-`.
-      required: false
-      schema:
-        type: string
-        title: order
-        description: >-
-          The field to sort the data by. By default, the sort order is
-          ascending. To change the order to descending, prefix the field name
-          with `-`.
+          prefix it will replace the entire default fields. NOTE: This route
+          doesn't allow expanding custom relations.
+        externalDocs:
+          url: '#select-fields-and-relations'
   security:
     - api_token: []
     - cookie_auth: []
@@ -106,8 +71,9 @@ get:
       $ref: ../components/responses/500_error.yaml
 post:
   operationId: PostCustomersIdAddressesAddress_id
-  summary: Add Addresses to Customer
-  description: Add a list of addresses to a customer.
+  summary: Update a Customer's Address
+  x-sidebar-summary: Update Address
+  description: Update a customer address's details.
   x-authenticated: true
   parameters:
     - name: id
@@ -122,23 +88,14 @@ post:
       required: true
       schema:
         type: string
-    - name: expand
-      in: query
-      description: Comma-separated relations that should be expanded in the returned data.
-      required: false
-      schema:
-        type: string
-        title: expand
-        description: >-
-          Comma-separated relations that should be expanded in the returned
-          data.
     - name: fields
       in: query
       description: >-
         Comma-separated fields that should be included in the returned data. if
         a field is prefixed with `+` it will be added to the default fields,
         using `-` will remove it from the default fields. without prefix it will
-        replace the entire default fields.
+        replace the entire default fields. NOTE: This route doesn't allow
+        expanding custom relations.
       required: false
       schema:
         type: string
@@ -147,36 +104,10 @@ post:
           Comma-separated fields that should be included in the returned data.
           if a field is prefixed with `+` it will be added to the default
           fields, using `-` will remove it from the default fields. without
-          prefix it will replace the entire default fields.
-    - name: offset
-      in: query
-      description: The number of items to skip when retrieving a list.
-      required: false
-      schema:
-        type: number
-        title: offset
-        description: The number of items to skip when retrieving a list.
-    - name: limit
-      in: query
-      description: Limit the number of items returned in the list.
-      required: false
-      schema:
-        type: number
-        title: limit
-        description: Limit the number of items returned in the list.
-    - name: order
-      in: query
-      description: >-
-        The field to sort the data by. By default, the sort order is ascending.
-        To change the order to descending, prefix the field name with `-`.
-      required: false
-      schema:
-        type: string
-        title: order
-        description: >-
-          The field to sort the data by. By default, the sort order is
-          ascending. To change the order to descending, prefix the field name
-          with `-`.
+          prefix it will replace the entire default fields. NOTE: This route
+          doesn't allow expanding custom relations.
+        externalDocs:
+          url: '#select-fields-and-relations'
   security:
     - api_token: []
     - cookie_auth: []
@@ -187,7 +118,7 @@ post:
         schema:
           allOf:
             - type: object
-              description: SUMMARY
+              description: The address's details.
               required:
                 - address_name
                 - company
@@ -205,60 +136,64 @@ post:
                 address_name:
                   type: string
                   title: address_name
-                  description: The customer's address name.
+                  description: The name of the address.
                 is_default_shipping:
                   type: boolean
                   title: is_default_shipping
-                  description: The customer's is default shipping.
+                  description: >-
+                    Whether this address is used by default for shipping when
+                    placing an order.
                 is_default_billing:
                   type: boolean
                   title: is_default_billing
-                  description: The customer's is default billing.
+                  description: >-
+                    Whether this address is used by default for billing when
+                    placing an order.
                 company:
                   type: string
                   title: company
-                  description: The customer's company.
+                  description: The address's company.
                 first_name:
                   type: string
                   title: first_name
-                  description: The customer's first name.
+                  description: The address's first name.
                 last_name:
                   type: string
                   title: last_name
-                  description: The customer's last name.
+                  description: The address's last name.
                 address_1:
                   type: string
                   title: address_1
-                  description: The customer's address 1.
+                  description: The address's first line
                 address_2:
                   type: string
                   title: address_2
-                  description: The customer's address 2.
+                  description: The address's second line
                 city:
                   type: string
                   title: city
-                  description: The customer's city.
+                  description: The address's city.
                 country_code:
                   type: string
                   title: country_code
-                  description: The customer's country code.
+                  description: The address's country code.
                 province:
                   type: string
                   title: province
-                  description: The customer's province.
+                  description: The address's province.
                 postal_code:
                   type: string
                   title: postal_code
-                  description: The customer's postal code.
+                  description: The address's postal code.
                 phone:
                   type: string
                   title: phone
-                  description: The customer's phone.
+                  description: The address's phone.
                 metadata:
                   type: object
-                  description: The customer's metadata.
+                  description: The address's metadata.
             - type: object
-              description: SUMMARY
+              description: The address's details.
               properties:
                 additional_data:
                   type: object
@@ -266,7 +201,7 @@ post:
                     Pass additional custom data to the API route. This data is
                     passed to the underlying workflow under the
                     `additional_data` parameter.
-          description: SUMMARY
+          description: The address's details.
   x-codeSamples:
     - lang: Shell
       label: cURL
@@ -313,23 +248,14 @@ delete:
       required: true
       schema:
         type: string
-    - name: expand
-      in: query
-      description: Comma-separated relations that should be expanded in the returned data.
-      required: false
-      schema:
-        type: string
-        title: expand
-        description: >-
-          Comma-separated relations that should be expanded in the returned
-          data.
     - name: fields
       in: query
       description: >-
         Comma-separated fields that should be included in the returned data. if
         a field is prefixed with `+` it will be added to the default fields,
         using `-` will remove it from the default fields. without prefix it will
-        replace the entire default fields.
+        replace the entire default fields. NOTE: This route doesn't allow
+        expanding custom relations.
       required: false
       schema:
         type: string
@@ -338,36 +264,10 @@ delete:
           Comma-separated fields that should be included in the returned data.
           if a field is prefixed with `+` it will be added to the default
           fields, using `-` will remove it from the default fields. without
-          prefix it will replace the entire default fields.
-    - name: offset
-      in: query
-      description: The number of items to skip when retrieving a list.
-      required: false
-      schema:
-        type: number
-        title: offset
-        description: The number of items to skip when retrieving a list.
-    - name: limit
-      in: query
-      description: Limit the number of items returned in the list.
-      required: false
-      schema:
-        type: number
-        title: limit
-        description: Limit the number of items returned in the list.
-    - name: order
-      in: query
-      description: >-
-        The field to sort the data by. By default, the sort order is ascending.
-        To change the order to descending, prefix the field name with `-`.
-      required: false
-      schema:
-        type: string
-        title: order
-        description: >-
-          The field to sort the data by. By default, the sort order is
-          ascending. To change the order to descending, prefix the field name
-          with `-`.
+          prefix it will replace the entire default fields. NOTE: This route
+          doesn't allow expanding custom relations.
+        externalDocs:
+          url: '#select-fields-and-relations'
   security:
     - api_token: []
     - cookie_auth: []
@@ -388,7 +288,7 @@ delete:
           schema:
             allOf:
               - type: object
-                description: SUMMARY
+                description: The deletion's details.
                 required:
                   - id
                   - object
@@ -407,11 +307,11 @@ delete:
                     title: deleted
                     description: Whether the Customer was deleted.
               - type: object
-                description: SUMMARY
+                description: The deletion's details.
                 properties:
                   parent:
                     $ref: ../components/schemas/AdminCustomer.yaml
-            description: SUMMARY
+            description: The deletion's details.
     '400':
       $ref: ../components/responses/400_error.yaml
     '401':

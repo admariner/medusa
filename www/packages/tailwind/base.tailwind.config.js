@@ -4,7 +4,7 @@ import presets from "./theme-presets"
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   presets: [require("@medusajs/ui-preset")],
-  darkMode: ["class", `[data-theme="dark"]`], // hooks into docusaurus' dark mode settings
+  darkMode: ["class", `[data-theme="dark"]`],
   theme: {
     extend: {
       colors: {
@@ -185,29 +185,37 @@ module.exports = {
               hover: "#505052",
             },
           },
+          alpha: {
+            white: {
+              alpha: {
+                6: "var(--docs-alpha-white-alpha-6)",
+                12: "var(--docs-alpha-white-alpha-12)",
+              },
+            },
+          },
         },
       },
       boxShadow: {
         "elevation-card-rest":
           "0px 0px 0px 1px rgba(0, 0, 0, 0.08), 0px 1px 2px -1px rgba(0, 0, 0, 0.08), 0px 2px 4px 0px rgba(0, 0, 0, 0.04)",
         "elevation-card-rest-dark":
-          "0px -1px 0px 0px rgba(255, 255, 255, 0.06), 0px 0px 0px 1px rgba(255, 255, 255, 0.06), 0px 0px 0px 1px rgba(39, 39, 42, 1), 0px 1px 2px 0px rgba(0, 0, 0, 0.32), 0px 2px 4px 0px rgba(0, 0, 0, 0.32)",
+          "0px -1px 0px 0px rgba(255, 255, 255, 0.06), 0px 0px 0px 1px rgba(255, 255, 255, 0.06), 0px 0px 0px 1px #27272A, 0px 1px 2px 0px rgba(0, 0, 0, 0.32), 0px 2px 4px 0px rgba(0, 0, 0, 0.32)",
         "elevation-card-hover":
-          "0px 0px 0px 1px rgba(0, 0, 0, 0.08), 0px 1px 2px -1px rgba(0, 0, 0, 0.08), 0px 2px 8px 0px rgba(0, 0, 0, 0.1)",
+          "0px 0px 0px 1px rgba(0, 0, 0, 0.08), 0px 1px 2px -1px rgba(0, 0, 0, 0.08), 0px 2px 8px 0px rgba(0, 0, 0, 0.10)",
         "elevation-card-hover-dark":
-          "0px -1px 0px 0px rgba(255, 255, 255, 0.06), 0px 0px 0px 1px rgba(255, 255, 255, 0.06), 0px 0px 0px 1px rgba(39, 39, 42, 1), 0px 1px 4px 0px rgba(0, 0, 0, 0.48), 0px 2px 8px 0px rgba(0, 0, 0, 0.48)",
+          "0px -1px 0px 0px rgba(255, 255, 255, 0.06), 0px 0px 0px 1px rgba(255, 255, 255, 0.06), 0px 0px 0px 1px #27272A, 0px 1px 4px 0px rgba(0, 0, 0, 0.48), 0px 2px 8px 0px rgba(0, 0, 0, 0.48)",
         "elevation-tooltip":
           "0px 0px 0px 1px rgba(0, 0, 0, 0.08), 0px 2px 4px 0px rgba(0, 0, 0, 0.08), 0px 4px 8px 0px rgba(0, 0, 0, 0.08)",
         "elevation-tooltip-dark":
-          "0px -1px 0px 0px rgba(255, 255, 255, 0.04), 0px 0px 0px 1px rgba(255, 255, 255, 0.1), 0px 2px 4px 0px rgba(0, 0, 0, 0.32), 0px 4px 8px 0px rgba(0, 0, 0, 0.32)",
+          "0px -1px 0px 0px rgba(255, 255, 255, 0.04), 0px 0px 0px 1px rgba(255, 255, 255, 0.10), 0px 2px 4px 0px rgba(0, 0, 0, 0.32), 0px 4px 8px 0px rgba(0, 0, 0, 0.32)",
         "elevation-flyout":
           "0px 0px 0px 1px rgba(0, 0, 0, 0.08), 0px 4px 8px 0px rgba(0, 0, 0, 0.08), 0px 8px 16px 0px rgba(0, 0, 0, 0.08)",
         "elevation-flyout-dark":
-          "0px -1px 0px 0px rgba(255, 255, 255, 0.04), 0px 0px 0px 1px rgba(255, 255, 255, 0.1), 0px 4px 8px 0px rgba(0, 0, 0, 0.32), 0px 8px 16px 0px rgba(0, 0, 0, 0.32)",
+          "0px -1px 0px 0px rgba(255, 255, 255, 0.04), 0px 0px 0px 1px rgba(255, 255, 255, 0.10), 0px 4px 8px 0px rgba(0, 0, 0, 0.32), 0px 8px 16px 0px rgba(0, 0, 0, 0.32)",
         "elevation-modal":
-          "0px 0px 0px 1px rgba(255, 255, 255, 1) inset, 0px 0px 0px 1.5px rgba(228, 228, 231, 0.6) inset, 0px 0px 0px 1px rgba(0, 0, 0, 0.08), 0px 8px 16px 0px rgba(0, 0, 0, 0.08), 0px 16px 32px 0px rgba(0, 0, 0, 0.08)",
+          "0px 0px 0px 1px #FFF inset, 0px 0px 0px 1.5px rgba(228, 228, 231, 0.60) inset, 0px 0px 0px 1px rgba(0, 0, 0, 0.08), 0px 8px 16px 0px rgba(0, 0, 0, 0.08), 0px 16px 32px 0px rgba(0, 0, 0, 0.08)",
         "elevation-modal-dark":
-          "0px 0px 0px 1px rgba(24, 24, 27, 1) inset, 0px 0px 0px 1.5px rgba(255, 255, 255, 0.06) inset, 0px -1px 0px 0px rgba(255, 255, 255, 0.04), 0px 0px 0px 1px rgba(255, 255, 255, 0.1), 0px 4px 8px 0px rgba(0, 0, 0, 0.32), 0px 8px 16px 0px rgba(0, 0, 0, 0.32)",
+          "0px 0px 0px 1px #18181B inset, 0px 0px 0px 1.5px rgba(255, 255, 255, 0.06) inset, 0px -1px 0px 0px rgba(255, 255, 255, 0.04), 0px 0px 0px 1px rgba(255, 255, 255, 0.10), 0px 4px 8px 0px rgba(0, 0, 0, 0.32), 0px 8px 16px 0px rgba(0, 0, 0, 0.32)",
         "button-neutral":
           "0px 1px 2px 0px rgba(0, 0, 0, 0.12), 0px 0px 0px 1px rgba(0, 0, 0, 0.08)",
         "button-neutral-dark":
@@ -234,7 +242,7 @@ module.exports = {
           "0px -1px 0px 0px rgba(255, 255, 255, 0.12), 0px 0px 0px 1px rgba(255, 255, 255, 0.12), 0px 0px 0px 1px rgba(82, 82, 91, 1), 0px 0px 0px 2px rgba(24, 24, 27, 1), 0px 0px 0px 4px rgba(96, 165, 250, 0.8)",
 
         "elevation-code-block":
-          "0px 0px 0px 1px #18181B, 0px 0px 0px 1.5px rgba(255, 255, 255, 0.20)",
+          "0px 0px 0px 1px #18181B inset, 0px 0px 0px 1.5px rgba(255, 255, 255, 0.20) inset",
         "elevation-code-block-dark":
           "0px -1px 0px 0px rgba(255, 255, 255, 0.06), 0px 0px 0px 1px rgba(255, 255, 255, 0.06), 0px 0px 0px 1px #27272A, 0px 1px 2px 0px rgba(0, 0, 0, 0.32), 0px 2px 4px 0px rgba(0, 0, 0, 0.32)",
         active: "0px 0px 0px 3px #E1F0FF",
@@ -267,6 +275,8 @@ module.exports = {
         "subtle-code-fade-right-to-left-dark": `linear-gradient(90deg, #30303380, #303033)`,
         "border-dotted":
           "linear-gradient(90deg,var(--docs-border-strong) 1px,transparent 1px)",
+        "ai-assistant-bottom":
+          "linear-gradient(180deg, rgba(255, 255, 255, 0.00) 0%, var(--docs-bg-base) 100%)",
       },
       screens: {
         xs: "568px",
@@ -275,7 +285,8 @@ module.exports = {
         lg: "1024px",
         xl: "1280px",
         xxl: "1536px",
-        xxxl: "3840px",
+        xxxl: "1800px",
+        xxxxl: "3840px",
       },
       transitionTimingFunction: {
         ease: "ease",
@@ -283,6 +294,7 @@ module.exports = {
       width: {
         toc: "221px",
         "sidebar-xs": "calc(100% - 20px)",
+        "ai-assistant": "500px"
       },
       maxWidth: {
         // sidebar
@@ -318,6 +330,8 @@ module.exports = {
         "modal-sm": "624px",
         "modal-md": "752px",
         "modal-lg": "640px",
+        // ai-assistant
+        "ai-assistant": "500px"
       },
       minWidth: {
         xl: "1419px",
@@ -326,7 +340,7 @@ module.exports = {
         h1: [
           "24px",
           {
-            lineHeight: "36px",
+            lineHeight: "125%",
             fontWeight: "500",
           },
         ],
@@ -340,7 +354,7 @@ module.exports = {
         h3: [
           "16px",
           {
-            lineHeight: "24px",
+            lineHeight: "150%",
             fontWeight: "500",
           },
         ],
@@ -494,8 +508,8 @@ module.exports = {
         "code-label": [
           "12px",
           {
-            lineHeight: "20px",
-            fontWeight: "400",
+            lineHeight: "15px",
+            fontWeight: "500",
           },
         ],
         "code-body": [
@@ -678,6 +692,14 @@ module.exports = {
             visibility: "hidden",
           },
         },
+        growWidth: {
+          from: {
+            width: 0,
+          },
+          to: {
+            width: "100%",
+          },
+        },
       },
       animation: {
         fadeIn: "fadeIn 500ms",
@@ -699,6 +721,7 @@ module.exports = {
         minimize: "minimize 500ms",
         maximize: "maximize 500ms",
         flash: "flash 1500ms 1",
+        growWidth: "growWidth 500ms",
       },
       scrollMargin: {
         56: "56px",
@@ -820,13 +843,13 @@ module.exports = {
           },
           ".code-block-highlight": {
             "*::selection": {
-              "background-color": "var(--docs-contrast-fg-secondary)",
+              "background-color": "var(--docs-contrast-fg-secondary) !important",
               color: "var(--docs-contrast-bg-base)",
             },
           },
           ".code-block-highlight-light": {
             "*::selection": {
-              "background-color": "var(--docs-bg-highlight)",
+              "background-color": "var(--docs-bg-highlight) !important",
             },
           },
           ".badge": {

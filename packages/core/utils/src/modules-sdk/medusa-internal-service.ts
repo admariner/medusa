@@ -9,19 +9,16 @@ import {
   PerformedActions,
   UpsertWithReplaceConfig,
 } from "@medusajs/types"
-import { EntitySchema } from "@mikro-orm/core"
-import { EntityClass } from "@mikro-orm/core/typings"
+import type { EntityClass, EntitySchema } from "@mikro-orm/core"
 import {
-  doNotForceTransaction,
   isDefined,
   isObject,
   isPresent,
   isString,
   lowerCaseFirst,
   MedusaError,
-  shouldForceTransaction,
 } from "../common"
-import { FreeTextSearchFilterKey } from "../dal"
+import { FreeTextSearchFilterKeyPrefix } from "../dal"
 import { DmlEntity, toMikroORMEntity } from "../dml"
 import { buildQuery } from "./build-query"
 import {
@@ -65,12 +62,12 @@ export function MedusaInternalService<
     }
 
     static applyFreeTextSearchFilter(
-      filters: FilterQuery,
+      filters: FilterQuery & { q?: string },
       config: FindConfig<any>
     ): void {
       if (isDefined(filters?.q)) {
         config.filters ??= {}
-        config.filters[FreeTextSearchFilterKey] = {
+        config.filters[FreeTextSearchFilterKeyPrefix + model.name] = {
           value: filters.q,
           fromEntity: model.name,
         }
@@ -210,7 +207,7 @@ export function MedusaInternalService<
       sharedContext?: Context
     ): Promise<InferEntityType<TEntity>[]>
 
-    @InjectTransactionManager(shouldForceTransaction, propertyRepositoryName)
+    @InjectTransactionManager(propertyRepositoryName)
     async create(
       data: any | any[],
       @MedusaContext() sharedContext: Context = {}
@@ -247,7 +244,7 @@ export function MedusaInternalService<
       sharedContext?: Context
     ): Promise<InferEntityType<TEntity>[]>
 
-    @InjectTransactionManager(shouldForceTransaction, propertyRepositoryName)
+    @InjectTransactionManager(propertyRepositoryName)
     async update(
       input: any | any[] | SelectorAndData | SelectorAndData[],
       @MedusaContext() sharedContext: Context = {}
@@ -273,11 +270,10 @@ export function MedusaInternalService<
         if (input_.selector) {
           const entitiesToUpdate = await this.list(
             input_.selector,
-            {
-              take: null,
-            },
+            {},
             sharedContext
           )
+
           // Create a pair of entity and data to update
           entitiesToUpdate.forEach((entity) => {
             toUpdateData.push({
@@ -304,7 +300,7 @@ export function MedusaInternalService<
       if (keySelectorForDataOnly.$or.length) {
         const entitiesToUpdate = await this.list(
           keySelectorForDataOnly,
-          { take: null },
+          {},
           sharedContext
         )
 
@@ -350,6 +346,10 @@ export function MedusaInternalService<
         }
       }
 
+      if (!toUpdateData.length) {
+        return []
+      }
+
       return await this[propertyRepositoryName].update(
         toUpdateData,
         sharedContext
@@ -367,7 +367,7 @@ export function MedusaInternalService<
       sharedContext?: Context
     ): Promise<void>
 
-    @InjectTransactionManager(doNotForceTransaction, propertyRepositoryName)
+    @InjectTransactionManager(propertyRepositoryName)
     async delete(
       idOrSelector:
         | string
@@ -461,6 +461,10 @@ export function MedusaInternalService<
           })*/
           return criteria
         })
+      }
+
+      if (!deleteCriteria.$or.length) {
+        return
       }
 
       await this[propertyRepositoryName].delete(deleteCriteria, sharedContext)

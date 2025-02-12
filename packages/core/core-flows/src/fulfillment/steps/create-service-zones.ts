@@ -1,9 +1,14 @@
 import {
   CreateServiceZoneDTO,
   IFulfillmentModuleService,
-} from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
+
+/**
+ * The service zones to create.
+ */
+export type CreateServiceZonesStepInput = CreateServiceZoneDTO[]
 
 export const createServiceZonesStepId = "create-service-zones"
 /**
@@ -11,9 +16,9 @@ export const createServiceZonesStepId = "create-service-zones"
  */
 export const createServiceZonesStep = createStep(
   createServiceZonesStepId,
-  async (input: CreateServiceZoneDTO[], { container }) => {
+  async (input: CreateServiceZonesStepInput, { container }) => {
     const service = container.resolve<IFulfillmentModuleService>(
-      ModuleRegistrationName.FULFILLMENT
+      Modules.FULFILLMENT
     )
 
     const createdServiceZones = await service.createServiceZones(input)
@@ -29,7 +34,7 @@ export const createServiceZonesStep = createStep(
     }
 
     const service = container.resolve<IFulfillmentModuleService>(
-      ModuleRegistrationName.FULFILLMENT
+      Modules.FULFILLMENT
     )
 
     await service.deleteServiceZones(createdServiceZones)

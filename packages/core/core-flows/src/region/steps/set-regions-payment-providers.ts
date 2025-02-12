@@ -1,20 +1,33 @@
-import { RemoteLink } from "@medusajs/modules-sdk"
-import { IPaymentModuleService, RemoteQueryFunction } from "@medusajs/types"
+import { Link } from "@medusajs/framework/modules-sdk"
+import {
+  IPaymentModuleService,
+  RemoteQueryFunction,
+} from "@medusajs/framework/types"
 import {
   ContainerRegistrationKeys,
   LINKS,
   MedusaError,
-  ModuleRegistrationName,
   Modules,
   arrayDifference,
   promiseAll,
-  remoteQueryObjectFromString,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The data to set the payment providers available in regions.
+ */
 export interface SetRegionsPaymentProvidersStepInput {
+  /**
+   * The regions to set the payment providers for.
+   */
   input: {
+    /**
+     * The ID of the region.
+     */
     id: string
+    /**
+     * The IDs of the payment providers that are available in the region.
+     */
     payment_providers?: string[]
   }[]
 }
@@ -64,16 +77,13 @@ async function getCurrentRegionPaymentProvidersLinks(
     [Modules.PAYMENT]: { payment_provider_id: string }
   }[]
 > {
-  const query = remoteQueryObjectFromString({
+  const regionProviderLinks = (await remoteQuery({
     service: LINKS.RegionPaymentProvider,
     variables: {
       filters: { region_id: regionIds },
-      take: null,
     },
     fields: ["region_id", "payment_provider_id"],
-  })
-
-  const regionProviderLinks = (await remoteQuery(query)) as {
+  } as any)) as {
     region_id: string
     payment_provider_id: string
   }[]
@@ -93,7 +103,17 @@ async function getCurrentRegionPaymentProvidersLinks(
 export const setRegionsPaymentProvidersStepId =
   "add-region-payment-providers-step"
 /**
- * This step sets the payment providers in regions.
+ * This step sets the payment providers available in regions.
+ * 
+ * @example
+ * const data = setRegionsPaymentProvidersStep({
+ *   input: [
+ *     {
+ *       id: "reg_123",
+ *       payment_providers: ["pp_system", "pp_stripe_stripe"]
+ *     }
+ *   ]
+ * })
  */
 export const setRegionsPaymentProvidersStep = createStep(
   setRegionsPaymentProvidersStepId,
@@ -107,11 +127,9 @@ export const setRegionsPaymentProvidersStep = createStep(
     }
 
     const paymentService = container.resolve<IPaymentModuleService>(
-      ModuleRegistrationName.PAYMENT
+      Modules.PAYMENT
     )
-    const remoteLink = container.resolve<RemoteLink>(
-      ContainerRegistrationKeys.REMOTE_LINK
-    )
+    const remoteLink = container.resolve<Link>(ContainerRegistrationKeys.LINK)
     const remoteQuery = container.resolve<RemoteQueryFunction>(
       ContainerRegistrationKeys.REMOTE_QUERY
     )
@@ -201,9 +219,7 @@ export const setRegionsPaymentProvidersStep = createStep(
       return
     }
 
-    const remoteLink = container.resolve<RemoteLink>(
-      ContainerRegistrationKeys.REMOTE_LINK
-    )
+    const remoteLink = container.resolve<Link>(ContainerRegistrationKeys.LINK)
 
     const promises: Promise<unknown[]>[] = []
 

@@ -1,15 +1,10 @@
-"use client"
-
 import {
+  AiAssistantProvider,
   AnalyticsProvider,
-  ColorModeProvider,
-  MobileProvider,
-  ModalProvider,
   PageLoadingProvider,
   ScrollControllerProvider,
   SiteConfigProvider,
 } from "docs-ui"
-import BaseSpecsProvider from "./base-specs"
 import SidebarProvider from "./sidebar"
 import SearchProvider from "./search"
 import { config } from "../config"
@@ -24,21 +19,26 @@ const Providers = ({ children }: ProvidersProps) => {
     <AnalyticsProvider writeKey={process.env.NEXT_PUBLIC_SEGMENT_API_KEY}>
       <SiteConfigProvider config={config}>
         <PageLoadingProvider>
-          <ModalProvider>
-            <ColorModeProvider>
-              <BaseSpecsProvider>
-                <ScrollControllerProvider scrollableSelector="#main">
-                  <SidebarProvider>
-                    <MainNavProvider>
-                      <SearchProvider>
-                        <MobileProvider>{children}</MobileProvider>
-                      </SearchProvider>
-                    </MainNavProvider>
-                  </SidebarProvider>
-                </ScrollControllerProvider>
-              </BaseSpecsProvider>
-            </ColorModeProvider>
-          </ModalProvider>
+          <ScrollControllerProvider scrollableSelector="#main">
+            <SidebarProvider>
+              <MainNavProvider>
+                <SearchProvider>
+                  <AiAssistantProvider
+                    apiUrl={process.env.NEXT_PUBLIC_AI_ASSISTANT_URL || "temp"}
+                    websiteId={process.env.NEXT_PUBLIC_AI_WEBSITE_ID || "temp"}
+                    recaptchaSiteKey={
+                      process.env
+                        .NEXT_PUBLIC_AI_API_ASSISTANT_RECAPTCHA_SITE_KEY ||
+                      "temp"
+                    }
+                    chatType="popover"
+                  >
+                    {children}
+                  </AiAssistantProvider>
+                </SearchProvider>
+              </MainNavProvider>
+            </SidebarProvider>
+          </ScrollControllerProvider>
         </PageLoadingProvider>
       </SiteConfigProvider>
     </AnalyticsProvider>

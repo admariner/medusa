@@ -1,5 +1,9 @@
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
+import {
+  generatePublishableKey,
+  generateStoreHeaders,
+} from "../../../../helpers/create-admin-user"
 import { createAuthenticatedCustomer } from "../../../helpers/create-authenticated-customer"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
 
 jest.setTimeout(50000)
 
@@ -10,17 +14,26 @@ medusaIntegrationTestRunner({
   testSuite: ({ dbConnection, getContainer, api }) => {
     describe("GET /store/customers", () => {
       let appContainer
+      let storeHeaders
+
       beforeAll(async () => {
         appContainer = getContainer()
       })
 
+      beforeEach(async () => {
+        appContainer = getContainer()
+        const publishableKey = await generatePublishableKey(appContainer)
+        storeHeaders = generateStoreHeaders({ publishableKey })
+      })
+
       it("should retrieve auth user's customer", async () => {
         const { customer, jwt } = await createAuthenticatedCustomer(
-          appContainer
+          api,
+          storeHeaders
         )
 
         const response = await api.get(`/store/customers/me`, {
-          headers: { authorization: `Bearer ${jwt}` },
+          headers: { authorization: `Bearer ${jwt}`, ...storeHeaders.headers },
         })
 
         expect(response.status).toEqual(200)
@@ -29,7 +42,7 @@ medusaIntegrationTestRunner({
             id: customer.id,
             first_name: "John",
             last_name: "Doe",
-            email: "john@me.com",
+            email: "tony@start.com",
           })
         )
       })

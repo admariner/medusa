@@ -7,18 +7,18 @@ import {
   AdminServiceZoneResponse,
   HttpTypes,
   IFulfillmentModuleService,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
   ContainerRegistrationKeys,
   MedusaError,
-  ModuleRegistrationName,
+  Modules,
   remoteQueryObjectFromString,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 import {
   AuthenticatedMedusaRequest,
   MedusaRequest,
   MedusaResponse,
-} from "../../../../../../types/routing"
+} from "@medusajs/framework/http"
 import { AdminUpdateFulfillmentSetServiceZonesType } from "../../../validators"
 
 export const GET = async (
@@ -33,7 +33,7 @@ export const GET = async (
       variables: {
         id: req.params.zone_id,
       },
-      fields: req.remoteQueryConfig.fields,
+      fields: req.queryConfig.fields,
     })
   )
 
@@ -52,7 +52,7 @@ export const POST = async (
   res: MedusaResponse<AdminFulfillmentSetResponse>
 ) => {
   const fulfillmentModuleService = req.scope.resolve<IFulfillmentModuleService>(
-    ModuleRegistrationName.FULFILLMENT
+    Modules.FULFILLMENT
   )
 
   // ensure fulfillment set exists and that the service zone is part of it
@@ -85,7 +85,7 @@ export const POST = async (
       variables: {
         id: req.params.id,
       },
-      fields: req.remoteQueryConfig.fields,
+      fields: req.queryConfig.fields,
     })
   )
 
@@ -99,7 +99,7 @@ export const DELETE = async (
   const { id, zone_id } = req.params
 
   const fulfillmentModuleService = req.scope.resolve<IFulfillmentModuleService>(
-    ModuleRegistrationName.FULFILLMENT
+    Modules.FULFILLMENT
   )
 
   // ensure fulfillment set exists and that the service zone is part of it

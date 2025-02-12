@@ -2,8 +2,8 @@ import {
   FulfillmentDTO,
   OrderExchangeDTO,
   OrderWorkflow,
-} from "@medusajs/types"
-import { MedusaError } from "@medusajs/utils"
+} from "@medusajs/framework/types"
+import { MedusaError } from "@medusajs/framework/utils"
 import {
   WorkflowData,
   createStep,
@@ -11,7 +11,7 @@ import {
   parallelize,
   transform,
   when,
-} from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/workflows-sdk"
 import { useRemoteQueryStep } from "../../../common"
 import { deleteReservationsByLineItemsStep } from "../../../reservation/steps/delete-reservations-by-line-items"
 import { cancelOrderExchangeStep } from "../../steps"
@@ -19,16 +19,46 @@ import { throwIfIsCancelled } from "../../utils/order-validation"
 import { cancelReturnWorkflow } from "../return/cancel-return"
 
 /**
+ * The data to validate that an exchange can be canceled.
+ */
+export type CancelExchangeValidateOrderStepInput = {
+  /**
+   * The order exchange's details.
+   */
+  orderExchange: OrderExchangeDTO
+  /**
+   * The details of canceling the exchange.
+   */
+  input: OrderWorkflow.CancelOrderExchangeWorkflowInput
+}
+
+/**
  * This step validates that an exchange can be canceled.
+ * If the exchange is canceled, or any of the fulfillments are not canceled, the step will throw an error.
+ * 
+ * :::note
+ * 
+ * You can retrieve an order exchange's details using [Query](https://docs.medusajs.com/learn/fundamentals/module-links/query),
+ * or [useQueryGraphStep](https://docs.medusajs.com/resources/references/medusa-workflows/steps/useQueryGraphStep).
+ * 
+ * :::
+ * 
+ * @example
+ * const data = cancelExchangeValidateOrder({
+ *   orderExchange: {
+ *     id: "exchange_123",
+ *     // other order exchange details...
+ *   },
+ *   input: {
+ *     exchange_id: "exchange_123",
+ *   }
+ * })
  */
 export const cancelExchangeValidateOrder = createStep(
   "validate-exchange",
   ({
     orderExchange,
-  }: {
-    orderExchange: OrderExchangeDTO
-    input: OrderWorkflow.CancelOrderExchangeWorkflowInput
-  }) => {
+  }: CancelExchangeValidateOrderStepInput) => {
     const orderExchange_ = orderExchange as OrderExchangeDTO & {
       fulfillments: FulfillmentDTO[]
     }
@@ -57,7 +87,23 @@ export const cancelExchangeValidateOrder = createStep(
 
 export const cancelOrderExchangeWorkflowId = "cancel-exchange"
 /**
- * This workflow cancels a confirmed exchange.
+ * This workflow cancels a confirmed exchange. It's used by the
+ * [Cancel Exchange Admin API Route](https://docs.medusajs.com/api/admin#exchanges_postexchangesidcancel).
+ * 
+ * You can use this workflow within your customizations or your own custom workflows, allowing you to cancel an exchange
+ * for an order in your custom flow.
+ * 
+ * @example
+ * const { result } = await cancelOrderExchangeWorkflow(container)
+ * .run({
+ *   input: {
+ *     exchange_id: "exchange_123",
+ *   }
+ * })
+ * 
+ * @summary
+ * 
+ * Cancel an exchange for an order.
  */
 export const cancelOrderExchangeWorkflow = createWorkflow(
   cancelOrderExchangeWorkflowId,

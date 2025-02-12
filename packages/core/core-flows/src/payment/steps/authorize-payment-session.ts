@@ -1,20 +1,40 @@
-import { IPaymentModuleService, Logger, PaymentDTO } from "@medusajs/types"
+import {
+  IPaymentModuleService,
+  Logger,
+  PaymentDTO,
+} from "@medusajs/framework/types"
 import {
   ContainerRegistrationKeys,
   MedusaError,
-  ModuleRegistrationName,
+  Modules,
   PaymentSessionStatus,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The data to authorize the payment session.
+ */
 export type AuthorizePaymentSessionStepInput = {
+  /**
+   * The ID of the payment session to authorize.
+   */
   id: string
-  context: Record<string, unknown>
+  /**
+   * The context to authorize the payment session with.
+   * This context is passed to the payment provider associated with the payment session.
+   */
+  context?: Record<string, unknown>
 }
 
 export const authorizePaymentSessionStepId = "authorize-payment-session-step"
 /**
  * This step authorizes a payment session.
+ *
+ * @example
+ * const data = authorizePaymentSessionStep({
+ *   id: "payses_123",
+ *   context: {}
+ * })
  */
 export const authorizePaymentSessionStep = createStep(
   authorizePaymentSessionStepId,
@@ -22,7 +42,7 @@ export const authorizePaymentSessionStep = createStep(
     let payment: PaymentDTO | undefined
     const logger = container.resolve<Logger>(ContainerRegistrationKeys.LOGGER)
     const paymentModule = container.resolve<IPaymentModuleService>(
-      ModuleRegistrationName.PAYMENT
+      Modules.PAYMENT
     )
 
     try {
@@ -36,7 +56,12 @@ export const authorizePaymentSessionStep = createStep(
       )
     }
 
-    const paymentSession = await paymentModule.retrievePaymentSession(input.id)
+    const paymentSession = await paymentModule.retrievePaymentSession(
+      input.id,
+      {
+        relations: ["payment", "payment.captures"],
+      }
+    )
 
     // Throw a special error type when the status is requires_more as it requires a specific further action
     // from the consumer
@@ -66,7 +91,7 @@ export const authorizePaymentSessionStep = createStep(
 
     const logger = container.resolve<Logger>(ContainerRegistrationKeys.LOGGER)
     const paymentModule = container.resolve<IPaymentModuleService>(
-      ModuleRegistrationName.PAYMENT
+      Modules.PAYMENT
     )
 
     // If the payment session status is requires_more, we don't have to revert the payment.

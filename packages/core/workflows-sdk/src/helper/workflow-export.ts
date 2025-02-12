@@ -3,15 +3,21 @@ import {
   DistributedTransactionEvents,
   DistributedTransactionType,
   LocalWorkflow,
-  TransactionHandlerType,
   TransactionState,
 } from "@medusajs/orchestration"
-import { Context, LoadedModule, MedusaContainer } from "@medusajs/types"
+import {
+  Context,
+  IEventBusModuleService,
+  LoadedModule,
+  Logger,
+  MedusaContainer,
+} from "@medusajs/types"
 import {
   ContainerRegistrationKeys,
   isPresent,
   MedusaContextType,
-  ModuleRegistrationName,
+  Modules,
+  TransactionHandlerType,
 } from "@medusajs/utils"
 import { EOL } from "os"
 import { ulid } from "ulid"
@@ -35,15 +41,14 @@ function createContextualWorkflowRunner<
 >({
   workflowId,
   defaultResult,
-  dataPreparation,
   options,
   container,
 }: {
   workflowId: string
   defaultResult?: string | Symbol
-  dataPreparation?: (data: TData) => Promise<unknown>
   options?: {
     wrappedInput?: boolean
+    sourcePath?: string
   }
   container?: LoadedModule[] | MedusaContainer
 }): Omit<
@@ -74,6 +79,7 @@ function createContextualWorkflowRunner<
   ) => {
     if (!executionContainer) {
       const container_ = flow.container as MedusaContainer
+
       if (!container_ || !isPresent(container_?.registrations)) {
         executionContainer = MedusaModule.getLoadedModules().map(
           (mod) => Object.values(mod)[0]
@@ -85,12 +91,14 @@ function createContextualWorkflowRunner<
       flow.container = executionContainer
     }
 
-    const { eventGroupId } = context
+    const { eventGroupId, parentStepIdempotencyKey } = context
 
-    attachOnFinishReleaseEvents(events, eventGroupId!, flow, { logOnError })
+    attachOnFinishReleaseEvents(events, flow, { logOnError })
 
     const flowMetadata = {
       eventGroupId,
+      parentStepIdempotencyKey,
+      sourcePath: options?.sourcePath,
     }
 
     const args = [
@@ -100,7 +108,10 @@ function createContextualWorkflowRunner<
       events,
       flowMetadata,
     ]
-    const transaction = await method.apply(method, args)
+    const transaction = (await method.apply(
+      method,
+      args
+    )) as DistributedTransactionType
 
     let errors = transaction.getErrors(TransactionHandlerType.INVOKE)
 
@@ -108,16 +119,24 @@ function createContextualWorkflowRunner<
     const isCancelled =
       isCancel && transaction.getState() === TransactionState.REVERTED
 
+    const isRegisterStepFailure =
+      method === originalRegisterStepFailure &&
+      transaction.getState() === TransactionState.REVERTED
+
+    let thrownError = null
+
     if (
-      !isCancelled &&
       failedStatus.includes(transaction.getState()) &&
-      throwOnError
+      !isCancelled &&
+      !isRegisterStepFailure
     ) {
-      /*const errorMessage = errors
-        ?.map((err) => `${err.error?.message}${EOL}${err.error?.stack}`)
-        ?.join(`${EOL}`)*/
       const firstError = errors?.[0]?.error ?? new Error("Unknown error")
-      throw firstError
+
+      thrownError = firstError
+
+      if (throwOnError) {
+        throw firstError
+      }
     }
 
     let result
@@ -125,6 +144,8 @@ function createContextualWorkflowRunner<
       result = resolveValue(resultFrom, transaction.getContext())
       if (result instanceof Promise) {
         result = await result.catch((e) => {
+          thrownError = e
+
           if (throwOnError) {
             throw e
           }
@@ -141,6 +162,7 @@ function createContextualWorkflowRunner<
       errors,
       transaction,
       result,
+      thrownError,
     }
   }
 
@@ -164,22 +186,6 @@ function createContextualWorkflowRunner<
 
     context.transactionId ??= ulid()
     context.eventGroupId ??= ulid()
-
-    if (typeof dataPreparation === "function") {
-      try {
-        const copyInput = input ? JSON.parse(JSON.stringify(input)) : input
-        input = await dataPreparation(copyInput as TData)
-      } catch (err) {
-        if (throwOnError) {
-          throw new Error(
-            `Data preparation failed: ${err.message}${EOL}${err.stack}`
-          )
-        }
-        return {
-          errors: [err],
-        }
-      }
-    }
 
     return await originalExecution(
       originalRun,
@@ -329,9 +335,9 @@ function createContextualWorkflowRunner<
 export const exportWorkflow = <TData = unknown, TResult = unknown>(
   workflowId: string,
   defaultResult?: string | Symbol,
-  dataPreparation?: (data: TData) => Promise<unknown>,
   options?: {
     wrappedInput?: boolean
+    sourcePath?: string
   }
 ): MainExportedWorkflow<TData, TResult> => {
   function exportedWorkflow<
@@ -353,7 +359,6 @@ export const exportWorkflow = <TData = unknown, TResult = unknown>(
     >({
       workflowId,
       defaultResult,
-      dataPreparation,
       options,
       container,
     })
@@ -379,7 +384,6 @@ export const exportWorkflow = <TData = unknown, TResult = unknown>(
     >({
       workflowId,
       defaultResult,
-      dataPreparation,
       options,
       container,
     })
@@ -491,7 +495,6 @@ export const exportWorkflow = <TData = unknown, TResult = unknown>(
 
 function attachOnFinishReleaseEvents(
   events: DistributedTransactionEvents = {},
-  eventGroupId: string,
   flow: LocalWorkflow,
   {
     logOnError,
@@ -507,37 +510,33 @@ function attachOnFinishReleaseEvents(
     errors?: unknown[]
   }) => {
     const { transaction } = args
+    const flowEventGroupId = transaction.getFlow().metadata?.eventGroupId
 
     const logger =
-      (flow.container as MedusaContainer).resolve(
+      (flow.container as MedusaContainer).resolve<Logger>(
         ContainerRegistrationKeys.LOGGER,
         { allowUnregistered: true }
       ) || console
 
     if (logOnError) {
-      const TERMINAL_SIZE = process.stdout?.columns ?? 60
-      const separator = new Array(TERMINAL_SIZE).join("-")
-
       const workflowName = transaction.getFlow().modelId
-      const allWorkflowErrors = transaction
+      transaction
         .getErrors()
-        .map(
-          (err) =>
+        .forEach((err) =>
+          logger.error(
             `${workflowName}:${err?.action}:${err?.handlerType} - ${err?.error?.message}${EOL}${err?.error?.stack}`
+          )
         )
-        .join(EOL + separator + EOL)
-
-      logger.error(allWorkflowErrors)
     }
 
-    await onFinish?.(args)
+    const eventBusService = (
+      flow.container as MedusaContainer
+    ).resolve<IEventBusModuleService>(Modules.EVENT_BUS, {
+      allowUnregistered: true,
+    })
 
-    const eventBusService = (flow.container as MedusaContainer).resolve(
-      ModuleRegistrationName.EVENT_BUS,
-      { allowUnregistered: true }
-    )
-
-    if (!eventBusService || !eventGroupId) {
+    if (!eventBusService || !flowEventGroupId) {
+      await onFinish?.(args)
       return
     }
 
@@ -545,22 +544,27 @@ function attachOnFinishReleaseEvents(
 
     if (failedStatus.includes(transaction.getState())) {
       return await eventBusService
-        .clearGroupedEvents(eventGroupId)
+        .clearGroupedEvents(flowEventGroupId)
         .catch(() => {
           logger.warn(
-            `Failed to clear events for eventGroupId - ${eventGroupId}`
+            `Failed to clear events for eventGroupId - ${flowEventGroupId}`
           )
         })
     }
 
-    await eventBusService.releaseGroupedEvents(eventGroupId).catch((e) => {
-      logger.error(
-        `Failed to release grouped events for eventGroupId: ${eventGroupId}`,
-        e
-      )
+    await eventBusService
+      .releaseGroupedEvents(flowEventGroupId)
+      .then(async () => {
+        await onFinish?.(args)
+      })
+      .catch((e) => {
+        logger.error(
+          `Failed to release grouped events for eventGroupId: ${flowEventGroupId}`,
+          e
+        )
 
-      return flow.cancel(transaction)
-    })
+        return flow.cancel(transaction)
+      })
   }
 
   events.onFinish = wrappedOnFinish

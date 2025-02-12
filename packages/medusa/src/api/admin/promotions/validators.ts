@@ -3,9 +3,11 @@ import {
   ApplicationMethodTargetType,
   ApplicationMethodType,
   PromotionRuleOperator,
+  PromotionStatus,
   PromotionType,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 import { z } from "zod"
+import { applyAndAndOrOperators } from "../../utils/common-validators"
 import {
   createFindParams,
   createOperatorMap,
@@ -19,6 +21,20 @@ export type AdminGetPromotionParamsType = z.infer<
 >
 export const AdminGetPromotionParams = createSelectParams()
 
+export const AdminGetPromotionsParamsFields = z.object({
+  q: z.string().optional(),
+  code: z.union([z.string(), z.array(z.string())]).optional(),
+  campaign_id: z.union([z.string(), z.array(z.string())]).optional(),
+  application_method: z
+    .object({
+      currency_code: z.union([z.string(), z.array(z.string())]).optional(),
+    })
+    .optional(),
+  created_at: createOperatorMap().optional(),
+  updated_at: createOperatorMap().optional(),
+  deleted_at: createOperatorMap().optional(),
+})
+
 export type AdminGetPromotionsParamsType = z.infer<
   typeof AdminGetPromotionsParams
 >
@@ -26,23 +42,8 @@ export const AdminGetPromotionsParams = createFindParams({
   limit: 50,
   offset: 0,
 })
-  .merge(
-    z.object({
-      q: z.string().optional(),
-      code: z.union([z.string(), z.array(z.string())]).optional(),
-      campaign_id: z.union([z.string(), z.array(z.string())]).optional(),
-      application_method: z
-        .object({
-          currency_code: z.union([z.string(), z.array(z.string())]).optional(),
-        })
-        .optional(),
-      created_at: createOperatorMap().optional(),
-      updated_at: createOperatorMap().optional(),
-      deleted_at: createOperatorMap().optional(),
-      $and: z.lazy(() => AdminGetPromotionsParams.array()).optional(),
-      $or: z.lazy(() => AdminGetPromotionsParams.array()).optional(),
-    })
-  )
+  .merge(AdminGetPromotionsParamsFields)
+  .merge(applyAndAndOrOperators(AdminGetPromotionsParamsFields))
   .strict()
 
 export type AdminGetPromotionRuleParamsType = z.infer<
@@ -160,6 +161,7 @@ export const CreatePromotion = z
     code: z.string(),
     is_automatic: z.boolean().optional(),
     type: z.nativeEnum(PromotionType),
+    status: z.nativeEnum(PromotionStatus).default(PromotionStatus.DRAFT),
     campaign_id: z.string().nullish(),
     campaign: CreateCampaign.optional(),
     application_method: AdminCreateApplicationMethod,
@@ -183,6 +185,7 @@ export const UpdatePromotion = z
     code: z.string().optional(),
     is_automatic: z.boolean().optional(),
     type: z.nativeEnum(PromotionType).optional(),
+    status: z.nativeEnum(PromotionStatus).optional(),
     campaign_id: z.string().nullish(),
     application_method: AdminUpdateApplicationMethod.optional(),
   })

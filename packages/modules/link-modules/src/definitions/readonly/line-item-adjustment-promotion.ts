@@ -1,5 +1,5 @@
-import { ModuleJoinerConfig } from "@medusajs/types"
-import { Modules } from "@medusajs/utils"
+import { ModuleJoinerConfig } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
 
 export const LineItemAdjustmentPromotion: ModuleJoinerConfig = {
   isLink: true,
@@ -7,8 +7,10 @@ export const LineItemAdjustmentPromotion: ModuleJoinerConfig = {
   extends: [
     {
       serviceName: Modules.CART,
+      entity: "LineItemAdjustment",
       relationship: {
         serviceName: Modules.PROMOTION,
+        entity: "Promotion",
         primaryKey: "id",
         foreignKey: "promotion_id",
         alias: "promotion",

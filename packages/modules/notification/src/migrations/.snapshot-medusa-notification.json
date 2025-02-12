@@ -90,6 +90,14 @@
       "schema": "public",
       "indexes": [
         {
+          "keyName": "IDX_notification_provider_deleted_at",
+          "columnNames": [],
+          "composite": false,
+          "primary": false,
+          "unique": false,
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_notification_provider_deleted_at\" ON \"notification_provider\" (deleted_at) WHERE deleted_at IS NULL"
+        },
+        {
           "keyName": "notification_provider_pkey",
           "columnNames": [
             "id"
@@ -295,6 +303,14 @@
           "primary": false,
           "unique": false,
           "expression": "CREATE INDEX IF NOT EXISTS \"IDX_notification_provider_id\" ON \"notification\" (provider_id) WHERE deleted_at IS NULL"
+        },
+        {
+          "keyName": "IDX_notification_deleted_at",
+          "columnNames": [],
+          "composite": false,
+          "primary": false,
+          "unique": false,
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_notification_deleted_at\" ON \"notification\" (deleted_at) WHERE deleted_at IS NULL"
         },
         {
           "keyName": "notification_pkey",

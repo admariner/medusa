@@ -1,7 +1,7 @@
 import { getMigrationPlanner, initialize } from "@medusajs/link-modules"
 import { MedusaModule } from "@medusajs/modules-sdk"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ModuleJoinerConfig } from "@medusajs/types"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
 
 jest.setTimeout(5000000)
 
@@ -74,6 +74,7 @@ medusaIntegrationTestRunner({
 
       const planner = getMigrationPlanner(dbConfig, linkDefinition)
       await planner.executePlan(await planner.createPlan())
+
       links = await initialize(dbConfig, linkDefinition)
     })
 

@@ -1,24 +1,37 @@
 import {
   CreateProductCategoryDTO,
   IProductModuleService,
-} from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The data to create product categories.
+ */
 export type CreateProductCategoriesStepInput = {
+  /**
+   * The product categories to create.
+   */
   product_categories: CreateProductCategoryDTO[]
 }
 
 export const createProductCategoriesStepId = "create-product-categories"
 /**
  * This step creates one or more product categories.
+ * 
+ * @example
+ * const data = createProductCategoriesStep({
+ *   product_categories: [
+ *     {
+ *       name: "Shoes",
+ *     }
+ *   ]
+ * })
  */
 export const createProductCategoriesStep = createStep(
   createProductCategoriesStepId,
   async (data: CreateProductCategoriesStepInput, { container }) => {
-    const service = container.resolve<IProductModuleService>(
-      ModuleRegistrationName.PRODUCT
-    )
+    const service = container.resolve<IProductModuleService>(Modules.PRODUCT)
 
     const created = await service.createProductCategories(
       data.product_categories
@@ -34,9 +47,7 @@ export const createProductCategoriesStep = createStep(
       return
     }
 
-    const service = container.resolve<IProductModuleService>(
-      ModuleRegistrationName.PRODUCT
-    )
+    const service = container.resolve<IProductModuleService>(Modules.PRODUCT)
 
     await service.deleteProductCategories(createdIds)
   }

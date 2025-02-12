@@ -4,7 +4,8 @@ import {
   deduplicate,
   isDefined,
   isObject,
-} from "@medusajs/utils"
+  toMikroORMEntity,
+} from "@medusajs/framework/utils"
 
 // Reshape the order object to match the OrderDTO
 // This function is used to format the order object before returning to the main module methods
@@ -20,8 +21,9 @@ export function formatOrder<T = any>(
 
   orders.map((order) => {
     let mainOrder = order
+    const entity = options?.entity ? toMikroORMEntity(options.entity) : null
 
-    const isRelatedEntity = options?.entity?.name !== "Order"
+    const isRelatedEntity = entity?.name !== "Order"
 
     // If the entity is a related entity, the original order is located in the order property
     if (isRelatedEntity) {
@@ -46,6 +48,13 @@ export function formatOrder<T = any>(
         ...orderItem.item,
         quantity: detail.quantity,
         raw_quantity: detail.raw_quantity,
+        unit_price: detail.unit_price ?? orderItem.item.unit_price,
+        raw_unit_price: detail.raw_unit_price ?? orderItem.item.raw_unit_price,
+        compare_at_unit_price:
+          detail.compare_at_unit_price ?? orderItem.item.compare_at_unit_price,
+        raw_compare_at_unit_price:
+          detail.raw_compare_at_unit_price ??
+          orderItem.item.raw_compare_at_unit_price,
         detail,
       }
     })
@@ -245,6 +254,16 @@ export function mapRepositoryToOrderModel(config, isRelatedEntity = false) {
     if (original.quantity) {
       conf.where.items.quantity = original.quantity
       delete conf.where.items.item.quantity
+    }
+
+    if (original.unit_price) {
+      conf.where.items.unit_price = original.unit_price
+      delete conf.where.items.item.unit_price
+    }
+
+    if (original.compare_at_unit_price) {
+      conf.where.items.compare_at_unit_price = original.compare_at_unit_price
+      delete conf.where.items.item.compare_at_unit_price
     }
 
     if (original.detail) {

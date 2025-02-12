@@ -1,6 +1,11 @@
-import { IPromotionModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import { IPromotionModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
+
+/**
+ * The IDs of the campaigns to delete.
+ */
+export type DeleteCampaignsStepInput = string[]
 
 export const deleteCampaignsStepId = "delete-campaigns"
 /**
@@ -8,9 +13,9 @@ export const deleteCampaignsStepId = "delete-campaigns"
  */
 export const deleteCampaignsStep = createStep(
   deleteCampaignsStepId,
-  async (ids: string[], { container }) => {
+  async (ids: DeleteCampaignsStepInput, { container }) => {
     const promotionModule = container.resolve<IPromotionModuleService>(
-      ModuleRegistrationName.PROMOTION
+      Modules.PROMOTION
     )
 
     await promotionModule.softDeleteCampaigns(ids)
@@ -23,7 +28,7 @@ export const deleteCampaignsStep = createStep(
     }
 
     const promotionModule = container.resolve<IPromotionModuleService>(
-      ModuleRegistrationName.PROMOTION
+      Modules.PROMOTION
     )
 
     await promotionModule.restoreCampaigns(idsToRestore)

@@ -1,10 +1,6 @@
-import { IRegionModuleService } from "@medusajs/types"
-import {
-  ContainerRegistrationKeys,
-  ModuleRegistrationName,
-  Modules,
-} from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
+import { IRegionModuleService, RemoteQueryFunction } from "@medusajs/types"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/utils"
 import { createAdminUser } from "../../..//helpers/create-admin-user"
 import { adminHeaders } from "../../../helpers/create-admin-user"
 
@@ -23,7 +19,7 @@ medusaIntegrationTestRunner({
 
       beforeAll(async () => {
         appContainer = getContainer()
-        regionModule = appContainer.resolve(ModuleRegistrationName.REGION)
+        regionModule = appContainer.resolve(Modules.REGION)
         remoteQuery = appContainer.resolve(
           ContainerRegistrationKeys.REMOTE_QUERY
         )
@@ -66,12 +62,82 @@ medusaIntegrationTestRunner({
               },
             },
           },
-          undefined,
           { throwIfKeyNotFound: true }
         )
 
         await expect(getNonExistingRegion).rejects.toThrow(
           "Region id not found: region_123"
+        )
+      })
+
+      it("should fail to retrieve not passing primary key in filters", async () => {
+        const noPk = remoteQuery(
+          {
+            region: {
+              fields: ["id", "currency_code"],
+            },
+          },
+          { throwIfKeyNotFound: true }
+        )
+        await expect(noPk).rejects.toThrow(
+          "Region: Primary key(s) [id, iso_2] not found in filters"
+        )
+
+        const noPk2 = remoteQuery(
+          {
+            country: {
+              fields: ["*"],
+            },
+          },
+          { throwIfKeyNotFound: true }
+        )
+        await expect(noPk2).rejects.toThrow(
+          "Country: Primary key(s) [id, iso_2] not found in filters"
+        )
+
+        const noPk3 = remoteQuery(
+          {
+            country: {
+              fields: ["*"],
+              __args: {
+                iso_2: undefined,
+              },
+            },
+          },
+          { throwIfKeyNotFound: true }
+        )
+        await expect(noPk3).rejects.toThrow(
+          "Country: Value for primary key iso_2 not found in filters"
+        )
+
+        const noPk4 = remoteQuery(
+          {
+            region: {
+              fields: ["id", "currency_code"],
+              __args: {
+                id: null,
+              },
+            },
+          },
+          { throwIfKeyNotFound: true }
+        )
+        await expect(noPk4).rejects.toThrow(
+          "Region: Value for primary key id not found in filters"
+        )
+
+        const noPk5 = remoteQuery(
+          {
+            region: {
+              fields: ["id", "currency_code"],
+              __args: {
+                currency_code: "EUR",
+              },
+            },
+          },
+          { throwIfKeyNotFound: true }
+        )
+        await expect(noPk5).rejects.toThrow(
+          "Region: Primary key(s) [id, iso_2] not found in filters"
         )
       })
 
@@ -127,13 +193,12 @@ medusaIntegrationTestRunner({
                 },
               },
             },
-            undefined,
             {
               throwIfRelationNotFound: true,
             }
           )
         ).rejects.toThrow(
-          `regionRegionPaymentPaymentProviderLink region_id not found: ${regionNoLink.id}`
+          `RegionRegionPaymentPaymentProviderLink region_id not found: ${regionNoLink.id}`
         )
 
         // Only validate the relations with Payment. It doesn't fail because the link didn't return any data
@@ -171,13 +236,12 @@ medusaIntegrationTestRunner({
                 },
               },
             },
-            undefined,
             {
               throwIfRelationNotFound: [Modules.PAYMENT],
             }
           )
         ).rejects.toThrow(
-          "payment id not found: pp_system_default_non_existent"
+          "PaymentProvider id not found: pp_system_default_non_existent"
         )
 
         // everything is fine
@@ -200,6 +264,169 @@ medusaIntegrationTestRunner({
             }
           )
         ).resolves.toHaveLength(1)
+      })
+    })
+
+    describe("Query", () => {
+      let appContainer
+      let query: RemoteQueryFunction
+
+      beforeAll(() => {
+        appContainer = getContainer()
+        query = appContainer.resolve(ContainerRegistrationKeys.QUERY)
+      })
+
+      let product
+      beforeEach(async () => {
+        await createAdminUser(dbConnection, adminHeaders, appContainer)
+
+        const shippingProfile = (
+          await api.post(
+            `/admin/shipping-profiles`,
+            { name: "Test", type: "default" },
+            adminHeaders
+          )
+        ).data.shipping_profile
+
+        const payload = {
+          title: "Test Giftcard",
+          is_giftcard: true,
+          shipping_profile_id: shippingProfile.id,
+          description: "test-giftcard-description",
+          options: [{ title: "Denominations", values: ["100"] }],
+          variants: [
+            {
+              title: "Test variant",
+              prices: [{ currency_code: "usd", amount: 100 }],
+              options: {
+                Denominations: "100",
+              },
+            },
+          ],
+        }
+
+        const res = await api
+          .post("/admin/products", payload, adminHeaders)
+          .catch((err) => {
+            console.log(err)
+          })
+
+        product = res.data.product
+      })
+
+      it(`should throw if not exists`, async () => {
+        const err = await query
+          .graph(
+            {
+              entity: "product",
+              fields: ["id", "title", "variants.*", "variants.prices.amount"],
+              filters: {
+                id: "non-existing-id",
+                variants: {
+                  prices: {
+                    amount: {
+                      $gt: 100,
+                    },
+                  },
+                },
+              },
+            },
+            {
+              throwIfKeyNotFound: true,
+            }
+          )
+          .catch((err) => {
+            return err
+          })
+
+        expect(err).toEqual(
+          expect.objectContaining({
+            message: expect.stringContaining(
+              "Product id not found: non-existing-id"
+            ),
+          })
+        )
+      })
+
+      it(`should support filtering using operators on a primary column`, async () => {
+        const { data } = await query.graph({
+          entity: "product",
+          fields: ["id", "title"],
+          filters: {
+            id: {
+              $in: [product.id],
+            },
+          },
+        })
+
+        expect(data).toEqual([
+          expect.objectContaining({
+            id: product.id,
+            title: product.title,
+          }),
+        ])
+      })
+
+      it(`should perform cross module query and apply filters correctly to the correct modules [1]`, async () => {
+        const { data } = await query.graph({
+          entity: "product",
+          fields: ["id", "title", "variants.*", "variants.prices.amount"],
+          filters: {
+            variants: {
+              prices: {
+                amount: {
+                  $gt: 100,
+                },
+              },
+            },
+          },
+        })
+
+        expect(data).toEqual([
+          expect.objectContaining({
+            id: expect.any(String),
+            title: "Test Giftcard",
+            variants: [
+              expect.objectContaining({
+                title: "Test variant",
+                prices: [],
+              }),
+            ],
+          }),
+        ])
+      })
+
+      it(`should perform cross module query and apply filters correctly to the correct modules [2]`, async () => {
+        const { data: dataWithPrice } = await query.graph({
+          entity: "product",
+          fields: ["id", "title", "variants.*", "variants.prices.amount"],
+          filters: {
+            variants: {
+              prices: {
+                amount: {
+                  $gt: 50,
+                },
+              },
+            },
+          },
+        })
+
+        expect(dataWithPrice).toEqual([
+          expect.objectContaining({
+            id: expect.any(String),
+            title: "Test Giftcard",
+            variants: [
+              expect.objectContaining({
+                title: "Test variant",
+                prices: [
+                  expect.objectContaining({
+                    amount: 100,
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ])
       })
     })
   },

@@ -1,8 +1,7 @@
+import { logger } from "@medusajs/framework/logger"
+import { Modules } from "@medusajs/framework/utils"
 import express from "express"
-import { track } from "medusa-telemetry"
-
-import { logger } from "@medusajs/framework"
-import { ModuleRegistrationName } from "@medusajs/utils"
+import { track } from "@medusajs/telemetry"
 import loaders from "../loaders"
 
 export default async function ({
@@ -27,8 +26,8 @@ export default async function ({
       expressApp: app,
     })
 
-    const userService = container.resolve(ModuleRegistrationName.USER)
-    const authService = container.resolve(ModuleRegistrationName.AUTH)
+    const userService = container.resolve(Modules.USER)
+    const authService = container.resolve(Modules.AUTH)
 
     const provider = "emailpass"
 
@@ -54,12 +53,14 @@ export default async function ({
       }
 
       // We know the authIdentity is not undefined
-      await authService.updateAuthIdentites({
+      await authService.updateAuthIdentities({
         id: authIdentity!.id,
         app_metadata: {
           user_id: user.id,
         },
       })
+
+      logger.info("User created successfully.")
     }
   } catch (err) {
     console.error(err)

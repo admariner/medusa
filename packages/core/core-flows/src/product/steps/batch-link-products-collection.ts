@@ -1,25 +1,32 @@
-import { IProductModuleService, LinkWorkflowInput } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import {
+  IProductModuleService,
+  LinkWorkflowInput,
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 
 export const batchLinkProductsToCollectionStepId =
   "batch-link-products-to-collection"
 /**
- * This step creates links between product and collection records.
+ * This step manages the links between a collection and products.
+ * 
+ * @example
+ * const data = batchLinkProductsToCollectionStep({
+ *   id: "collection_123",
+ *   add: ["product_123"],
+ *   remove: ["product_321"]
+ * })
  */
 export const batchLinkProductsToCollectionStep = createStep(
   batchLinkProductsToCollectionStepId,
   async (data: LinkWorkflowInput, { container }) => {
-    const service = container.resolve<IProductModuleService>(
-      ModuleRegistrationName.PRODUCT
-    )
+    const service = container.resolve<IProductModuleService>(Modules.PRODUCT)
 
     if (!data.add?.length && !data.remove?.length) {
       return new StepResponse(void 0, null)
     }
 
     const dbCollection = await service.retrieveProductCollection(data.id, {
-      take: null,
       select: ["id", "products.id"],
       relations: ["products"],
     })
@@ -45,9 +52,7 @@ export const batchLinkProductsToCollectionStep = createStep(
       return
     }
 
-    const service = container.resolve<IProductModuleService>(
-      ModuleRegistrationName.PRODUCT
-    )
+    const service = container.resolve<IProductModuleService>(Modules.PRODUCT)
 
     await service.updateProductCollections(prevData.id, {
       product_ids: prevData.productIds,

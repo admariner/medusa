@@ -1,17 +1,27 @@
-import { CreateTaxRateRuleDTO, ITaxModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import {
+  CreateTaxRateRuleDTO,
+  ITaxModuleService,
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const createTaxRateRulesStepId = "create-tax-rate-rules"
 /**
  * This step creates one or more tax rate rules.
+ * 
+ * @example
+ * const data = createTaxRateRulesStep([
+ *   {
+ *     reference: "product_type",
+ *     reference_id: "ptyp_123",
+ *     tax_rate_id: "txr_123"
+ *   }
+ * ])
  */
 export const createTaxRateRulesStep = createStep(
   createTaxRateRulesStepId,
   async (data: CreateTaxRateRuleDTO[], { container }) => {
-    const service = container.resolve<ITaxModuleService>(
-      ModuleRegistrationName.TAX
-    )
+    const service = container.resolve<ITaxModuleService>(Modules.TAX)
 
     const created = await service.createTaxRateRules(data)
 
@@ -25,9 +35,7 @@ export const createTaxRateRulesStep = createStep(
       return
     }
 
-    const service = container.resolve<ITaxModuleService>(
-      ModuleRegistrationName.TAX
-    )
+    const service = container.resolve<ITaxModuleService>(Modules.TAX)
 
     await service.deleteTaxRateRules(createdIds)
   }

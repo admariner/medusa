@@ -1,13 +1,13 @@
 /**
  * @oas [post] /admin/workflows-executions/{workflow_id}/run
  * operationId: PostWorkflowsExecutionsWorkflow_idRun
- * summary: Add Runs to Workflows Execution
- * description: Add a list of runs to a workflows execution.
+ * summary: Execute a Workflow
+ * description: Execute a workflow by its ID.
  * x-authenticated: true
  * parameters:
  *   - name: workflow_id
  *     in: path
- *     description: The workflows execution's workflow id.
+ *     description: The workflow's ID.
  *     required: true
  *     schema:
  *       type: string
@@ -25,7 +25,7 @@
  *     label: cURL
  *     source: |-
  *       curl -X POST '{backend_url}/admin/workflows-executions/{workflow_id}/run' \
- *       -H 'x-medusa-access-token: {api_token}'
+ *       -H 'Authorization: Bearer {access_token}'
  * tags:
  *   - Workflows Executions
  * responses:
@@ -35,11 +35,39 @@
  *       application/json:
  *         schema:
  *           type: object
- *           description: SUMMARY
+ *           description: The execution's details.
  *           required:
  *             - acknowledgement
  *           properties:
- *             acknowledgement: {}
+ *             acknowledgement:
+ *               type: object
+ *               description: The workflow's details
+ *               required:
+ *                 - workflowId
+ *                 - transactionId
+ *                 - hasFinished
+ *                 - hasFailed
+ *               properties:
+ *                 workflowId:
+ *                   type: string
+ *                   description: The ID of the executed workflow.
+ *                   title: workflowId
+ *                 transactionId:
+ *                   type: string
+ *                   description: The ID of the workflow exection's transaction. Use this later to track the workflow execution's progress or succeed / fail its steps.
+ *                   title: transactionId
+ *                 parentStepIdempotencyKey:
+ *                   type: string
+ *                   title: parentStepIdempotencyKey
+ *                   description: The idempotency key of the workflow execution.
+ *                 hasFinished:
+ *                   type: boolean
+ *                   title: hasFinished
+ *                   description: Whether the workflow execution has finished.
+ *                 hasFailed:
+ *                   type: boolean
+ *                   title: hasFailed
+ *                   description: Whether the workflow execution has failed.
  *   "400":
  *     $ref: "#/components/responses/400_error"
  *   "401":

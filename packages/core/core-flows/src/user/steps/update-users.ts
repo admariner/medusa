@@ -1,17 +1,23 @@
-import { IUserModuleService, UpdateUserDTO } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import { IUserModuleService, UpdateUserDTO } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const updateUsersStepId = "update-users-step"
 /**
- * This step updates one or more stores.
+ * This step updates one or more users.
+ * 
+ * @example
+ * const data = updateUsersStep([
+ *   {
+ *     id: "user_123",
+ *     last_name: "Doe",
+ *   }
+ * ])
  */
 export const updateUsersStep = createStep(
   updateUsersStepId,
   async (input: UpdateUserDTO[], { container }) => {
-    const service: IUserModuleService = container.resolve(
-      ModuleRegistrationName.USER
-    )
+    const service: IUserModuleService = container.resolve(Modules.USER)
 
     if (!input.length) {
       return new StepResponse([], [])
@@ -29,7 +35,7 @@ export const updateUsersStep = createStep(
       return
     }
 
-    const service = container.resolve(ModuleRegistrationName.USER)
+    const service = container.resolve(Modules.USER)
 
     await service.updateUsers(
       originalUsers.map((u) => ({

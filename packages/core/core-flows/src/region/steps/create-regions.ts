@@ -1,17 +1,27 @@
-import { CreateRegionDTO, IRegionModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import {
+  CreateRegionDTO,
+  IRegionModuleService,
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const createRegionsStepId = "create-regions"
 /**
  * This step creates one or more regions.
+ * 
+ * @example
+ * const data = createRegionsStep([
+ *   {
+ *     currency_code: "usd",
+ *     name: "United States",
+ *     countries: ["us"],
+ *   }
+ * ])
  */
 export const createRegionsStep = createStep(
   createRegionsStepId,
   async (data: CreateRegionDTO[], { container }) => {
-    const service = container.resolve<IRegionModuleService>(
-      ModuleRegistrationName.REGION
-    )
+    const service = container.resolve<IRegionModuleService>(Modules.REGION)
 
     const created = await service.createRegions(data)
 
@@ -25,9 +35,7 @@ export const createRegionsStep = createStep(
       return
     }
 
-    const service = container.resolve<IRegionModuleService>(
-      ModuleRegistrationName.REGION
-    )
+    const service = container.resolve<IRegionModuleService>(Modules.REGION)
 
     await service.deleteRegions(createdIds)
   }

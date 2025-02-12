@@ -4,11 +4,11 @@ import {
   INotificationModuleService,
   Logger,
 } from "@medusajs/types"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/utils"
 import {
-  ContainerRegistrationKeys,
-  ModuleRegistrationName,
-} from "@medusajs/utils"
-import { medusaIntegrationTestRunner, TestEventUtils } from "medusa-test-utils"
+  TestEventUtils,
+  medusaIntegrationTestRunner,
+} from "@medusajs/test-utils"
 
 jest.setTimeout(50000)
 
@@ -19,7 +19,7 @@ medusaIntegrationTestRunner({
       let logger: Logger
 
       beforeAll(async () => {
-        service = getContainer().resolve(ModuleRegistrationName.NOTIFICATION)
+        service = getContainer().resolve(Modules.NOTIFICATION)
         logger = getContainer().resolve(ContainerRegistrationKeys.LOGGER)
       })
 
@@ -38,6 +38,10 @@ medusaIntegrationTestRunner({
             trigger_type: "order-created",
             resource_id: "order-id",
             resource_type: "order",
+            content: {
+              subject: "We received you order",
+              html: "<p>Thank you<p>",
+            },
           } as CreateNotificationDTO
 
           const result = await service.createNotifications(notification)
@@ -67,6 +71,8 @@ medusaIntegrationTestRunner({
             })
           )
 
+          expect(result).toHaveProperty("content")
+
           expect(fromDB).toEqual(
             expect.objectContaining({
               to: "test@medusajs.com",
@@ -82,6 +88,8 @@ medusaIntegrationTestRunner({
               trigger_type: "order-created",
             })
           )
+
+          expect(fromDB).not.toHaveProperty("content")
 
           expect(logSpy).toHaveBeenCalledWith(
             `Attempting to send a notification to: 'test@medusajs.com' on the channel: 'email' with template: 'order-created' and data: '{\"username\":\"john-doe\"}'`
@@ -166,7 +174,7 @@ medusaIntegrationTestRunner({
       describe("Configurable notification subscriber", () => {
         let eventBus: IEventBusModuleService
         beforeAll(async () => {
-          eventBus = getContainer().resolve(ModuleRegistrationName.EVENT_BUS)
+          eventBus = getContainer().resolve(Modules.EVENT_BUS)
         })
 
         it("should successfully sent a notification when an order is created (based on configuration)", async () => {

@@ -2,28 +2,45 @@ import {
   FilterableRegionProps,
   IRegionModuleService,
   UpdateRegionDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
-  ModuleRegistrationName,
+  Modules,
   getSelectsAndRelationsFromObjectArray,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The data to update regions.
+ */
 export type UpdateRegionsStepInput = {
+  /**
+   * The filters to select the regions to update.
+   */
   selector: FilterableRegionProps
+  /**
+   * The data to update in the regions.
+   */
   update: UpdateRegionDTO
 }
 
 export const updateRegionsStepId = "update-region"
 /**
  * This step updates regions matching the specified filters.
+ * 
+ * @example
+ * const data = updateRegionsStep({
+ *   selector: {
+ *     id: "reg_123"
+ *   },
+ *   update: {
+ *     name: "United States"
+ *   }
+ * })
  */
 export const updateRegionsStep = createStep(
   updateRegionsStepId,
   async (data: UpdateRegionsStepInput, { container }) => {
-    const service = container.resolve<IRegionModuleService>(
-      ModuleRegistrationName.REGION
-    )
+    const service = container.resolve<IRegionModuleService>(Modules.REGION)
 
     const { selects, relations } = getSelectsAndRelationsFromObjectArray([
       data.update,
@@ -47,9 +64,7 @@ export const updateRegionsStep = createStep(
       return
     }
 
-    const service = container.resolve<IRegionModuleService>(
-      ModuleRegistrationName.REGION
-    )
+    const service = container.resolve<IRegionModuleService>(Modules.REGION)
 
     await service.upsertRegions(
       prevData.map((r) => ({

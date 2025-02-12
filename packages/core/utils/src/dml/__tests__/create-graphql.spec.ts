@@ -2,7 +2,7 @@ import { model } from "../entity-builder"
 import { toGraphQLSchema } from "../helpers/create-graphql"
 
 describe("GraphQL builder", () => {
-  test("define an entity", () => {
+  test("should generate the proper graphql output for the given entities definition", () => {
     const tag = model.define("tag", {
       id: model.id(),
       value: model.text(),
@@ -31,6 +31,7 @@ describe("GraphQL builder", () => {
     const group = model.define("group", {
       id: model.number(),
       name: model.text(),
+      admin: model.hasOne(() => user, { foreignKey: true }),
       users: model.hasMany(() => user),
     })
 
@@ -70,7 +71,8 @@ describe("GraphQL builder", () => {
         email: Email!
         spend_limit: String!
         phones: [String]!
-        group: [Group]!
+        group_id:String!
+        group: Group!
         role: UserRoleEnum!
         tags: [Tag]!
         raw_spend_limit: JSON!
@@ -82,6 +84,8 @@ describe("GraphQL builder", () => {
       type Group {
         id: Int!
         name: String!
+        admin_id: String!
+        admin: User!
         users: [User]!
         created_at: DateTime!
         updated_at: DateTime!

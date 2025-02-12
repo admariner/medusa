@@ -1,39 +1,50 @@
-import { PricingWorkflow, IPricingModuleService } from "@medusajs/types"
+import {
+  IPricingModuleService,
+  PricingWorkflow,
+} from "@medusajs/framework/types"
 import {
   MedusaError,
-  ModuleRegistrationName,
+  Modules,
   arrayDifference,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
-export type UpdatePricePreferencesAsArrayStepInput = PricingWorkflow.UpdatePricePreferencesWorkflowInput["update"][]
+/**
+ * The price preferences to update.
+ */
+export type UpdatePricePreferencesAsArrayStepInput =
+  PricingWorkflow.UpdatePricePreferencesWorkflowInput["update"][]
 
 export const updatePricePreferencesAsArrayStepId =
   "update-price-preferences-as-array"
 /**
- * This step updates price preferences.
+ * This step creates or updates price preferences.
+ * 
+ * @example
+ * const data = updatePricePreferencesAsArrayStep([
+ *   {
+ *     attribute: "region_id",
+ *     value: "reg_123",
+ *     is_tax_inclusive: true
+ *   }
+ * ])
  */
 export const updatePricePreferencesAsArrayStep = createStep(
   updatePricePreferencesAsArrayStepId,
   async (input: UpdatePricePreferencesAsArrayStepInput, { container }) => {
-    const service = container.resolve<IPricingModuleService>(
-      ModuleRegistrationName.PRICING
-    )
+    const service = container.resolve<IPricingModuleService>(Modules.PRICING)
 
     const prevData = await service.listPricePreferences({
-      $or: input.map(
-        (entry) => {
-          if (!entry.attribute || !entry.value) {
-            throw new MedusaError(
-              MedusaError.Types.INVALID_DATA,
-              "Attribute and value must be provided when updating price preferences"
-            )
-          }
+      $or: input.map((entry) => {
+        if (!entry.attribute || !entry.value) {
+          throw new MedusaError(
+            MedusaError.Types.INVALID_DATA,
+            "Attribute and value must be provided when updating price preferences"
+          )
+        }
 
-          return { attribute: entry.attribute, value: entry.value }
-        },
-        { take: null }
-      ),
+        return { attribute: entry.attribute, value: entry.value }
+      }, {}),
     })
 
     const toUpsert = input.map((entry) => {
@@ -69,9 +80,7 @@ export const updatePricePreferencesAsArrayStep = createStep(
       return
     }
 
-    const service = container.resolve<IPricingModuleService>(
-      ModuleRegistrationName.PRICING
-    )
+    const service = container.resolve<IPricingModuleService>(Modules.PRICING)
 
     await service.upsertPricePreferences(compensationData.prevData)
     await service.deletePricePreferences(compensationData.newDataIds)

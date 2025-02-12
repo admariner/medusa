@@ -1,6 +1,12 @@
-import { EventBusTypes, IEventBusModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepExecutionContext, createStep } from "@medusajs/workflows-sdk"
+import {
+  EventBusTypes,
+  IEventBusModuleService,
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import {
+  StepExecutionContext,
+  createStep,
+} from "@medusajs/framework/workflows-sdk"
 
 /**
  * The event's details.
@@ -35,24 +41,12 @@ export const emitEventStepId = "emit-event-step"
  * Emit an event.
  *
  * @example
- * import {
- *   createWorkflow
- * } from "@medusajs/workflows-sdk"
- * import {
- *   emitEventStep
- * } from "@medusajs/core-flows"
- *
- * const helloWorldWorkflow = createWorkflow(
- *   "hello-world",
- *   () => {
- *     emitEventStep({
- *       eventName: "custom.created",
- *       data: {
- *         id: "123"
- *       }
- *     })
+ * emitEventStep({
+ *   eventName: "custom.created",
+ *   data: {
+ *     id: "123"
  *   }
- * )
+ * })
  */
 export const emitEventStep = createStep(
   emitEventStepId,
@@ -64,7 +58,7 @@ export const emitEventStep = createStep(
     const { container } = context
 
     const eventBus: IEventBusModuleService = container.resolve(
-      ModuleRegistrationName.EVENT_BUS
+      Modules.EVENT_BUS
     )
 
     const data_ =

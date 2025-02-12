@@ -22,8 +22,8 @@ const light = {
 
   "--docs-fg-base": "rgba(24, 24, 27, 1)",
   "--docs-fg-subtle": "rgba(82, 82, 91, 1)",
-  "--docs-fg-muted": "rgba(161, 161, 170, 1)",
-  "--docs-fg-disabled": "rgba(212, 212, 216, 1)",
+  "--docs-fg-muted": "rgba(113, 113, 122, 1)",
+  "--docs-fg-disabled": "rgba(161, 161, 170, 1)",
   "--docs-fg-on-color": "rgba(255, 255, 255, 1)",
   "--docs-fg-on-inverted": "rgba(255, 255, 255, 1)",
   "--docs-fg-interactive": "rgba(59, 130, 246, 1)",
@@ -99,7 +99,10 @@ const light = {
   "--docs-contrast-fg-secondary": "rgba(255, 255, 255, 0.56)",
   "--docs-contrast-border-base": "rgba(255, 255, 255, 0.16)",
   "--docs-contrast-border-top": "rgba(9, 9, 11, 1)",
-  "--docs-contrast-border-bot": "rgba(255, 255, 255, 0.1)",
+  "--docs-contrast-border-bot": "rgba(255, 255, 255, 0.10)",
+
+  "--docs-alpha-white-alpha-6": "rgba(255, 255, 255, 0.06)",
+  "--docs-alpha-white-alpha-12": "rgba(255, 255, 255, 0.12)",
 }
 
 const dark = {

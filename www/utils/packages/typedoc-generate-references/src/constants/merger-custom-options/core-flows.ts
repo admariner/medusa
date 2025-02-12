@@ -43,20 +43,21 @@ const coreFlowsOptions: FormattingOptionsType = {
   },
   "^core_flows/.*/Workflows_.*/functions/.*/page\\.mdx": {
     reflectionDescription:
-      "This documentation provides a reference to the `{{alias}}`. It belongs to the `@medusajs/core-flows` package.",
+      "This documentation provides a reference to the `{{alias}}`. It belongs to the `@medusajs/medusa/core-flows` package.",
     frontmatterData: {
       slug: "/references/medusa-workflows/{{alias}}",
       sidebar_label: "{{alias}}",
+      sidebar_description: "{{summary}}",
     },
     reflectionTitle: {
       kind: false,
       typeParameters: false,
-      suffix: "- Medusa Workflows API Reference",
+      suffix: "- Medusa Core Workflows Reference",
     },
   },
   "^core_flows/.*/Steps_.*/functions/.*/page\\.mdx": {
     reflectionDescription:
-      "This documentation provides a reference to the `{{alias}}`. It belongs to the `@medusajs/core-flows` package.",
+      "This documentation provides a reference to the `{{alias}}`. It belongs to the `@medusajs/medusa/core-flows` package.",
     frontmatterData: {
       slug: "/references/medusa-workflows/steps/{{alias}}",
       sidebar_label: "{{alias}}",
@@ -64,7 +65,7 @@ const coreFlowsOptions: FormattingOptionsType = {
     reflectionTitle: {
       kind: false,
       typeParameters: false,
-      suffix: "- Medusa Workflows API Reference",
+      suffix: "- Medusa Core Workflows Reference",
     },
   },
 }

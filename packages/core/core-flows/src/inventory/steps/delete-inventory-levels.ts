@@ -1,7 +1,12 @@
-import { IInventoryService } from "@medusajs/types"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import { IInventoryService } from "@medusajs/framework/types"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
-import { ModuleRegistrationName } from "@medusajs/utils"
+import { Modules } from "@medusajs/framework/utils"
+
+/**
+ * The IDs of inventory levels to delete.
+ */
+export type DeleteInventoryLevelsStepInput = string[]
 
 export const deleteInventoryLevelsStepId = "delete-inventory-levels-step"
 /**
@@ -9,10 +14,8 @@ export const deleteInventoryLevelsStepId = "delete-inventory-levels-step"
  */
 export const deleteInventoryLevelsStep = createStep(
   deleteInventoryLevelsStepId,
-  async (ids: string[], { container }) => {
-    const service = container.resolve<IInventoryService>(
-      ModuleRegistrationName.INVENTORY
-    )
+  async (ids: DeleteInventoryLevelsStepInput, { container }) => {
+    const service = container.resolve<IInventoryService>(Modules.INVENTORY)
 
     await service.softDeleteInventoryLevels(ids)
 
@@ -23,9 +26,7 @@ export const deleteInventoryLevelsStep = createStep(
       return
     }
 
-    const service = container.resolve<IInventoryService>(
-      ModuleRegistrationName.INVENTORY
-    )
+    const service = container.resolve<IInventoryService>(Modules.INVENTORY)
 
     await service.restoreInventoryLevels(prevLevelIds)
   }

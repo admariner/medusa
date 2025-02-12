@@ -1,8 +1,8 @@
-import { ICartModuleService } from "@medusajs/types"
-import { BigNumber, Module, Modules } from "@medusajs/utils"
+import { ICartModuleService } from "@medusajs/framework/types"
+import { BigNumber, Module, Modules } from "@medusajs/framework/utils"
+import { moduleIntegrationTestRunner } from "@medusajs/test-utils"
 import { CheckConstraintViolationException } from "@mikro-orm/core"
 import { CartModuleService } from "@services"
-import { moduleIntegrationTestRunner } from "medusa-test-utils"
 
 jest.setTimeout(50000)
 
@@ -34,6 +34,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
           cart: {
             id: {
               linkable: "cart_id",
+              entity: "Cart",
               primaryKey: "id",
               serviceName: "cart",
               field: "cart",
@@ -42,6 +43,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
           address: {
             id: {
               linkable: "address_id",
+              entity: "Address",
               primaryKey: "id",
               serviceName: "cart",
               field: "address",
@@ -50,6 +52,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
           lineItem: {
             id: {
               linkable: "line_item_id",
+              entity: "LineItem",
               primaryKey: "id",
               serviceName: "cart",
               field: "lineItem",
@@ -58,6 +61,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
           lineItemAdjustment: {
             id: {
               linkable: "line_item_adjustment_id",
+              entity: "LineItemAdjustment",
               primaryKey: "id",
               serviceName: "cart",
               field: "lineItemAdjustment",
@@ -66,6 +70,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
           lineItemTaxLine: {
             id: {
               linkable: "line_item_tax_line_id",
+              entity: "LineItemTaxLine",
               primaryKey: "id",
               serviceName: "cart",
               field: "lineItemTaxLine",
@@ -74,6 +79,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
           shippingMethod: {
             id: {
               linkable: "shipping_method_id",
+              entity: "ShippingMethod",
               primaryKey: "id",
               serviceName: "cart",
               field: "shippingMethod",
@@ -82,6 +88,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
           shippingMethodAdjustment: {
             id: {
               linkable: "shipping_method_adjustment_id",
+              entity: "ShippingMethodAdjustment",
               primaryKey: "id",
               serviceName: "cart",
               field: "shippingMethodAdjustment",
@@ -90,6 +97,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
           shippingMethodTaxLine: {
             id: {
               linkable: "shipping_method_tax_line_id",
+              entity: "ShippingMethodTaxLine",
               primaryKey: "id",
               serviceName: "cart",
               field: "shippingMethodTaxLine",
@@ -1971,7 +1979,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
           const taxLines = await service.setLineItemTaxLines(createdCart.id, [
             {
               item_id: itemOne.id,
-              rate: 20,
+              rate: 20.753,
               code: "TX",
             },
           ])
@@ -1980,7 +1988,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
             expect.arrayContaining([
               expect.objectContaining({
                 item_id: itemOne.id,
-                rate: 20,
+                rate: 20.753,
                 code: "TX",
               }),
             ])
@@ -1989,7 +1997,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
           await service.setLineItemTaxLines(createdCart.id, [
             {
               item_id: itemOne.id,
-              rate: 25,
+              rate: 25.14789,
               code: "TX-2",
             },
           ])
@@ -2005,7 +2013,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
                 tax_lines: expect.arrayContaining([
                   expect.objectContaining({
                     item_id: itemOne.id,
-                    rate: 25,
+                    rate: 25.14789,
                     code: "TX-2",
                   }),
                 ]),
@@ -2494,6 +2502,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
             product_description: null,
             product_subtitle: null,
             product_type: null,
+            product_type_id: null,
             product_collection: null,
             product_handle: null,
             variant_sku: null,
@@ -2503,6 +2512,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
             requires_shipping: true,
             is_discountable: true,
             is_tax_inclusive: false,
+            is_custom_price: false,
             raw_compare_at_unit_price: null,
             raw_unit_price: {
               value: "100",
@@ -2548,6 +2558,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
             total: 0,
             original_total: 100,
             discount_total: 100,
+            discount_subtotal: 100,
             discount_tax_total: 0,
             tax_total: 0,
             original_tax_total: 0,
@@ -2564,6 +2575,10 @@ moduleIntegrationTestRunner<ICartModuleService>({
               precision: 20,
             },
             raw_discount_total: {
+              value: "100",
+              precision: 20,
+            },
+            raw_discount_subtotal: {
               value: "100",
               precision: 20,
             },
@@ -2593,6 +2608,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
             product_description: null,
             product_subtitle: null,
             product_type: null,
+            product_type_id: null,
             product_collection: null,
             product_handle: null,
             variant_sku: null,
@@ -2602,6 +2618,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
             requires_shipping: true,
             is_discountable: true,
             is_tax_inclusive: false,
+            is_custom_price: false,
             raw_compare_at_unit_price: null,
             raw_unit_price: {
               value: "200",
@@ -2647,6 +2664,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
             total: 200,
             original_total: 400,
             discount_total: 200,
+            discount_subtotal: 200,
             discount_tax_total: 0,
             tax_total: 0,
             original_tax_total: 0,
@@ -2663,6 +2681,10 @@ moduleIntegrationTestRunner<ICartModuleService>({
               precision: 20,
             },
             raw_discount_total: {
+              value: "200",
+              precision: 20,
+            },
+            raw_discount_subtotal: {
               value: "200",
               precision: 20,
             },
@@ -2704,6 +2726,7 @@ moduleIntegrationTestRunner<ICartModuleService>({
             total: 10,
             original_total: 10,
             discount_total: 0,
+            discount_subtotal: 0,
             discount_tax_total: 0,
             tax_total: 0,
             original_tax_total: 0,
@@ -2720,6 +2743,10 @@ moduleIntegrationTestRunner<ICartModuleService>({
               precision: 20,
             },
             raw_discount_total: {
+              value: "0",
+              precision: 20,
+            },
+            raw_discount_subtotal: {
               value: "0",
               precision: 20,
             },
@@ -2741,8 +2768,9 @@ moduleIntegrationTestRunner<ICartModuleService>({
         subtotal: 510,
         tax_total: 0,
         discount_total: 300,
+        discount_subtotal: 300,
         discount_tax_total: 0,
-        original_total: 210,
+        original_total: 510,
         original_tax_total: 0,
         item_total: 200,
         item_subtotal: 500,
@@ -2772,12 +2800,16 @@ moduleIntegrationTestRunner<ICartModuleService>({
           value: "300",
           precision: 20,
         },
+        raw_discount_subtotal: {
+          value: "300",
+          precision: 20,
+        },
         raw_discount_tax_total: {
           value: "0",
           precision: 20,
         },
         raw_original_total: {
-          value: "210",
+          value: "510",
           precision: 20,
         },
         raw_original_tax_total: {

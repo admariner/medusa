@@ -1,29 +1,39 @@
 import { MedusaContainer } from "@medusajs/types"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import {
   adminHeaders,
   createAdminUser,
+  generatePublishableKey,
+  generateStoreHeaders,
 } from "../../../../helpers/create-admin-user"
+import { createAuthenticatedCustomer } from "../../../../modules/helpers/create-authenticated-customer"
 
-jest.setTimeout(30000)
+jest.setTimeout(50000)
 
 medusaIntegrationTestRunner({
   testSuite: ({ dbConnection, api, getContainer }) => {
     let appContainer: MedusaContainer
+    let storeHeaders
 
     beforeEach(async () => {
       appContainer = getContainer()
+      const publishableKey = await generatePublishableKey(appContainer)
+      storeHeaders = generateStoreHeaders({ publishableKey })
       await createAdminUser(dbConnection, adminHeaders, appContainer)
     })
 
-    describe("POST /admin/customers", () => {
+    describe("POST /store/customers", () => {
       it("should fails to create a customer without an identity", async () => {
         const customer = await api
-          .post("/store/customers", {
-            email: "newcustomer@medusa.js",
-            first_name: "John",
-            last_name: "Doe",
-          })
+          .post(
+            "/store/customers",
+            {
+              email: "newcustomer@medusa.js",
+              first_name: "John",
+              last_name: "Doe",
+            },
+            storeHeaders
+          )
           .catch((e) => e)
 
         expect(customer.response.status).toEqual(401)
@@ -44,10 +54,17 @@ medusaIntegrationTestRunner({
             email: "newcustomer@medusa.js",
             first_name: "John",
             last_name: "Doe",
+            metadata: {
+              loyalty_level: "gold",
+              preferences: {
+                newsletter: true,
+              },
+            },
           },
           {
             headers: {
               authorization: `Bearer ${signup.data.token}`,
+              ...storeHeaders.headers,
             },
           }
         )
@@ -59,6 +76,12 @@ medusaIntegrationTestRunner({
             first_name: "John",
             last_name: "Doe",
             has_account: true,
+            metadata: {
+              loyalty_level: "gold",
+              preferences: {
+                newsletter: true,
+              },
+            },
           }),
         })
       })
@@ -102,6 +125,7 @@ medusaIntegrationTestRunner({
           {
             headers: {
               authorization: `Bearer ${signup.data.token}`,
+              ...storeHeaders.headers,
             },
           }
         )
@@ -161,6 +185,7 @@ medusaIntegrationTestRunner({
           {
             headers: {
               authorization: `Bearer ${firstSignup.data.token}`,
+              ...storeHeaders.headers,
             },
           }
         )
@@ -181,6 +206,7 @@ medusaIntegrationTestRunner({
             {
               headers: {
                 authorization: `Bearer ${firstSignin.data.token}`,
+                ...storeHeaders.headers,
               },
             }
           )
@@ -190,6 +216,87 @@ medusaIntegrationTestRunner({
         expect(customer.response.data.message).toEqual(
           "Request already authenticated as a customer."
         )
+      })
+
+      describe("With ensurePublishableApiKey middleware", () => {
+        it("should fail when no publishable key is passed in the header", async () => {
+          const { response } = await api
+            .post(
+              "/store/customers",
+              {
+                email: "newcustomer@medusa.js",
+                first_name: "John",
+                last_name: "Doe",
+              },
+              {
+                headers: {},
+              }
+            )
+            .catch((e) => e)
+
+          expect(response.data).toEqual({
+            message:
+              "Publishable API key required in the request header: x-publishable-api-key. You can manage your keys in settings in the dashboard.",
+            type: "not_allowed",
+          })
+        })
+
+        it("should fail when publishable keys are invalid", async () => {
+          const { response } = await api
+            .post(
+              "/store/customers",
+              {
+                email: "newcustomer@medusa.js",
+                first_name: "John",
+                last_name: "Doe",
+              },
+              {
+                headers: {
+                  "x-publishable-api-key": ["test1", "test2"],
+                },
+              }
+            )
+            .catch((e) => e)
+
+          expect(response.data).toEqual({
+            message:
+              "A valid publishable key is required to proceed with the request",
+            type: "not_allowed",
+          })
+        })
+      })
+    })
+
+    describe("POST /store/customers/me", () => {
+      it("should successfully update a customer", async () => {
+        const { customer, jwt } = await createAuthenticatedCustomer(
+          api,
+          storeHeaders
+        )
+
+        const response = await api.post(
+          `/store/customers/me`,
+          {
+            first_name: "John2",
+            last_name: "Doe2",
+          },
+          {
+            headers: {
+              authorization: `Bearer ${jwt}`,
+              ...storeHeaders.headers,
+            },
+          }
+        )
+
+        expect(response.status).toEqual(200)
+        expect(response.data).toEqual({
+          customer: expect.objectContaining({
+            id: customer.id,
+            first_name: "John2",
+            last_name: "Doe2",
+            email: "tony@start.com",
+          }),
+        })
       })
     })
   },

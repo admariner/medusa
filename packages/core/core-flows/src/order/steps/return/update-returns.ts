@@ -1,9 +1,14 @@
-import { UpdateReturnDTO } from "@medusajs/types"
+import { UpdateReturnDTO } from "@medusajs/framework/types"
 import {
-  ModuleRegistrationName,
+  Modules,
   getSelectsAndRelationsFromObjectArray,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
+
+/**
+ * The returns to update.
+ */
+export type UpdateReturnsStepInput = UpdateReturnDTO[]
 
 export const updateReturnsStepId = "update-returns"
 /**
@@ -11,8 +16,8 @@ export const updateReturnsStepId = "update-returns"
  */
 export const updateReturnsStep = createStep(
   updateReturnsStepId,
-  async (data: UpdateReturnDTO[], { container }) => {
-    const service = container.resolve(ModuleRegistrationName.ORDER) as any
+  async (data: UpdateReturnsStepInput, { container }) => {
+    const service = container.resolve(Modules.ORDER) as any
 
     const { selects, relations } = getSelectsAndRelationsFromObjectArray(data, {
       objectFields: ["metadata"],
@@ -31,7 +36,7 @@ export const updateReturnsStep = createStep(
       return
     }
 
-    const service = container.resolve(ModuleRegistrationName.ORDER) as any
+    const service = container.resolve(Modules.ORDER) as any
 
     await service.updateReturns(dataBeforeUpdate)
   }

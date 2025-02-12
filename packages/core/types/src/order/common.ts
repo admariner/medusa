@@ -3,7 +3,7 @@ import { OperatorMap } from "../dal/utils"
 import { FulfillmentDTO } from "../fulfillment"
 import { PaymentCollectionDTO } from "../payment"
 import { BigNumberInput, BigNumberRawValue, BigNumberValue } from "../totals"
-import { ClaimReason } from "./mutations"
+import { ClaimReason, OrderClaimType } from "./mutations"
 
 /**
  * The change action's type.
@@ -11,6 +11,7 @@ import { ClaimReason } from "./mutations"
 export type ChangeActionType =
   | "CANCEL_RETURN_ITEM"
   | "FULFILL_ITEM"
+  | "DELIVER_ITEM"
   | "CANCEL_ITEM_FULFILLMENT"
   | "ITEM_ADD"
   | "ITEM_REMOVE"
@@ -23,6 +24,16 @@ export type ChangeActionType =
   | "SHIP_ITEM"
   | "WRITE_OFF_ITEM"
   | "REINSTATE_ITEM"
+  | "TRANSFER_CUSTOMER"
+  | "UPDATE_ORDER_PROPERTIES"
+  | "CREDIT_LINE_ADD"
+
+export type OrderChangeStatus =
+  | "confirmed"
+  | "declined"
+  | "requested"
+  | "pending"
+  | "canceled"
 
 /**
  * @interface
@@ -112,8 +123,22 @@ export type OrderSummaryDTO = {
 
   /**
    * The raw pending difference of the order.
+   *
+   * @ignore
    */
   raw_pending_difference: BigNumberRawValue
+
+  /**
+   * The sum difference of all actions
+   */
+  difference_sum: BigNumberValue
+
+  /**
+   * The raw sum difference of all actions
+   *
+   * @ignore
+   */
+  raw_difference_sum: BigNumberRawValue
 }
 
 /**
@@ -274,11 +299,15 @@ export interface OrderShippingMethodTaxLineDTO extends OrderTaxLineDTO {
 
   /**
    * The raw total tax relative to the shipping method.
+   *
+   * @ignore
    */
   raw_total: BigNumberRawValue
 
   /**
    * The raw subtotal tax relative to the shipping method.
+   *
+   * @ignore
    */
   raw_subtotal: BigNumberRawValue
 }
@@ -311,11 +340,15 @@ export interface OrderLineItemTaxLineDTO extends OrderTaxLineDTO {
 
   /**
    * The raw total tax relative to the item.
+   *
+   * @ignore
    */
   raw_total: BigNumberRawValue
 
   /**
    * The raw subtotal tax relative to the item.
+   *
+   * @ignore
    */
   raw_subtotal: BigNumberRawValue
 }
@@ -431,6 +464,8 @@ export interface OrderShippingMethodDTO {
 
   /**
    * The raw price of the shipping method.
+   *
+   * @ignore
    */
   raw_amount: BigNumberRawValue
 
@@ -520,41 +555,57 @@ export interface OrderShippingMethodDTO {
 
   /**
    * The raw original total of the order shipping method.
+   *
+   * @ignore
    */
   raw_original_total: BigNumberRawValue
 
   /**
    * The raw original subtotal of the order shipping method.
+   *
+   * @ignore
    */
   raw_original_subtotal: BigNumberRawValue
 
   /**
    * The raw original tax total of the order shipping method.
+   *
+   * @ignore
    */
   raw_original_tax_total: BigNumberRawValue
 
   /**
    * The raw total of the order shipping method.
+   *
+   * @ignore
    */
   raw_total: BigNumberRawValue
 
   /**
    * The raw subtotal of the order shipping method.
+   *
+   * @ignore
    */
   raw_subtotal: BigNumberRawValue
 
   /**
    * The raw tax total of the order shipping method.
+   *
+   * @ignore
    */
   raw_tax_total: BigNumberRawValue
 
   /**
    * The raw discount total of the order shipping method.
+   *
+   * @ignore
    */
   raw_discount_total: BigNumberRawValue
 
   /**
    * The raw discount tax total of the order shipping method.
+   *
+   * @ignore
    */
   raw_discount_tax_total: BigNumberRawValue
 }
@@ -630,66 +681,92 @@ export interface OrderLineItemTotalsDTO {
 
   /**
    * The raw original total of the order line item.
+   *
+   * @ignore
    */
   raw_original_total: BigNumberRawValue
 
   /**
    * The raw original subtotal of the order line item.
+   *
+   * @ignore
    */
   raw_original_subtotal: BigNumberRawValue
 
   /**
    * The raw original tax total of the order line item.
+   *
+   * @ignore
    */
   raw_original_tax_total: BigNumberRawValue
 
   /**
    * The raw item total of the order line item.
+   *
+   * @ignore
    */
   raw_item_total: BigNumberRawValue
 
   /**
    * The raw item subtotal of the order line item.
+   *
+   * @ignore
    */
   raw_item_subtotal: BigNumberRawValue
 
   /**
    * The raw item tax total of the order line item.
+   *
+   * @ignore
    */
   raw_item_tax_total: BigNumberRawValue
 
   /**
    * The raw total of the order line item.
+   *
+   * @ignore
    */
   raw_total: BigNumberRawValue
 
   /**
    * The raw subtotal of the order line item.
+   *
+   * @ignore
    */
   raw_subtotal: BigNumberRawValue
 
   /**
    * The raw tax total of the order line item.
+   *
+   * @ignore
    */
   raw_tax_total: BigNumberRawValue
 
   /**
    * The raw discount total of the order line item.
+   *
+   * @ignore
    */
   raw_discount_total: BigNumberRawValue
 
   /**
    * The raw discount tax total of the order line item.
+   *
+   * @ignore
    */
   raw_discount_tax_total: BigNumberRawValue
 
   /**
    * The raw refundable total of the order line item..
+   *
+   * @ignore
    */
   raw_refundable_total: BigNumberRawValue
 
   /**
    * The raw  refundable total per unit of the order line item.
+   *
+   * @ignore
    */
   raw_refundable_total_per_unit: BigNumberRawValue
 }
@@ -742,6 +819,11 @@ export interface OrderLineItemDTO extends OrderLineItemTotalsDTO {
    * The subtitle of the product associated with the line item.
    */
   product_subtitle?: string | null
+
+  /**
+   * The ID of the type of the product associated with the line item.
+   */
+  product_type_id?: string | null
 
   /**
    * The type of the product associated with the line item.
@@ -800,6 +882,8 @@ export interface OrderLineItemDTO extends OrderLineItemTotalsDTO {
 
   /**
    * The raw compare at unit price of the line item.
+   *
+   * @ignore
    */
   raw_compare_at_unit_price?: BigNumberRawValue
 
@@ -810,6 +894,8 @@ export interface OrderLineItemDTO extends OrderLineItemTotalsDTO {
 
   /**
    * The raw unit price of the line item.
+   *
+   * @ignore
    */
   raw_unit_price: BigNumberRawValue
 
@@ -820,6 +906,8 @@ export interface OrderLineItemDTO extends OrderLineItemTotalsDTO {
 
   /**
    * The raw quantity of the line item.
+   *
+   * @ignore
    */
   raw_quantity: BigNumberRawValue
 
@@ -886,6 +974,8 @@ export interface OrderItemDTO {
 
   /**
    * The raw quantity of the order line item.
+   *
+   * @ignore
    */
   raw_quantity: BigNumberRawValue
 
@@ -896,8 +986,22 @@ export interface OrderItemDTO {
 
   /**
    * The raw fulfilled quantity of the order line item.
+   *
+   * @ignore
    */
   raw_fulfilled_quantity: BigNumberRawValue
+
+  /**
+   * The delivered quantity of the order line item.
+   */
+  delivered_quantity: number
+
+  /**
+   * The raw delivered quantity of the order line item.
+   *
+   * @ignore
+   */
+  raw_delivered_quantity: BigNumberRawValue
 
   /**
    * The shipped quantity of the order line item.
@@ -906,6 +1010,8 @@ export interface OrderItemDTO {
 
   /**
    * The raw shipped quantity of the order line item.
+   *
+   * @ignore
    */
   raw_shipped_quantity: BigNumberRawValue
 
@@ -916,6 +1022,8 @@ export interface OrderItemDTO {
 
   /**
    * The raw quantity of return requested for the order line item.
+   *
+   * @ignore
    */
   raw_return_requested_quantity: BigNumberRawValue
 
@@ -926,6 +1034,8 @@ export interface OrderItemDTO {
 
   /**
    * The raw quantity of return received for the order line item.
+   *
+   * @ignore
    */
   raw_return_received_quantity: BigNumberRawValue
 
@@ -936,6 +1046,8 @@ export interface OrderItemDTO {
 
   /**
    * The raw quantity of return dismissed for the order line item.
+   *
+   * @ignore
    */
   raw_return_dismissed_quantity: BigNumberRawValue
 
@@ -946,6 +1058,8 @@ export interface OrderItemDTO {
 
   /**
    * The raw quantity of written off for the order line item.
+   *
+   * @ignore
    */
   raw_written_off_quantity: BigNumberRawValue
 
@@ -968,7 +1082,7 @@ export interface OrderItemDTO {
 /**
  * The order's status.
  */
-type OrderStatus =
+export type OrderStatus =
   | "pending"
   | "completed"
   | "draft"
@@ -989,6 +1103,11 @@ export interface OrderDTO {
    * The version of the order.
    */
   version: number
+
+  /**
+   * The order's display ID.
+   */
+  display_id: number
 
   /**
    * The active order change, if any.
@@ -1063,6 +1182,13 @@ export interface OrderDTO {
   transactions?: OrderTransactionDTO[]
 
   /**
+   * The credit lines for an order
+   *
+   * @expandable
+   */
+  credit_lines?: OrderCreditLineDTO[]
+
+  /**
    * The summary of the order totals.
    *
    * @expandable
@@ -1082,12 +1208,12 @@ export interface OrderDTO {
   /**
    * When the order was created.
    */
-  created_at?: string | Date
+  created_at: string | Date
 
   /**
    * When the order was updated.
    */
-  updated_at?: string | Date
+  updated_at: string | Date
 
   /**
    * The original item total of the order.
@@ -1150,6 +1276,11 @@ export interface OrderDTO {
   tax_total: BigNumberValue
 
   /**
+   * The discount subtotal of the order.
+   */
+  discount_subtotal: BigNumberValue
+
+  /**
    * The discount total of the order.
    */
   discount_total: BigNumberValue
@@ -1201,111 +1332,155 @@ export interface OrderDTO {
 
   /**
    * The raw original item total of the order.
+   *
+   * @ignore
    */
   raw_original_item_total: BigNumberRawValue
 
   /**
    * The raw original item subtotal of the order.
+   *
+   * @ignore
    */
   raw_original_item_subtotal: BigNumberRawValue
 
   /**
    * The raw original item tax total of the order.
+   *
+   * @ignore
    */
   raw_original_item_tax_total: BigNumberRawValue
 
   /**
    * The raw item total of the order.
+   *
+   * @ignore
    */
   raw_item_total: BigNumberRawValue
 
   /**
    * The raw item subtotal of the order.
+   *
+   * @ignore
    */
   raw_item_subtotal: BigNumberRawValue
 
   /**
    * The raw item tax total of the order.
+   *
+   * @ignore
    */
   raw_item_tax_total: BigNumberRawValue
 
   /**
    * The raw original total of the order.
+   *
+   * @ignore
    */
   raw_original_total: BigNumberRawValue
 
   /**
    * The raw original subtotal of the order.
+   *
+   * @ignore
    */
   raw_original_subtotal: BigNumberRawValue
 
   /**
    * The raw original tax total of the order.
+   *
+   * @ignore
    */
   raw_original_tax_total: BigNumberRawValue
 
   /**
    * The raw total of the order.
+   *
+   * @ignore
    */
   raw_total: BigNumberRawValue
 
   /**
    * The raw subtotal of the order. (Excluding taxes)
+   *
+   * @ignore
    */
   raw_subtotal: BigNumberRawValue
 
   /**
    * The raw tax total of the order.
+   *
+   * @ignore
    */
   raw_tax_total: BigNumberRawValue
 
   /**
    * The raw discount total of the order.
+   *
+   * @ignore
    */
   raw_discount_total: BigNumberRawValue
 
   /**
    * The raw discount tax total of the order.
+   *
+   * @ignore
    */
   raw_discount_tax_total: BigNumberRawValue
 
   /**
    * The raw gift card total of the order.
+   *
+   * @ignore
    */
   raw_gift_card_total: BigNumberRawValue
 
   /**
    * The raw gift card tax total of the order.
+   *
+   * @ignore
    */
   raw_gift_card_tax_total: BigNumberRawValue
 
   /**
    * The raw shipping total of the order.
+   *
+   * @ignore
    */
   raw_shipping_total: BigNumberRawValue
 
   /**
    * The raw shipping subtotal of the order.
+   *
+   * @ignore
    */
   raw_shipping_subtotal: BigNumberRawValue
 
   /**
    * The raw shipping tax total of the order.
+   *
+   * @ignore
    */
   raw_shipping_tax_total: BigNumberRawValue
 
   /**
    * The raw original shipping total of the order.
+   *
+   * @ignore
    */
   raw_original_shipping_total: BigNumberRawValue
 
   /**
    * The raw original shipping subtotal of the order.
+   *
+   * @ignore
    */
   raw_original_shipping_subtotal: BigNumberRawValue
 
   /**
    * The raw original shipping tax total of the order.
+   *
+   * @ignore
    */
   raw_original_shipping_tax_total: BigNumberRawValue
 }
@@ -1318,8 +1493,7 @@ type ReturnStatus = "requested" | "received" | "partially_received" | "canceled"
 /**
  * The return details.
  */
-export interface ReturnDTO
-  extends Omit<OrderDTO, "status" | "version" | "items"> {
+export interface ReturnDTO {
   /**
    * The ID of the return.
    */
@@ -1336,14 +1510,110 @@ export interface ReturnDTO
   refund_amount?: BigNumberValue
 
   /**
+   * The raw refund amount of the return.
+   */
+  raw_refund_amount?: BigNumberValue
+
+  /**
    * The associated order's ID.
    */
   order_id: string
 
   /**
+   * The associated order.
+   */
+  order?: OrderDTO
+
+  /**
    * The items of the return
    */
   items: OrderReturnItemDTO[]
+
+  /**
+   * The associated exchange's ID.
+   */
+  exchange_id?: string
+
+  /**
+   * The associated exchange.
+   */
+  exchange?: OrderExchangeDTO
+
+  /**
+   * The associated claim's ID.
+   */
+  claim_id?: string
+
+  /**
+   * The associated claim.
+   */
+  claim?: OrderClaimDTO
+
+  /**
+   * The return's display ID.
+   */
+  display_id: number
+
+  /**
+   * The ID of the location to return the items to.
+   */
+  location_id?: string
+
+  /**
+   * Whether the customer should receive notifications related
+   * to updates on the return.
+   */
+  no_notification?: boolean
+
+  /**
+   * The id of the user that created the return
+   */
+  created_by?: string | null
+
+  /**
+   * The shipping methods used to receive the returned items.
+   */
+  shipping_methods?: OrderShippingMethodDTO[]
+
+  /**
+   * The return's transactions if refund is required.
+   */
+  transactions?: OrderTransactionDTO[]
+
+  /**
+   * Holds custom data in key-value pairs.
+   */
+  metadata: Record<string, unknown> | null
+
+  /**
+   * The creation date of the return.
+   */
+  created_at?: Date | string
+
+  /**
+   * The update date of the return.
+   */
+  updated_at?: Date | string
+
+  /**
+   * The deletion date of the return.
+   */
+  deleted_at?: Date | string
+
+  /**
+   * The cancelation date of the return.
+   */
+  canceled_at?: Date | string
+
+  /**
+   * The request date of the return.
+   */
+  requested_at?: Date | string
+
+  /**
+   * The receival date of the return.
+   */
+  received_at?: Date | string
 }
 
 /**
@@ -1382,6 +1652,8 @@ export interface OrderReturnItemDTO {
 
   /**
    * The raw quantity of the item to return.
+   *
+   * @ignore
    */
   raw_quantity: BigNumberRawValue
 
@@ -1392,6 +1664,8 @@ export interface OrderReturnItemDTO {
 
   /**
    * The raw received quantity of the return item.
+   *
+   * @ignore
    */
   raw_received_quantity?: BigNumberRawValue
 
@@ -1436,6 +1710,11 @@ export interface OrderClaimItemDTO {
   item_id: string
 
   /**
+   * The associated item.
+   */
+  item: OrderLineItemDTO
+
+  /**
    * The quantity of the order claim item
    */
   quantity: number
@@ -1447,6 +1726,8 @@ export interface OrderClaimItemDTO {
 
   /**
    * The raw quantity of the order claim item
+   *
+   * @ignore
    */
   raw_quantity: BigNumberRawValue
 
@@ -1526,12 +1807,19 @@ export interface OrderExchangeItemDTO {
   item_id: string
 
   /**
+   * The associated item.
+   */
+  item: OrderLineItemDTO
+
+  /**
    * The quantity of the order exchange item
    */
   quantity: number
 
   /**
    * The raw quantity of the order exchange item
+   *
+   * @ignore
    */
   raw_quantity: BigNumberRawValue
 
@@ -1554,16 +1842,38 @@ export interface OrderExchangeItemDTO {
 /**
  * The claim details.
  */
-export interface OrderClaimDTO
-  extends Omit<OrderDTO, "status" | "version" | "items"> {
+export interface OrderClaimDTO {
+  /**
+   * The claim's ID.
+   */
+  id: string
+
+  /**
+   * The claim's type.
+   */
+  type: OrderClaimType
   /**
    * The ID of the associated order.
    */
   order_id: string
 
   /**
-   * The items to be received from the customer
-   * if the claim's type is `replace`.
+   * The associated order.
+   */
+  order?: OrderDTO
+
+  /**
+   * The version of the order when the claim is applied.
+   */
+  order_version: number
+
+  /**
+   * The claim's display ID.
+   */
+  display_id: number
+
+  /**
+   * The items to be received from the customer.
    */
   claim_items: any[]
 
@@ -1595,25 +1905,79 @@ export interface OrderClaimDTO
   refund_amount?: BigNumberValue
 
   /**
-   * The id of the user that creates the order claim
+   * The raw refund amount of the claim.
+   */
+  raw_refund_amount?: BigNumberValue
+
+  /**
+   * The id of the user that created the order claim
    */
   created_by?: string | null
+
+  /**
+   * The shipping methods used to send the additional items.
+   */
+  shipping_methods?: OrderShippingMethodDTO[]
+
+  /**
+   * The claim's transactions if additional payment is required.
+   */
+  transactions?: OrderTransactionDTO[]
+
+  /**
+   * Holds custom data in key-value pairs.
+   */
+  metadata: Record<string, unknown> | null
+
+  /**
+   * The creation date of the claim.
+   */
+  created_at?: Date | string
+
+  /**
+   * The update date of the claim.
+   */
+  updated_at?: Date | string
+
+  /**
+   * The deletion date of the claim.
+   */
+  deleted_at?: Date | string
+
+  /**
+   * The cancelation date of the claim.
+   */
+  canceled_at?: Date | string
 }
 
 /**
  * The exchange details.
  */
-export interface OrderExchangeDTO
-  extends Omit<OrderDTO, "status" | "version" | "items"> {
+export interface OrderExchangeDTO {
+  /**
+   * The exchange's ID.
+   */
+  id: string
+
   /**
    * The associated order's ID.
    */
   order_id: string
 
   /**
-   * The items to be returned from the customer.
+   * The associated order.
    */
-  return_items: any[]
+  order?: OrderDTO
+
+  /**
+   * The version of the order when the exchange is applied.
+   */
+  order_version: number
+
+  /**
+   * The exchange's display ID.
+   */
+  display_id: number
 
   /**
    * The items to be sent to the customer.
@@ -1636,6 +2000,20 @@ export interface OrderExchangeDTO
   difference_due?: BigNumberValue
 
   /**
+   * The raw difference due of the order exchange.
+   *
+   * - If less than `0`, the merchant owes the customer this amount.
+   * - If greater than `0`, the customer owes the merchange this amount.
+   * - If equal to `0`, no payment is required by either sides.
+   */
+  raw_difference_due?: BigNumberValue
+
+  /**
+   * Whether the variants that are out of stock can be added to the exchange.
+   */
+  allow_backorder?: boolean
+
+  /**
    * The associated return.
    */
   return?: ReturnDTO
@@ -1646,9 +2024,44 @@ export interface OrderExchangeDTO
   return_id?: string
 
   /**
-   * The id of the user that creates the order exchange
+   * The id of the user that created the order exchange
    */
   created_by?: string | null
+
+  /**
+   * The shipping methods used to send the additional items.
+   */
+  shipping_methods?: OrderShippingMethodDTO[]
+
+  /**
+   * The exchange's transactions if additional payment is required.
+   */
+  transactions?: OrderTransactionDTO[]
+
+  /**
+   * Holds custom data in key-value pairs.
+   */
+  metadata: Record<string, unknown> | null
+
+  /**
+   * The creation date of the exchange.
+   */
+  created_at?: Date | string
+
+  /**
+   * The update date of the exchange.
+   */
+  updated_at?: Date | string
+
+  /**
+   * The deletion date of the exchange.
+   */
+  deleted_at?: Date | string
+
+  /**
+   * The cancelation date of the exchange.
+   */
+  canceled_at?: Date | string
 }
 
 /**
@@ -1725,7 +2138,7 @@ export interface OrderChangeDTO {
   /**
    * The type of the order change
    */
-  change_type?: "return" | "exchange" | "claim" | "edit"
+  change_type?: "return" | "exchange" | "claim" | "edit" | "transfer"
 
   /**
    * The ID of the associated order
@@ -1785,7 +2198,7 @@ export interface OrderChangeDTO {
   /**
    * The status of the order change
    */
-  status: string
+  status: OrderChangeStatus
 
   /**
    * The requested by of the order change
@@ -1960,63 +2373,8 @@ export interface OrderTransactionDTO {
 
   /**
    * The raw amount of the transaction
-   */
-  raw_amount: BigNumberRawValue
-
-  /**
-   * The currency code of the transaction
-   */
-  currency_code: string
-
-  /**
-   * The reference of the transaction
-   */
-  reference: string
-
-  /**
-   * The ID of the reference
-   */
-  reference_id: string
-
-  /**
-   * When the transaction was created
-   */
-  created_at: Date | string
-
-  /**
-   * When the transaction was updated
-   */
-  updated_at: Date | string
-}
-
-/**
- * The order transaction details.
- */
-export interface OrderTransactionDTO {
-  /**
-   * The ID of the transaction
-   */
-  id: string
-
-  /**
-   * The ID of the associated order
-   */
-  order_id: string
-
-  /**
-   * The associated order
    *
-   * @expandable
-   */
-  order: OrderDTO
-
-  /**
-   * The amount of the transaction
-   */
-  amount: BigNumberValue
-
-  /**
-   * The raw amount of the transaction
+   * @ignore
    */
   raw_amount: BigNumberRawValue
 
@@ -2370,6 +2728,21 @@ export interface FilterableOrderChangeProps
   order_id?: string | string[] | OperatorMap<string>
 
   /**
+   * Filter the changes by their associated return's ID.
+   */
+  return_id?: string | string[] | OperatorMap<string>
+
+  /**
+   * Filter the changes by their associated claim's ID.
+   */
+  claim_id?: string | string[] | OperatorMap<string>
+
+  /**
+   * Filter the changes by their associated exchange's ID.
+   */
+  exchange_id?: string | string[] | OperatorMap<string>
+
+  /**
    * Filter the order changes by their status.
    */
   status?: string | string[] | OperatorMap<string>
@@ -2676,11 +3049,74 @@ export interface OrderChangeReturn {
   shippingMethods: any[]
 }
 
+/**
+ * The details of an order after a change is applied on it.
+ */
 export interface OrderPreviewDTO
   extends Omit<OrderDTO, "items" | "shipping_methods"> {
+  /**
+   * The details of the changes made on the order.
+   */
   order_change: OrderChangeDTO
+  /**
+   * The items of the order, along with changes on the items.
+   */
   items: (OrderLineItemDTO & { actions?: OrderChangeActionDTO[] })[]
+  /**
+   * The shipping methods of the order, along with changes on the shipping methods.
+   */
   shipping_methods: (OrderShippingMethodDTO & {
     actions?: OrderChangeActionDTO[]
   })[]
+  /**
+   * The total amount for the requested return.
+   */
+  return_requested_total: number
+}
+
+/**
+ * The order credit line details.
+ */
+export interface OrderCreditLineDTO {
+  /**
+   * The ID of the order credit line.
+   */
+  id: string
+
+  /**
+   * The ID of the order that the credit line belongs to.
+   */
+  order_id: string
+
+  /**
+   * The associated order
+   *
+   * @expandable
+   */
+  order: OrderDTO
+
+  /**
+   * The reference model name that the credit line is generated from
+   */
+  reference: string | null
+
+  /**
+   * The reference model id that the credit line is generated from
+   */
+  reference_id: string | null
+
+  /**
+   * The metadata of the order detail
+   */
+  metadata: Record<string, unknown> | null
+
+  /**
+   * The date when the order credit line was created.
+   */
+  created_at: Date
+
+  /**
+   * The date when the order credit line was last updated.
+   */
+  updated_at: Date
 }

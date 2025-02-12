@@ -1,4 +1,7 @@
-import { PreviewDocsOptions, previewDocs } from "@redocly/cli/lib/commands/preview-docs"
+import {
+  previewDocs,
+  PreviewDocsOptions,
+} from "@redocly/cli/lib/commands/preview-docs"
 import { commandWrapper } from "@redocly/cli/lib/wrapper"
 import { Command, Option, OptionValues } from "commander"
 import execa from "execa"
@@ -12,7 +15,12 @@ import {
 } from "./utils/circular-patch-utils"
 import { getTmpDirectory, isFile } from "./utils/fs-utils"
 import { readJson } from "./utils/json-utils"
-import { jsonObjectToYamlString, readYaml, writeYaml, writeYamlFromJson } from "./utils/yaml-utils"
+import {
+  jsonObjectToYamlString,
+  readYaml,
+  writeYaml,
+  writeYamlFromJson,
+} from "./utils/yaml-utils"
 import yargs from "yargs"
 
 /**
@@ -64,7 +72,7 @@ export const commandOptions: Option[] = [
   new Option(
     "--main-file-name <mainFileName>",
     "The name of the main YAML file."
-  ).default("openapi.yaml")
+  ).default("openapi.yaml"),
 ]
 
 export function getCommand(): Command {
@@ -135,10 +143,15 @@ export async function execute(cliParams: OptionValues): Promise<void> {
 
   const srcFileSanitized = path.resolve(tmpDir, "tmp.oas.yaml")
   await sanitizeOAS(srcFile, srcFileSanitized, configTmpFile)
-  await fixCirclularReferences(srcFileSanitized, dryRun)
+  await fixCirclularReferences(srcFileSanitized)
 
   if (dryRun) {
     console.log(`⚫️ Dry run - no files generated`)
+    // check out possible changes in redocly config
+    await execa("git", [
+      "checkout",
+      path.join(basePath, "redocly", "redocly-config.yaml"),
+    ])
     return
   }
   if (shouldPreview) {
@@ -148,7 +161,10 @@ export async function execute(cliParams: OptionValues): Promise<void> {
   if (shouldSplit) {
     await generateReference(srcFileSanitized, outDir)
   } else {
-    await writeYaml(path.join(outDir, finalOASFile), await fs.readFile(srcFileSanitized, "utf8"))
+    await writeYaml(
+      path.join(outDir, finalOASFile),
+      await fs.readFile(srcFileSanitized, "utf8")
+    )
   }
   if (shouldBuildHTML) {
     const outHTMLFile = path.resolve(outDir, "index.html")
@@ -223,7 +239,7 @@ const sanitizeOAS = async (
   console.log(logs)
 }
 
-const fixCirclularReferences = async (srcFile: string, dryRun = false): Promise<void> => {
+const fixCirclularReferences = async (srcFile: string): Promise<void> => {
   const { circularRefs, oas } = await getCircularReferences(srcFile)
   if (circularRefs.length) {
     const recommendation = getCircularPatchRecommendation(circularRefs, oas)
@@ -234,20 +250,31 @@ const fixCirclularReferences = async (srcFile: string, dryRun = false): Promise<
 ${hint}
 ###
 `
-      if (dryRun) {
-        throw new Error(
-          `🔴 Unhandled circular references - Please manually patch using --config ./redocly-config.yaml
-Within redocly-config.yaml, try adding the following:` + hintMessage
-        )
-      }
-      const redoclyConfigPath = path.join(basePath, "redocly", "redocly-config.yaml")
-      const originalContent = await readYaml(redoclyConfigPath) as CircularReferenceConfig
-      originalContent.decorators["medusa/circular-patch"].schemas = Object.assign(
-        originalContent.decorators["medusa/circular-patch"].schemas, 
-        recommendation
+      const redoclyConfigPath = path.join(
+        basePath,
+        "redocly",
+        "redocly-config.yaml"
       )
-      await writeYaml(redoclyConfigPath, jsonObjectToYamlString(originalContent))
-      console.log(`🟡 Added the following unhandled circular references to redocly-config.ts:` + hintMessage)
+      const originalContent = (await readYaml(
+        redoclyConfigPath
+      )) as CircularReferenceConfig
+      Object.keys(recommendation).forEach((recKey) => {
+        originalContent.decorators["medusa/circular-patch"].schemas[recKey] = [
+          ...(originalContent.decorators["medusa/circular-patch"].schemas[
+            recKey
+          ] || []),
+          ...recommendation[recKey],
+        ]
+      })
+
+      await writeYaml(
+        redoclyConfigPath,
+        jsonObjectToYamlString(originalContent)
+      )
+      console.log(
+        `🟡 Added the following unhandled circular references to redocly-config.ts:` +
+          hintMessage
+      )
     }
   }
   console.log(`🟢 All circular references are handled`)

@@ -89,6 +89,14 @@
       "schema": "public",
       "indexes": [
         {
+          "keyName": "IDX_region_deleted_at",
+          "columnNames": [],
+          "composite": false,
+          "primary": false,
+          "unique": false,
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_region_deleted_at\" ON \"region\" (deleted_at) WHERE deleted_at IS NULL"
+        },
+        {
           "keyName": "region_pkey",
           "columnNames": [
             "id"
@@ -203,12 +211,28 @@
       "schema": "public",
       "indexes": [
         {
+          "keyName": "IDX_region_country_region_id",
+          "columnNames": [],
+          "composite": false,
+          "primary": false,
+          "unique": false,
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_region_country_region_id\" ON \"region_country\" (region_id) WHERE deleted_at IS NULL"
+        },
+        {
+          "keyName": "IDX_region_country_deleted_at",
+          "columnNames": [],
+          "composite": false,
+          "primary": false,
+          "unique": false,
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_region_country_deleted_at\" ON \"region_country\" (deleted_at) WHERE deleted_at IS NULL"
+        },
+        {
           "keyName": "IDX_region_country_region_id_iso_2_unique",
           "columnNames": [],
           "composite": false,
           "primary": false,
           "unique": false,
-          "expression": "CREATE UNIQUE INDEX IF NOT EXISTS \"IDX_region_country_region_id_iso_2_unique\" ON \"region_country\" (region_id, iso_2)"
+          "expression": "CREATE UNIQUE INDEX IF NOT EXISTS \"IDX_region_country_region_id_iso_2_unique\" ON \"region_country\" (region_id, iso_2) WHERE deleted_at IS NULL"
         },
         {
           "keyName": "region_country_pkey",

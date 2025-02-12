@@ -22,13 +22,14 @@ const OAS_PREFIX_REGEX = /@oas \[(?<method>(get|post|delete))\] (?<path>.+)/
 
 const ignoreSchemas = [
   "AuthResponse",
+  "AuthCallbackResponse",
   "AuthAdminSessionResponse",
   "AuthStoreSessionResponse",
 ]
 
 const ignoreTags = {
   admin: ["Auth"],
-  store: ["Auth"]
+  store: ["Auth"],
 }
 
 export default async function () {
@@ -174,6 +175,30 @@ export default async function () {
       })
 
       // collect schemas
+      oas.parameters?.forEach((parameter) => {
+        if (oasSchemaHelper.isRefObject(parameter)) {
+          referencedSchemas.add(
+            oasSchemaHelper.normalizeSchemaName(parameter.$ref)
+          )
+
+          return
+        }
+
+        if (!parameter.schema) {
+          return
+        }
+
+        if (oasSchemaHelper.isRefObject(parameter.schema)) {
+          referencedSchemas.add(
+            oasSchemaHelper.normalizeSchemaName(parameter.schema.$ref)
+          )
+
+          return
+        }
+
+        testAndFindReferenceSchema(parameter.schema)
+      })
+
       if (oas.requestBody) {
         if (oasSchemaHelper.isRefObject(oas.requestBody)) {
           referencedSchemas.add(
@@ -229,8 +254,8 @@ export default async function () {
     }
     const lengthBefore = parsedBaseYaml.tags?.length || 0
 
-    parsedBaseYaml.tags = parsedBaseYaml.tags?.filter((tag) =>
-      areaTags.has(tag.name) || ignoreTags[area].includes(tag.name)
+    parsedBaseYaml.tags = parsedBaseYaml.tags?.filter(
+      (tag) => areaTags.has(tag.name) || ignoreTags[area].includes(tag.name)
     )
 
     if (lengthBefore !== (parsedBaseYaml.tags?.length || 0)) {

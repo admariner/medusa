@@ -1,9 +1,9 @@
 import {
   AddFulfillmentShippingOptionRulesWorkflowDTO,
   IFulfillmentModuleService,
-} from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const createShippingOptionRulesStepId = "create-shipping-option-rules"
 /**
@@ -18,7 +18,7 @@ export const createShippingOptionRulesStep = createStep(
     const { data } = input
 
     const fulfillmentModule = container.resolve<IFulfillmentModuleService>(
-      ModuleRegistrationName.FULFILLMENT
+      Modules.FULFILLMENT
     )
 
     const createdShippingOptionRules =
@@ -35,7 +35,7 @@ export const createShippingOptionRulesStep = createStep(
     }
 
     const fulfillmentModule = container.resolve<IFulfillmentModuleService>(
-      ModuleRegistrationName.FULFILLMENT
+      Modules.FULFILLMENT
     )
 
     await fulfillmentModule.deleteShippingOptionRules(ruleIds)

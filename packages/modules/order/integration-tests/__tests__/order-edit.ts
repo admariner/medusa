@@ -3,9 +3,9 @@ import {
   CreateOrderChangeDTO,
   CreateOrderDTO,
   IOrderModuleService,
-} from "@medusajs/types"
-import { BigNumber, ChangeActionType, Modules } from "@medusajs/utils"
-import { moduleIntegrationTestRunner } from "medusa-test-utils"
+} from "@medusajs/framework/types"
+import { BigNumber, ChangeActionType, Modules } from "@medusajs/framework/utils"
+import { moduleIntegrationTestRunner } from "@medusajs/test-utils"
 
 jest.setTimeout(100000)
 
@@ -27,6 +27,7 @@ moduleIntegrationTestRunner<IOrderModuleService>({
             product_description: "Description 1",
             product_subtitle: "Product Subtitle 1",
             product_type: "Type 1",
+            product_type_id: "type_1",
             product_collection: "Collection 1",
             product_handle: "handle1",
             variant_id: "variant1",
@@ -284,6 +285,7 @@ moduleIntegrationTestRunner<IOrderModuleService>({
               product_description: "Description 1",
               product_subtitle: "Product Subtitle 1",
               product_type: "Type 1",
+              product_type_id: "type_1",
               product_collection: "Collection 1",
               product_handle: "handle1",
               variant_sku: "SKU1",
@@ -397,6 +399,13 @@ moduleIntegrationTestRunner<IOrderModuleService>({
                 quantity: 4,
               },
             },
+            {
+              action: ChangeActionType.DELIVER_ITEM,
+              details: {
+                reference_id: createdOrder.items![1].id,
+                quantity: 1,
+              },
+            },
           ],
         })
 
@@ -421,6 +430,7 @@ moduleIntegrationTestRunner<IOrderModuleService>({
           expect.objectContaining({
             quantity: 4,
             fulfilled_quantity: 1,
+            delivered_quantity: 1,
           })
         )
 
@@ -499,6 +509,30 @@ moduleIntegrationTestRunner<IOrderModuleService>({
             fulfilled_quantity: 2,
           })
         )
+
+        const orderChange5 = await service.createOrderChange({
+          order_id: createdOrder.id,
+          actions: [
+            {
+              action: ChangeActionType.DELIVER_ITEM,
+              details: {
+                reference_id: createdOrder.items![1].id,
+                quantity: 5,
+              },
+            },
+          ],
+        })
+
+        await expect(
+          service.confirmOrderChange({
+            id: orderChange5.id,
+          })
+        ).rejects.toThrow(
+          `Cannot deliver more items than what was fulfilled for item ${
+            createdOrder.items![1].id
+          }`
+        )
+        await service.deleteOrderChanges([orderChange5.id])
       })
 
       it("should create an order change, add actions to it, confirm the changes, revert all the changes and restore the changes again.", async function () {

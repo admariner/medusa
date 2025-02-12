@@ -20,7 +20,7 @@
  *     label: cURL
  *     source: |-
  *       curl -X DELETE '{backend_url}/admin/customers/{id}' \
- *       -H 'x-medusa-access-token: {api_token}'
+ *       -H 'Authorization: Bearer {access_token}'
  * tags:
  *   - Customers
  * responses:
@@ -30,7 +30,7 @@
  *       application/json:
  *         schema:
  *           type: object
- *           description: SUMMARY
+ *           description: The deletion's details.
  *           required:
  *             - id
  *             - object
@@ -60,7 +60,7 @@
  *     $ref: "#/components/responses/invalid_request_error"
  *   "500":
  *     $ref: "#/components/responses/500_error"
- * x-workflow: deleteCustomersWorkflow
+ * x-workflow: removeCustomerAccountWorkflow
  * 
 */
 

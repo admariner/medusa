@@ -2,12 +2,8 @@ import {
   IFulfillmentModuleService,
   IPricingModuleService,
 } from "@medusajs/types"
-import {
-  ContainerRegistrationKeys,
-  ModuleRegistrationName,
-  Modules,
-} from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/utils"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import {
   adminHeaders,
   createAdminUser,
@@ -28,10 +24,8 @@ medusaIntegrationTestRunner({
 
       beforeAll(async () => {
         appContainer = getContainer()
-        fulfillmentModule = appContainer.resolve(
-          ModuleRegistrationName.FULFILLMENT
-        )
-        pricingModule = appContainer.resolve(ModuleRegistrationName.PRICING)
+        fulfillmentModule = appContainer.resolve(Modules.FULFILLMENT)
+        pricingModule = appContainer.resolve(Modules.PRICING)
         remoteQuery = appContainer.resolve(
           ContainerRegistrationKeys.REMOTE_QUERY
         )

@@ -1,16 +1,32 @@
-import { CreatePromotionDTO, IPromotionModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import {
+  CreatePromotionDTO,
+  IPromotionModuleService,
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
 export const createPromotionsStepId = "create-promotions"
 /**
  * This step creates one or more promotions.
+ * 
+ * @example
+ * const data = createPromotionsStep([
+ *   {
+ *     code: "10OFF",
+ *     type: "standard",
+ *     application_method: {
+ *       type: "percentage",
+ *       value: 10,
+ *       target_type: "items"
+ *     }
+ *   }
+ * ])
  */
 export const createPromotionsStep = createStep(
   createPromotionsStepId,
   async (data: CreatePromotionDTO[], { container }) => {
     const promotionModule = container.resolve<IPromotionModuleService>(
-      ModuleRegistrationName.PROMOTION
+      Modules.PROMOTION
     )
 
     const createdPromotions = await promotionModule.createPromotions(data)
@@ -26,7 +42,7 @@ export const createPromotionsStep = createStep(
     }
 
     const promotionModule = container.resolve<IPromotionModuleService>(
-      ModuleRegistrationName.PROMOTION
+      Modules.PROMOTION
     )
 
     await promotionModule.deletePromotions(createdPromotionIds)

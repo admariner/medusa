@@ -1,6 +1,35 @@
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
-import { ModuleRegistrationName } from "@medusajs/utils"
+import { MathBN, MedusaError, Modules } from "@medusajs/framework/utils"
+import { BigNumberInput } from "@medusajs/types"
+
+export interface ValidateInventoryDeleteStepInput {
+  inventory_items: { id: string; reserved_quantity: BigNumberInput }[]
+}
+
+export const validateVariantInventoryStepId = "validate-inventory-item-delete"
+
+export const validateInventoryDeleteStep = createStep(
+  validateVariantInventoryStepId,
+  async (data: ValidateInventoryDeleteStepInput) => {
+    const nonDeletable = data.inventory_items.filter((inventoryItem) => {
+      return MathBN.gt(inventoryItem.reserved_quantity, 0)
+    })
+    if (nonDeletable.length) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `Cannot remove following inventory item(s) since they have reservations: [${nonDeletable
+          .map((inventoryItem) => inventoryItem.id)
+          .join(", ")}].`
+      )
+    }
+  }
+)
+
+/**
+ * The IDs of the inventory items to delete.
+ */
+export type DeleteInventoryItemStepInput = string[]
 
 export const deleteInventoryItemStepId = "delete-inventory-item-step"
 /**
@@ -8,8 +37,8 @@ export const deleteInventoryItemStepId = "delete-inventory-item-step"
  */
 export const deleteInventoryItemStep = createStep(
   deleteInventoryItemStepId,
-  async (ids: string[], { container }) => {
-    const inventoryService = container.resolve(ModuleRegistrationName.INVENTORY)
+  async (ids: DeleteInventoryItemStepInput, { container }) => {
+    const inventoryService = container.resolve(Modules.INVENTORY)
 
     await inventoryService.softDeleteInventoryItems(ids)
 
@@ -20,7 +49,7 @@ export const deleteInventoryItemStep = createStep(
       return
     }
 
-    const inventoryService = container.resolve(ModuleRegistrationName.INVENTORY)
+    const inventoryService = container.resolve(Modules.INVENTORY)
 
     await inventoryService.restoreInventoryItems(prevInventoryItemIds)
   }

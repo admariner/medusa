@@ -4,7 +4,6 @@
  * summary: Create Session
  * description: Create a session.
  * x-authenticated: false
- * parameters: []
  * x-codeSamples:
  *   - lang: Shell
  *     label: cURL
@@ -24,10 +23,6 @@
  *     $ref: "#/components/responses/invalid_request_error"
  *   "500":
  *     $ref: "#/components/responses/500_error"
- * requestBody:
- *   content:
- *     application/json:
- *       schema: {}
  * 
 */
 

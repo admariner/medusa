@@ -1,8 +1,15 @@
-import { generateJwtToken } from "@medusajs/utils"
+import { AuthIdentityDTO } from "@medusajs/framework/types"
+import { generateJwtToken } from "@medusajs/framework/utils"
 
 export function generateJwtTokenForAuthIdentity(
-  { authIdentity, actorType },
-  { secret, expiresIn }
+  {
+    authIdentity,
+    actorType,
+  }: { authIdentity: AuthIdentityDTO; actorType: string },
+  {
+    secret,
+    expiresIn,
+  }: { secret: string | undefined; expiresIn: string | undefined }
 ) {
   const entityIdKey = `${actorType}_id`
   const entityId = authIdentity?.app_metadata?.[entityIdKey] as

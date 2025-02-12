@@ -1,18 +1,22 @@
 /**
  * @oas [get] /store/customers/me/addresses
  * operationId: GetCustomersMeAddresses
- * summary: List Customers
- * description: Retrieve a list of customers. The customers can be filtered by fields such as `id`. The customers can also be sorted or paginated.
+ * summary: List Customer's Addresses
+ * x-sidebary-summary: List Addresses
+ * description: Retrieve the addresses of the logged-in customer. The addresses can be filtered by fields such as `country_code`. The addresses can also be sorted or paginated.
  * x-authenticated: true
+ * externalDocs:
+ *   url: https://docs.medusajs.com/v2/resources/storefront-development/customers/addresses#list-customer-addresses
+ *   description: "Storefront guide: How to retrieve the logged-in customer's addresses."
  * parameters:
- *   - name: expand
- *     in: query
- *     description: Comma-separated relations that should be expanded in the returned data.
- *     required: false
+ *   - name: x-publishable-api-key
+ *     in: header
+ *     description: Publishable API Key created in the Medusa Admin.
+ *     required: true
  *     schema:
  *       type: string
- *       title: expand
- *       description: Comma-separated relations that should be expanded in the returned data.
+ *       externalDocs:
+ *         url: https://docs.medusajs.com/api/store#publishable-api-key
  *   - name: fields
  *     in: query
  *     description: Comma-separated fields that should be included in the returned data. if a field is prefixed with `+` it will be added to the default fields, using `-` will remove it from the default
@@ -23,6 +27,8 @@
  *       title: fields
  *       description: Comma-separated fields that should be included in the returned data. if a field is prefixed with `+` it will be added to the default fields, using `-` will remove it from the default
  *         fields. without prefix it will replace the entire default fields.
+ *       externalDocs:
+ *         url: "#select-fields-and-relations"
  *   - name: offset
  *     in: query
  *     description: The number of items to skip when retrieving a list.
@@ -31,6 +37,8 @@
  *       type: number
  *       title: offset
  *       description: The number of items to skip when retrieving a list.
+ *       externalDocs:
+ *         url: "#pagination"
  *   - name: limit
  *     in: query
  *     description: Limit the number of items returned in the list.
@@ -39,6 +47,8 @@
  *       type: number
  *       title: limit
  *       description: Limit the number of items returned in the list.
+ *       externalDocs:
+ *         url: "#pagination"
  *   - name: order
  *     in: query
  *     description: The field to sort the data by. By default, the sort order is ascending. To change the order to descending, prefix the field name with `-`.
@@ -47,117 +57,59 @@
  *       type: string
  *       title: order
  *       description: The field to sort the data by. By default, the sort order is ascending. To change the order to descending, prefix the field name with `-`.
- *   - name: metadata
- *     in: query
- *     description: The customer's metadata.
- *     required: true
- *     schema:
- *       type: object
- *       description: The customer's metadata.
- *   - name: first_name
- *     in: query
- *     description: The customer's first name.
- *     required: true
- *     schema:
- *       type: string
- *       title: first_name
- *       description: The customer's first name.
- *   - name: last_name
- *     in: query
- *     description: The customer's last name.
- *     required: true
- *     schema:
- *       type: string
- *       title: last_name
- *       description: The customer's last name.
- *   - name: phone
- *     in: query
- *     description: The customer's phone.
- *     required: true
- *     schema:
- *       type: string
- *       title: phone
- *       description: The customer's phone.
- *   - name: company
- *     in: query
- *     description: The customer's company.
- *     required: true
- *     schema:
- *       type: string
- *       title: company
- *       description: The customer's company.
- *   - name: address_1
- *     in: query
- *     description: The customer's address 1.
- *     required: true
- *     schema:
- *       type: string
- *       title: address_1
- *       description: The customer's address 1.
- *   - name: address_2
- *     in: query
- *     description: The customer's address 2.
- *     required: true
- *     schema:
- *       type: string
- *       title: address_2
- *       description: The customer's address 2.
  *   - name: city
  *     in: query
- *     description: The customer's city.
- *     required: true
+ *     description: Filter by the address's city.
+ *     required: false
  *     schema:
- *       type: string
- *       title: city
- *       description: The customer's city.
- *   - name: country_code
- *     in: query
- *     description: The customer's country code.
- *     required: true
- *     schema:
- *       type: string
- *       title: country_code
- *       description: The customer's country code.
- *   - name: province
- *     in: query
- *     description: The customer's province.
- *     required: true
- *     schema:
- *       type: string
- *       title: province
- *       description: The customer's province.
+ *       oneOf:
+ *         - type: string
+ *           title: city
+ *           description: Filter by a city.
+ *         - type: array
+ *           description: Filter by cities.
+ *           items:
+ *             type: string
+ *             title: city
+ *             description: A city.
  *   - name: postal_code
  *     in: query
- *     description: The customer's postal code.
- *     required: true
- *     schema:
- *       type: string
- *       title: postal_code
- *       description: The customer's postal code.
- *   - name: address_name
- *     in: query
- *     description: The customer's address name.
- *     required: true
- *     schema:
- *       type: string
- *       title: address_name
- *       description: The customer's address name.
- *   - name: is_default_shipping
- *     in: query
- *     description: The customer's is default shipping.
+ *     description: Filter by the address's postal code.
  *     required: false
  *     schema:
- *       type: boolean
- *       title: is_default_shipping
- *       description: The customer's is default shipping.
- *   - name: is_default_billing
+ *       oneOf:
+ *         - type: string
+ *           title: postal_code
+ *           description: Filter by a postal code.
+ *         - type: array
+ *           description: Filter by postal codes.
+ *           items:
+ *             type: string
+ *             title: postal_code
+ *             description: A postal code.
+ *   - name: country_code
  *     in: query
- *     description: The customer's is default billing.
+ *     description: Filter by the address's country code.
  *     required: false
  *     schema:
- *       type: boolean
- *       title: is_default_billing
- *       description: The customer's is default billing.
+ *       oneOf:
+ *         - type: string
+ *           title: country_code
+ *           description: Filter by a country code.
+ *         - type: array
+ *           description: Filter by country codes.
+ *           items:
+ *             type: string
+ *             title: country_code
+ *             description: A country code.
+ *   - name: q
+ *     in: query
+ *     description: Search term to filter the address's searchable properties.
+ *     required: false
+ *     schema:
+ *       type: string
+ *       title: q
+ *       description: Search term to filter the address's searchable properties.
  * security:
  *   - cookie_auth: []
  *   - jwt_token: []
@@ -166,7 +118,8 @@
  *     label: cURL
  *     source: |-
  *       curl '{backend_url}/store/customers/me/addresses' \
- *       -H 'Authorization: Bearer {access_token}'
+ *       -H 'Authorization: Bearer {access_token}' \
+ *       -H 'x-publishable-api-key: {your_publishable_api_key}'
  * tags:
  *   - Customers
  * responses:

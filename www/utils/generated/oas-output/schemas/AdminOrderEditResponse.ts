@@ -1,13 +1,13 @@
 /**
  * @schema AdminOrderEditResponse
  * type: object
- * description: SUMMARY
+ * description: An order edit's details.
  * x-schemaName: AdminOrderEditResponse
  * required:
  *   - order_change
  * properties:
  *   order_change:
- *     $ref: "#/components/schemas/OrderChange"
+ *     $ref: "#/components/schemas/AdminOrderChange"
  * 
 */
 

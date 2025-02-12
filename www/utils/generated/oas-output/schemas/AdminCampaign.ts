@@ -12,6 +12,9 @@
  *   - starts_at
  *   - ends_at
  *   - budget
+ *   - created_at
+ *   - updated_at
+ *   - deleted_at
  * properties:
  *   id:
  *     type: string
@@ -32,15 +35,15 @@
  *   campaign_identifier:
  *     type: string
  *     title: campaign_identifier
- *     description: The campaign's campaign identifier.
+ *     description: The campaign's identifier.
  *   starts_at:
  *     type: string
  *     title: starts_at
- *     description: The campaign's starts at.
+ *     description: The date and time that the campaign starts.
  *   ends_at:
  *     type: string
  *     title: ends_at
- *     description: The campaign's ends at.
+ *     description: The date and time that the campaign ends.
  *   budget:
  *     type: object
  *     description: The campaign's budget.
@@ -57,7 +60,9 @@
  *         description: The budget's ID.
  *       type:
  *         type: string
- *         description: The budget's type.
+ *         description: >
+ *           The budget's type. `spend` means the limit is set on the total amount discounted by the campaign's promotions; `usage` means the limit is set on the total number of times the campaign's
+ *           promotions can be used.
  *         enum:
  *           - spend
  *           - usage
@@ -72,7 +77,24 @@
  *       used:
  *         type: number
  *         title: used
- *         description: The budget's used.
+ *         description: >
+ *           How much of the budget has been used. If the limit is `spend`, this property holds the total amount discounted so far. If the limit is `usage`, it holds the number of times the campaign's
+ *           promotions have been used so far.
+ *   created_at:
+ *     type: string
+ *     format: date-time
+ *     title: created_at
+ *     description: The date the campaign was created.
+ *   updated_at:
+ *     type: string
+ *     format: date-time
+ *     title: updated_at
+ *     description: The date the campaign was updated.
+ *   deleted_at:
+ *     type: string
+ *     format: date-time
+ *     title: deleted_at
+ *     description: The date the campaign was deleted.
  * 
 */
 

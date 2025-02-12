@@ -1,8 +1,14 @@
-import { IOrderModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { createStep, StepResponse } from "@medusajs/workflows-sdk"
+import { IOrderModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The details of archiving the orders.
+ */
 export type ArchiveOrdersStepInput = {
+  /**
+   * The IDs of the orders to archive.
+   */
   orderIds: string[]
 }
 
@@ -13,9 +19,7 @@ export const archiveOrdersStepId = "archive-orders"
 export const archiveOrdersStep = createStep(
   archiveOrdersStepId,
   async (data: ArchiveOrdersStepInput, { container }) => {
-    const service = container.resolve<IOrderModuleService>(
-      ModuleRegistrationName.ORDER
-    )
+    const service = container.resolve<IOrderModuleService>(Modules.ORDER)
 
     const archived = await service.archive(data.orderIds)
     return new StepResponse(
@@ -33,9 +37,7 @@ export const archiveOrdersStep = createStep(
       return
     }
 
-    const service = container.resolve<IOrderModuleService>(
-      ModuleRegistrationName.ORDER
-    )
+    const service = container.resolve<IOrderModuleService>(Modules.ORDER)
 
     await service.updateOrders(archived)
   }

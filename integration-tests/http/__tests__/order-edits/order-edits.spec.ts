@@ -1,11 +1,10 @@
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import {
   ContainerRegistrationKeys,
-  ModuleRegistrationName,
   Modules,
   OrderChangeStatus,
   RuleOperator,
 } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
 import {
   adminHeaders,
   createAdminUser,
@@ -86,15 +85,29 @@ medusaIntegrationTestRunner({
         )
       ).data.sales_channel
 
+      shippingProfile = (
+        await api.post(
+          `/admin/shipping-profiles`,
+          {
+            name: "Test",
+            type: "default",
+          },
+          adminHeaders
+        )
+      ).data.shipping_profile
+
       const product = (
         await api.post(
           "/admin/products",
           {
             title: "Test product",
+            options: [{ title: "size", values: ["large", "small"] }],
+            shipping_profile_id: shippingProfile.id,
             variants: [
               {
                 title: "Test variant",
                 sku: "test-variant",
+                options: { size: "large" },
                 prices: [
                   {
                     currency_code: "usd",
@@ -113,10 +126,13 @@ medusaIntegrationTestRunner({
           "/admin/products",
           {
             title: "Extra product",
+            options: [{ title: "size", values: ["large", "small"] }],
+            shipping_profile_id: shippingProfile.id,
             variants: [
               {
                 title: "my variant",
                 sku: "variant-sku",
+                options: { size: "large" },
                 prices: [
                   {
                     currency_code: "usd",
@@ -130,7 +146,7 @@ medusaIntegrationTestRunner({
         )
       ).data.product
 
-      const orderModule = container.resolve(ModuleRegistrationName.ORDER)
+      const orderModule = container.resolve(Modules.ORDER)
 
       order = await orderModule.createOrders({
         region_id: region.id,
@@ -170,17 +186,6 @@ medusaIntegrationTestRunner({
         currency_code: "usd",
         customer_id: customer.id,
       })
-
-      shippingProfile = (
-        await api.post(
-          `/admin/shipping-profiles`,
-          {
-            name: "Test",
-            type: "default",
-          },
-          adminHeaders
-        )
-      ).data.shipping_profile
 
       location = (
         await api.post(
@@ -366,22 +371,81 @@ medusaIntegrationTestRunner({
         expect(result.summary.current_order_total).toEqual(84)
         expect(result.summary.original_order_total).toEqual(60)
 
-        // Update item quantity
+        // Update item quantity and unit_price with the same amount as we have originally should not change totals
         result = (
           await api.post(
             `/admin/order-edits/${orderId}/items/item/${item.id}`,
             {
-              quantity: 4,
+              quantity: 2,
+              unit_price: 25,
             },
             adminHeaders
           )
         ).data.order_preview
 
-        expect(result.summary.current_order_total).toEqual(134)
+        expect(result.summary.current_order_total).toEqual(84)
         expect(result.summary.original_order_total).toEqual(60)
 
-        // Remove the item by setting the quantity to 0
+        // Update item quantity, but keep the price as it was originally, should add + 25 to previous amount
+        result = (
+          await api.post(
+            `/admin/order-edits/${orderId}/items/item/${item.id}`,
+            {
+              quantity: 3,
+              unit_price: 25,
+            },
+            adminHeaders
+          )
+        ).data.order_preview
 
+        expect(result.summary.current_order_total).toEqual(109)
+        expect(result.summary.original_order_total).toEqual(60)
+
+        // Update item quantity, with a new price
+        // 30 * 3 = 90 (new item)
+        // 12 * 2 = 24 (custom item)
+        // 10 * 1 = 10 (shipping item)
+        // total = 124
+        result = (
+          await api.post(
+            `/admin/order-edits/${orderId}/items/item/${item.id}`,
+            {
+              quantity: 3,
+              unit_price: 30,
+            },
+            adminHeaders
+          )
+        ).data.order_preview
+
+        expect(result.summary.current_order_total).toEqual(124)
+        expect(result.summary.original_order_total).toEqual(60)
+
+        const updatedItem = result.items.find((i) => i.id === item.id)
+        expect(updatedItem.actions).toEqual([
+          expect.objectContaining({
+            details: expect.objectContaining({
+              quantity: 2,
+              unit_price: 25,
+              quantity_diff: 0,
+            }),
+          }),
+          expect.objectContaining({
+            details: expect.objectContaining({
+              quantity: 3,
+              unit_price: 25,
+              quantity_diff: 1,
+            }),
+          }),
+          expect.objectContaining({
+            details: expect.objectContaining({
+              quantity: 3,
+              unit_price: 30,
+              quantity_diff: 1,
+            }),
+          }),
+        ])
+
+        // Remove the item by setting the quantity to 0
         result = (
           await api.post(
             `/admin/order-edits/${orderId}/items/item/${item.id}`,
@@ -436,7 +500,7 @@ medusaIntegrationTestRunner({
           )
         ).data.order_changes
 
-        expect(result[0].actions).toHaveLength(3)
+        expect(result[0].actions).toHaveLength(5)
         expect(result[0].status).toEqual("confirmed")
         expect(result[0].confirmed_by).toEqual(expect.stringContaining("user_"))
       })

@@ -10,11 +10,12 @@ import {
 import { Context, LoadedModule, MedusaContainer } from "@medusajs/types"
 import { ExportedWorkflow } from "../../helper"
 import { Hook } from "./create-hook"
+import { CompensateFn, InvokeFn } from "./create-step"
 
 export type StepFunctionResult<TOutput extends unknown | unknown[] = unknown> =
   (this: CreateWorkflowComposerContext) => WorkflowData<TOutput>
 
-type StepFunctionReturnConfig<TOutput> = {
+export type StepFunctionReturnConfig<TOutput> = {
   config(
     config: { name?: string } & Omit<
       TransactionStepsDefinition,
@@ -32,8 +33,9 @@ export type HookHandler = (...args: any[]) => void | Promise<void>
 type ConvertHooksToFunctions<THooks extends any[]> = {
   [K in keyof THooks]: THooks[K] extends Hook<infer Name, infer Input>
     ? {
-        [Fn in Name]: (
-          callback: (input: Input, context: StepExecutionContext) => any
+        [Fn in Name]: <TOutput, TCompensateInput>(
+          invoke: InvokeFn<Input, TOutput, TCompensateInput>,
+          compensate?: CompensateFn<TCompensateInput>
         ) => void
       }
     : never
@@ -96,6 +98,7 @@ export type CreateWorkflowComposerContext = {
   hooksCallback_: Record<string, HookHandler>
   workflowId: string
   flow: OrchestratorBuilder
+  isAsync: boolean
   handlers: WorkflowHandler
   stepBinder: <TOutput = unknown>(
     fn: StepFunctionResult
@@ -124,6 +127,11 @@ export interface StepExecutionContext {
    * The idempoency key of the step.
    */
   idempotencyKey: string
+
+  /**
+   * The idempoency key of the parent step.
+   */
+  parentStepIdempotencyKey?: string
 
   /**
    * The name of the step.
@@ -221,7 +229,7 @@ export type ReturnWorkflow<TData, TResult, THooks extends any[]> = {
   /**
    * This method executes the workflow as a step. Useful when running a workflow within another.
    *
-   * Learn more in [this documentation](https://docs.medusajs.com/v2/advanced-development/workflows/execute-another-workflow).
+   * Learn more in [this documentation](https://docs.medusajs.com/learn/fundamentals/workflows/execute-another-workflow).
    *
    * @param param0 - The options to execute the workflow.
    * @returns The workflow's result
@@ -258,7 +266,7 @@ export type ReturnWorkflow<TData, TResult, THooks extends any[]> = {
   /**
    * The workflow's exposed hooks, used to register a handler to consume the hook.
    *
-   * Learn more in [this documentation](https://docs.medusajs.com/v2/advanced-development/workflows/add-workflow-hook#how-to-consume-a-hook).
+   * Learn more in [this documentation](https://docs.medusajs.com/learn/fundamentals/workflows/workflow-hooks#how-to-consume-a-hook).
    */
   hooks: ConvertHooksToFunctions<THooks>
 }

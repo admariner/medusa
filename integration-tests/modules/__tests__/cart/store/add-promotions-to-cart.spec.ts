@@ -1,15 +1,17 @@
 import { RemoteLink } from "@medusajs/modules-sdk"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ICartModuleService, IPromotionModuleService } from "@medusajs/types"
 import {
   ContainerRegistrationKeys,
-  ModuleRegistrationName,
   Modules,
+  PromotionStatus,
   PromotionType,
 } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
 import {
   adminHeaders,
   createAdminUser,
+  generatePublishableKey,
+  generateStoreHeaders,
 } from "../../../../helpers/create-admin-user"
 
 jest.setTimeout(50000)
@@ -24,13 +26,12 @@ medusaIntegrationTestRunner({
       let cartModuleService: ICartModuleService
       let promotionModuleService: IPromotionModuleService
       let remoteLinkService: RemoteLink
+      let storeHeaders
 
       beforeAll(async () => {
         appContainer = getContainer()
-        cartModuleService = appContainer.resolve(ModuleRegistrationName.CART)
-        promotionModuleService = appContainer.resolve(
-          ModuleRegistrationName.PROMOTION
-        )
+        cartModuleService = appContainer.resolve(Modules.CART)
+        promotionModuleService = appContainer.resolve(Modules.PROMOTION)
         remoteLinkService = appContainer.resolve(
           ContainerRegistrationKeys.REMOTE_LINK
         )
@@ -38,6 +39,8 @@ medusaIntegrationTestRunner({
 
       beforeEach(async () => {
         await createAdminUser(dbConnection, adminHeaders, appContainer)
+        const publishableKey = await generatePublishableKey(appContainer)
+        storeHeaders = generateStoreHeaders({ publishableKey })
       })
 
       describe("POST /store/carts/:id/promotions", () => {
@@ -46,11 +49,12 @@ medusaIntegrationTestRunner({
             await promotionModuleService.createPromotions({
               code: "PROMOTION_APPLIED",
               type: PromotionType.STANDARD,
+              status: PromotionStatus.ACTIVE,
               application_method: {
                 type: "fixed",
                 target_type: "items",
                 allocation: "each",
-                value: "300",
+                value: 300,
                 apply_to_quantity: 1,
                 currency_code: "usd",
                 max_quantity: 1,
@@ -68,11 +72,12 @@ medusaIntegrationTestRunner({
             await promotionModuleService.createPromotions({
               code: "PROMOTION_TEST",
               type: PromotionType.STANDARD,
+              status: PromotionStatus.ACTIVE,
               application_method: {
                 type: "fixed",
                 target_type: "items",
                 allocation: "across",
-                value: "1000",
+                value: 1000,
                 apply_to_quantity: 1,
                 currency_code: "usd",
                 target_rules: [
@@ -123,9 +128,11 @@ medusaIntegrationTestRunner({
             [Modules.PROMOTION]: { promotion_id: appliedPromotion.id },
           })
 
-          const created = await api.post(`/store/carts/${cart.id}/promotions`, {
-            promo_codes: [createdPromotion.code],
-          })
+          const created = await api.post(
+            `/store/carts/${cart.id}/promotions`,
+            { promo_codes: [createdPromotion.code] },
+            storeHeaders
+          )
 
           expect(created.status).toEqual(200)
           expect(created.data.cart).toEqual(
@@ -161,6 +168,7 @@ medusaIntegrationTestRunner({
               {
                 code: "PROMOTION_APPLIED",
                 type: PromotionType.STANDARD,
+                status: PromotionStatus.ACTIVE,
                 rules: [
                   {
                     attribute: "customer_id",
@@ -177,7 +185,7 @@ medusaIntegrationTestRunner({
                   type: "fixed",
                   target_type: "shipping_methods",
                   allocation: "each",
-                  value: "100",
+                  value: 100,
                   max_quantity: 1,
                   currency_code: "usd",
                   target_rules: [
@@ -195,6 +203,7 @@ medusaIntegrationTestRunner({
             {
               code: "PROMOTION_NEW",
               type: PromotionType.STANDARD,
+              status: PromotionStatus.ACTIVE,
               rules: [
                 {
                   attribute: "customer_id",
@@ -211,7 +220,7 @@ medusaIntegrationTestRunner({
                 type: "fixed",
                 target_type: "shipping_methods",
                 allocation: "each",
-                value: "200",
+                value: 200,
                 max_quantity: 1,
                 currency_code: "usd",
                 target_rules: [
@@ -264,9 +273,11 @@ medusaIntegrationTestRunner({
               },
             ])
 
-          const created = await api.post(`/store/carts/${cart.id}/promotions`, {
-            promo_codes: [newPromotion.code],
-          })
+          const created = await api.post(
+            `/store/carts/${cart.id}/promotions`,
+            { promo_codes: [newPromotion.code] },
+            storeHeaders
+          )
 
           expect(created.status).toEqual(200)
           expect(created.data.cart).toEqual(

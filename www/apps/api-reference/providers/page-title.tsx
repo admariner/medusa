@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useEffect } from "react"
-import { capitalize, useSidebar } from "docs-ui"
+import { useSidebar } from "docs-ui"
 import { useArea } from "./area"
 import { SidebarItemLink } from "types"
 
@@ -12,16 +12,15 @@ type PageTitleProviderProps = {
 }
 
 const PageTitleProvider = ({ children }: PageTitleProviderProps) => {
-  const { activePath, getActiveItem } = useSidebar()
-  const { area } = useArea()
+  const { activePath, activeItem } = useSidebar()
+  const { displayedArea } = useArea()
 
   useEffect(() => {
-    const titleSuffix = `Medusa ${capitalize(area)} API Reference`
+    const titleSuffix = `Medusa ${displayedArea} API Reference`
 
     if (!activePath?.length) {
       document.title = titleSuffix
     } else {
-      const activeItem = getActiveItem()
       if (activeItem?.path === activePath) {
         document.title = `${activeItem?.title} - ${titleSuffix}`
       } else {
@@ -34,7 +33,7 @@ const PageTitleProvider = ({ children }: PageTitleProviderProps) => {
         }
       }
     }
-  }, [activePath, area, getActiveItem])
+  }, [activePath, displayedArea, activeItem])
 
   return (
     <PageTitleContext.Provider value={null}>

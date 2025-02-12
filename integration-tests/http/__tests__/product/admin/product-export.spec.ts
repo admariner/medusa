@@ -1,13 +1,16 @@
 import { IEventBusModuleService } from "@medusajs/types"
-import { TestEventUtils, medusaIntegrationTestRunner } from "medusa-test-utils"
+import { CommonEvents, Modules } from "@medusajs/utils"
+import fs from "fs/promises"
+import {
+  TestEventUtils,
+  medusaIntegrationTestRunner,
+} from "@medusajs/test-utils"
+import path from "path"
 import {
   adminHeaders,
   createAdminUser,
 } from "../../../../helpers/create-admin-user"
 import { getProductFixture } from "../../../../helpers/fixtures"
-import fs from "fs/promises"
-import path from "path"
-import { ModuleRegistrationName } from "@medusajs/utils"
 
 jest.setTimeout(50000)
 
@@ -36,6 +39,9 @@ const compareCSVs = async (filePath, expectedFilePath) => {
   fileContent = fileContent.replace(dateRegex, "<DATE>")
   fixturesContent = fixturesContent.replace(dateRegex, "<DATE>")
 
+  fixturesContent = fixturesContent.replace(/,Shipping Profile Id*/g, "")
+  fixturesContent = fixturesContent.replace(/,import-shipping-profile*/g, "")
+
   expect(fileContent).toEqual(fixturesContent)
 }
 
@@ -53,10 +59,11 @@ medusaIntegrationTestRunner({
     let baseTag1
     let baseTag2
     let newTag
+    let shippingProfile
 
     let eventBus: IEventBusModuleService
     beforeAll(async () => {
-      eventBus = getContainer().resolve(ModuleRegistrationName.EVENT_BUS)
+      eventBus = getContainer().resolve(Modules.EVENT_BUS)
     })
 
     beforeEach(async () => {
@@ -88,6 +95,14 @@ medusaIntegrationTestRunner({
           adminHeaders
         )
       ).data.collection
+
+      shippingProfile = (
+        await api.post(
+          `/admin/shipping-profiles`,
+          { name: "Test", type: "default" },
+          adminHeaders
+        )
+      ).data.shipping_profile
 
       baseType = (
         await api.post(
@@ -127,6 +142,7 @@ medusaIntegrationTestRunner({
           getProductFixture({
             title: "Base product",
             description: "test-product-description\ntest line 2",
+            shipping_profile_id: shippingProfile.id,
             collection_id: baseCollection.id,
             type_id: baseType.id,
             categories: [{ id: baseCategory.id }],
@@ -188,6 +204,7 @@ medusaIntegrationTestRunner({
             status: "proposed",
             tags: [{ id: newTag.id }],
             type_id: baseType.id,
+            shipping_profile_id: shippingProfile.id,
           }),
           adminHeaders
         )
@@ -201,7 +218,7 @@ medusaIntegrationTestRunner({
     describe("POST /admin/products/export", () => {
       it("should export a csv file containing the expected products", async () => {
         const subscriberExecution = TestEventUtils.waitSubscribersExecution(
-          "notification.notification.created",
+          `${Modules.NOTIFICATION}.notification.${CommonEvents.CREATED}`,
           eventBus
         )
 
@@ -243,7 +260,7 @@ medusaIntegrationTestRunner({
 
       it("should export a csv file with categories", async () => {
         const subscriberExecution = TestEventUtils.waitSubscribersExecution(
-          "notification.notification.created",
+          `${Modules.NOTIFICATION}.notification.${CommonEvents.CREATED}`,
           eventBus
         )
 
@@ -269,7 +286,7 @@ medusaIntegrationTestRunner({
 
       it("should export a csv file with region prices", async () => {
         const subscriberExecution = TestEventUtils.waitSubscribersExecution(
-          "notification.notification.created",
+          `${Modules.NOTIFICATION}.notification.${CommonEvents.CREATED}`,
           eventBus
         )
 
@@ -278,6 +295,7 @@ medusaIntegrationTestRunner({
             "/admin/products",
             getProductFixture({
               title: "Product with prices",
+              shipping_profile_id: shippingProfile.id,
               tags: [{ id: baseTag1.id }, { id: baseTag2.id }],
               variants: [
                 {
@@ -328,7 +346,7 @@ medusaIntegrationTestRunner({
 
       it("should export a csv file filtered by specific products", async () => {
         const subscriberExecution = TestEventUtils.waitSubscribersExecution(
-          "notification.notification.created",
+          `${Modules.NOTIFICATION}.notification.${CommonEvents.CREATED}`,
           eventBus
         )
 

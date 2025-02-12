@@ -4,9 +4,12 @@ import {
   batchProductVariantsWorkflow,
   batchProductVariantsWorkflowId,
 } from "@medusajs/core-flows"
-import { IProductModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
+import {
+  IFulfillmentModuleService,
+  IProductModuleService,
+} from "@medusajs/types"
+import { Modules } from "@medusajs/utils"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 
 jest.setTimeout(50000)
 
@@ -17,9 +20,20 @@ medusaIntegrationTestRunner({
       let appContainer
       let service: IProductModuleService
 
+      let fulfullmentService: IFulfillmentModuleService
+      let shippingProfile
+
       beforeAll(async () => {
         appContainer = getContainer()
-        service = appContainer.resolve(ModuleRegistrationName.PRODUCT)
+        service = appContainer.resolve(Modules.PRODUCT)
+        fulfullmentService = appContainer.resolve(Modules.FULFILLMENT)
+      })
+
+      beforeEach(async () => {
+        shippingProfile = await fulfullmentService.createShippingProfiles({
+          name: "Test",
+          type: "default",
+        })
       })
 
       describe("batchProductWorkflow", () => {
@@ -40,7 +54,13 @@ medusaIntegrationTestRunner({
 
             const { errors } = await workflow.run({
               input: {
-                create: [{ title: "test3" }],
+                create: [
+                  {
+                    title: "test3",
+                    shipping_profile_id: shippingProfile.id,
+                    options: [{ title: "size", values: ["x"] }],
+                  },
+                ],
                 update: [{ id: product1.id, title: "test1-updated" }],
                 delete: [product2.id],
               },
@@ -88,14 +108,18 @@ medusaIntegrationTestRunner({
                 create: [
                   {
                     title: "test1",
+                    options: [{ title: "size", values: ["x", "l", "m"] }],
+                    shipping_profile_id: shippingProfile.id,
                     variants: [
                       {
                         title: "variant1",
                         prices: [{ amount: 100, currency_code: "EUR" }],
+                        options: { size: "x" },
                       },
                       {
                         title: "variant2",
                         prices: [{ amount: 100, currency_code: "EUR" }],
+                        options: { size: "l" },
                       },
                     ],
                   },
@@ -110,6 +134,7 @@ medusaIntegrationTestRunner({
                   {
                     title: "variant3",
                     product_id: product1.id,
+                    options: { size: "m" },
                     prices: [{ amount: 100, currency_code: "EUR" }],
                   },
                 ],

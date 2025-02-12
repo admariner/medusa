@@ -12,23 +12,14 @@ get:
       required: true
       schema:
         type: string
-    - name: expand
-      in: query
-      description: Comma-separated relations that should be expanded in the returned data.
-      required: false
-      schema:
-        type: string
-        title: expand
-        description: >-
-          Comma-separated relations that should be expanded in the returned
-          data.
     - name: fields
       in: query
       description: >-
         Comma-separated fields that should be included in the returned data. if
         a field is prefixed with `+` it will be added to the default fields,
         using `-` will remove it from the default fields. without prefix it will
-        replace the entire default fields.
+        replace the entire default fields. NOTE: This route doesn't allow
+        expanding custom relations.
       required: false
       schema:
         type: string
@@ -37,36 +28,10 @@ get:
           Comma-separated fields that should be included in the returned data.
           if a field is prefixed with `+` it will be added to the default
           fields, using `-` will remove it from the default fields. without
-          prefix it will replace the entire default fields.
-    - name: offset
-      in: query
-      description: The number of items to skip when retrieving a list.
-      required: false
-      schema:
-        type: number
-        title: offset
-        description: The number of items to skip when retrieving a list.
-    - name: limit
-      in: query
-      description: Limit the number of items returned in the list.
-      required: false
-      schema:
-        type: number
-        title: limit
-        description: Limit the number of items returned in the list.
-    - name: order
-      in: query
-      description: >-
-        The field to sort the data by. By default, the sort order is ascending.
-        To change the order to descending, prefix the field name with `-`.
-      required: false
-      schema:
-        type: string
-        title: order
-        description: >-
-          The field to sort the data by. By default, the sort order is
-          ascending. To change the order to descending, prefix the field name
-          with `-`.
+          prefix it will replace the entire default fields. NOTE: This route
+          doesn't allow expanding custom relations.
+        externalDocs:
+          url: '#select-fields-and-relations'
   security:
     - api_token: []
     - cookie_auth: []
@@ -109,23 +74,14 @@ post:
       required: true
       schema:
         type: string
-    - name: expand
-      in: query
-      description: Comma-separated relations that should be expanded in the returned data.
-      required: false
-      schema:
-        type: string
-        title: expand
-        description: >-
-          Comma-separated relations that should be expanded in the returned
-          data.
     - name: fields
       in: query
       description: >-
         Comma-separated fields that should be included in the returned data. if
         a field is prefixed with `+` it will be added to the default fields,
         using `-` will remove it from the default fields. without prefix it will
-        replace the entire default fields.
+        replace the entire default fields. NOTE: This route doesn't allow
+        expanding custom relations.
       required: false
       schema:
         type: string
@@ -134,36 +90,10 @@ post:
           Comma-separated fields that should be included in the returned data.
           if a field is prefixed with `+` it will be added to the default
           fields, using `-` will remove it from the default fields. without
-          prefix it will replace the entire default fields.
-    - name: offset
-      in: query
-      description: The number of items to skip when retrieving a list.
-      required: false
-      schema:
-        type: number
-        title: offset
-        description: The number of items to skip when retrieving a list.
-    - name: limit
-      in: query
-      description: Limit the number of items returned in the list.
-      required: false
-      schema:
-        type: number
-        title: limit
-        description: Limit the number of items returned in the list.
-    - name: order
-      in: query
-      description: >-
-        The field to sort the data by. By default, the sort order is ascending.
-        To change the order to descending, prefix the field name with `-`.
-      required: false
-      schema:
-        type: string
-        title: order
-        description: >-
-          The field to sort the data by. By default, the sort order is
-          ascending. To change the order to descending, prefix the field name
-          with `-`.
+          prefix it will replace the entire default fields. NOTE: This route
+          doesn't allow expanding custom relations.
+        externalDocs:
+          url: '#select-fields-and-relations'
   security:
     - api_token: []
     - cookie_auth: []
@@ -174,7 +104,7 @@ post:
         schema:
           allOf:
             - type: object
-              description: SUMMARY
+              description: The customer's details.
               required:
                 - email
                 - company_name
@@ -208,7 +138,7 @@ post:
                   type: object
                   description: The customer's metadata.
             - type: object
-              description: SUMMARY
+              description: The customer's details.
               properties:
                 additional_data:
                   type: object
@@ -216,7 +146,7 @@ post:
                     Pass additional custom data to the API route. This data is
                     passed to the underlying workflow under the
                     `additional_data` parameter.
-          description: SUMMARY
+          description: The customer's details.
   x-codeSamples:
     - lang: Shell
       label: cURL
@@ -274,7 +204,7 @@ delete:
         application/json:
           schema:
             type: object
-            description: SUMMARY
+            description: The deletion's details.
             required:
               - id
               - object
@@ -304,4 +234,4 @@ delete:
       $ref: ../components/responses/invalid_request_error.yaml
     '500':
       $ref: ../components/responses/500_error.yaml
-  x-workflow: deleteCustomersWorkflow
+  x-workflow: removeCustomerAccountWorkflow

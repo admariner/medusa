@@ -1,14 +1,15 @@
 import {
   Event,
   EventBusTypes,
+  InternalModuleDeclaration,
   Logger,
   MedusaContainer,
   Message,
   Subscriber,
-} from "@medusajs/types"
-import { AbstractEventBusModuleService } from "@medusajs/utils"
+} from "@medusajs/framework/types"
+import { AbstractEventBusModuleService } from "@medusajs/framework/utils"
 import { EventEmitter } from "events"
-import { ulid } from "ulid"
+import { setTimeout } from "timers/promises"
 
 type InjectedDependencies = {
   logger: Logger
@@ -25,7 +26,11 @@ export default class LocalEventBusService extends AbstractEventBusModuleService 
   protected readonly eventEmitter_: EventEmitter
   protected groupedEventsMap_: StagingQueueType
 
-  constructor({ logger }: MedusaContainer & InjectedDependencies) {
+  constructor(
+    { logger }: MedusaContainer & InjectedDependencies,
+    moduleOptions = {},
+    moduleDeclaration: InternalModuleDeclaration
+  ) {
     // @ts-ignore
     // eslint-disable-next-line prefer-rest-params
     super(...arguments)
@@ -54,17 +59,20 @@ export default class LocalEventBusService extends AbstractEventBusModuleService 
         eventData.name
       )
 
+      if (eventListenersCount === 0) {
+        continue
+      }
+
       if (!options.internal && !eventData.options?.internal) {
         this.logger_?.info(
           `Processing ${eventData.name} which has ${eventListenersCount} subscribers`
         )
       }
 
-      if (eventListenersCount === 0) {
-        continue
-      }
-
-      await this.groupOrEmitEvent(eventData)
+      await this.groupOrEmitEvent({
+        ...eventData,
+        options,
+      })
     }
   }
 
@@ -81,7 +89,13 @@ export default class LocalEventBusService extends AbstractEventBusModuleService 
       await this.groupEvent(eventGroupId, eventData)
     } else {
       const { options, ...eventBody } = eventData
-      this.eventEmitter_.emit(eventData.name, eventBody)
+
+      const options_ = options as { delay: number }
+      const delay = (ms?: number) => (ms ? setTimeout(ms) : Promise.resolve())
+
+      delay(options_?.delay).then(() =>
+        this.eventEmitter_.emit(eventData.name, eventBody)
+      )
     }
   }
 
@@ -103,7 +117,12 @@ export default class LocalEventBusService extends AbstractEventBusModuleService 
     for (const event of groupedEvents) {
       const { options, ...eventBody } = event
 
-      this.eventEmitter_.emit(event.name, eventBody)
+      const options_ = options as { delay: number }
+      const delay = (ms?: number) => (ms ? setTimeout(ms) : Promise.resolve())
+
+      delay(options_?.delay).then(() =>
+        this.eventEmitter_.emit(event.name, eventBody)
+      )
     }
 
     await this.clearGroupedEvents(eventGroupId)
@@ -113,37 +132,33 @@ export default class LocalEventBusService extends AbstractEventBusModuleService 
     this.groupedEventsMap_.delete(eventGroupId)
   }
 
-  subscribe(event: string | symbol, subscriber: Subscriber): this {
-    const randId = ulid()
-    this.storeSubscribers({ event, subscriberId: randId, subscriber })
+  subscribe(
+    event: string | symbol,
+    subscriber: Subscriber,
+    context?: EventBusTypes.SubscriberContext
+  ): this {
+    super.subscribe(event, subscriber, context)
+
     this.eventEmitter_.on(event, async (data: Event) => {
       try {
         await subscriber(data)
-      } catch (e) {
+      } catch (err) {
         this.logger_?.error(
-          `An error occurred while processing ${event.toString()}: ${e}`
+          `An error occurred while processing ${event.toString()}:`
         )
+        this.logger_?.error(err)
       }
     })
+
     return this
   }
 
   unsubscribe(
     event: string | symbol,
     subscriber: Subscriber,
-    context?: EventBusTypes.SubscriberContext
+    context: EventBusTypes.SubscriberContext
   ): this {
-    const existingSubscribers = this.eventToSubscribersMap_.get(event)
-
-    if (existingSubscribers?.length) {
-      const subIndex = existingSubscribers?.findIndex(
-        (sub) => sub.id === context?.subscriberId
-      )
-
-      if (subIndex !== -1) {
-        this.eventToSubscribersMap_.get(event)?.splice(subIndex as number, 1)
-      }
-    }
+    super.unsubscribe(event, subscriber, context)
 
     this.eventEmitter_.off(event, subscriber)
     return this

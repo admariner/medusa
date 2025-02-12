@@ -12,7 +12,7 @@ import {
   SoftDeleteReturn,
   UpdateRegionDTO,
   UpsertRegionDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
   arrayDifference,
   getDuplicates,
@@ -24,7 +24,7 @@ import {
   MedusaService,
   promiseAll,
   removeUndefined,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 import { Country, Region } from "@models"
 import { UpdateRegionInput } from "@types"
 
@@ -71,12 +71,14 @@ export default class RegionModuleService
     data: CreateRegionDTO[],
     sharedContext?: Context
   ): Promise<RegionDTO[]>
+  // @ts-expect-error
   async createRegions(
     data: CreateRegionDTO,
     sharedContext?: Context
   ): Promise<RegionDTO>
 
-  @InjectManager("baseRepository_")
+  @InjectManager()
+  // @ts-expect-error
   async createRegions(
     data: CreateRegionDTO | CreateRegionDTO[],
     @MedusaContext() sharedContext: Context = {}
@@ -90,7 +92,7 @@ export default class RegionModuleService
     )
   }
 
-  @InjectTransactionManager("baseRepository_")
+  @InjectTransactionManager()
   async createRegions_(
     data: CreateRegionDTO[],
     @MedusaContext() sharedContext: Context = {}
@@ -129,8 +131,8 @@ export default class RegionModuleService
     return result
   }
 
-  @InjectManager("baseRepository_")
-  // @ts-ignore
+  @InjectManager()
+  // @ts-expect-error
   async softDeleteRegions(
     ids: string | object | string[] | object[],
     config?: SoftDeleteReturn<string>,
@@ -141,7 +143,7 @@ export default class RegionModuleService
     await super.updateCountries(
       {
         selector: { region_id: ids },
-        data: { region_id: null },
+        data: { region_id: null } as any,
       },
       sharedContext
     )
@@ -158,7 +160,7 @@ export default class RegionModuleService
     sharedContext?: Context
   ): Promise<RegionDTO>
 
-  @InjectTransactionManager("baseRepository_")
+  @InjectTransactionManager()
   async upsertRegions(
     data: UpsertRegionDTO | UpsertRegionDTO[],
     @MedusaContext() sharedContext: Context = {}
@@ -192,13 +194,15 @@ export default class RegionModuleService
     data: UpdateRegionDTO,
     sharedContext?: Context
   ): Promise<RegionDTO>
+  // @ts-expect-error
   async updateRegions(
     selector: FilterableRegionProps,
     data: UpdateRegionDTO,
     sharedContext?: Context
   ): Promise<RegionDTO[]>
 
-  @InjectManager("baseRepository_")
+  @InjectManager()
+  // @ts-expect-error
   async updateRegions(
     idOrSelector: string | FilterableRegionProps,
     data: UpdateRegionDTO,
@@ -232,7 +236,7 @@ export default class RegionModuleService
     return isString(idOrSelector) ? regions[0] : regions
   }
 
-  @InjectTransactionManager("baseRepository_")
+  @InjectTransactionManager()
   protected async updateRegions_(
     data: UpdateRegionInput[],
     @MedusaContext() sharedContext: Context = {}
@@ -323,7 +327,7 @@ export default class RegionModuleService
 
     const countriesInDb = await this.countryService_.list(
       { iso_2: uniqueCountries },
-      { select: ["iso_2", "region_id"], take: null },
+      { select: ["iso_2", "region_id"] },
       sharedContext
     )
     const countryCodesInDb = countriesInDb.map((c) => c.iso_2.toLowerCase())

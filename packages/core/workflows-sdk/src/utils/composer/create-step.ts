@@ -4,9 +4,10 @@ import {
   WorkflowStepHandler,
   WorkflowStepHandlerArguments,
 } from "@medusajs/orchestration"
-import { OrchestrationUtils, isString } from "@medusajs/utils"
+import { isString, OrchestrationUtils } from "@medusajs/utils"
 import { ulid } from "ulid"
-import { StepResponse, resolveValue } from "./helpers"
+import { resolveValue, StepResponse } from "./helpers"
+import { createStepHandler } from "./helpers/create-step-handler"
 import { proxify } from "./helpers/proxy"
 import {
   CreateWorkflowComposerContext,
@@ -15,7 +16,6 @@ import {
   StepFunctionResult,
   WorkflowData,
 } from "./type"
-import { createStepHandler } from "./helpers/create-step-handler"
 
 /**
  * The type of invocation function passed to a step.
@@ -64,6 +64,11 @@ export type CompensateFn<T> = (
    */
   context: StepExecutionContext
 ) => unknown | Promise<unknown>
+
+export type LocalStepConfig = { name?: string } & Omit<
+  TransactionStepsDefinition,
+  "next" | "uuid" | "action"
+>
 
 export interface ApplyStepOptions<
   TStepInputs extends {
@@ -136,6 +141,8 @@ export function applyStep<
 
     this.flow.addAction(stepName, stepConfig)
 
+    this.isAsync ||= !!(stepConfig.async || stepConfig.compensateAsync)
+
     if (!this.handlers.has(stepName)) {
       this.handlers.set(stepName, handler)
     }
@@ -143,59 +150,76 @@ export function applyStep<
     const ret = {
       __type: OrchestrationUtils.SymbolWorkflowStep,
       __step__: stepName,
-      config: (
-        localConfig: { name?: string } & Omit<
-          TransactionStepsDefinition,
-          "next" | "uuid" | "action"
-        >
-      ) => {
-        const newStepName = localConfig.name ?? stepName
-        const newConfig = {
-          ...stepConfig,
-          ...localConfig,
-        }
+    }
 
-        delete localConfig.name
-
-        this.handlers.set(newStepName, handler)
-
-        this.flow.replaceAction(stepConfig.uuid!, newStepName, newConfig)
-
-        ret.__step__ = newStepName
-        WorkflowManager.update(this.workflowId, this.flow, this.handlers)
-
-        const confRef = proxify(ret)
-
-        if (global[OrchestrationUtils.SymbolMedusaWorkflowComposerCondition]) {
-          const flagSteps =
-            global[OrchestrationUtils.SymbolMedusaWorkflowComposerCondition]
-              .steps
-
-          const idx = flagSteps.findIndex((a) => a.__step__ === ret.__step__)
-          if (idx > -1) {
-            flagSteps.splice(idx, 1)
-          }
-          flagSteps.push(confRef)
-        }
-
-        return confRef
-      },
+    const refRet = proxify(ret) as WorkflowData<TInvokeResultOutput> & {
       if: (
         input: any,
         condition: (...args: any) => boolean | WorkflowData
-      ): WorkflowData<TInvokeResultOutput> => {
-        if (typeof condition !== "function") {
-          throw new Error("Condition must be a function")
-        }
-
-        wrapConditionalStep(input, condition, handler)
-        this.handlers.set(ret.__step__, handler)
-
-        return proxify(ret)
-      },
+      ) => WorkflowData<TInvokeResultOutput>
     }
 
-    const refRet = proxify(ret) as WorkflowData<TInvokeResultOutput>
+    refRet.config = (
+      localConfig: { name?: string } & Omit<
+        TransactionStepsDefinition,
+        "next" | "uuid" | "action"
+      >
+    ) => {
+      const newStepName = localConfig.name ?? stepName
+      const newConfig = {
+        async: false,
+        compensateAsync: false,
+        ...stepConfig,
+        ...localConfig,
+      }
+
+      delete localConfig.name
+
+      const handler = createStepHandler.bind(this)({
+        stepName: newStepName,
+        input,
+        invokeFn,
+        compensateFn,
+      })
+
+      wrapAsyncHandler(stepConfig, handler)
+
+      this.handlers.set(newStepName, handler)
+
+      this.flow.replaceAction(stepConfig.uuid!, newStepName, newConfig)
+      this.isAsync ||= !!(newConfig.async || newConfig.compensateAsync)
+
+      ret.__step__ = newStepName
+      WorkflowManager.update(this.workflowId, this.flow, this.handlers)
+
+      //const confRef = proxify(ret)
+
+      if (global[OrchestrationUtils.SymbolMedusaWorkflowComposerCondition]) {
+        const flagSteps =
+          global[OrchestrationUtils.SymbolMedusaWorkflowComposerCondition].steps
+
+        const idx = flagSteps.findIndex((a) => a.__step__ === ret.__step__)
+        if (idx > -1) {
+          flagSteps.splice(idx, 1)
+        }
+        flagSteps.push(refRet)
+      }
+
+      return refRet
+    }
+    refRet.if = (
+      input: any,
+      condition: (...args: any) => boolean | WorkflowData
+    ): WorkflowData<TInvokeResultOutput> => {
+      if (typeof condition !== "function") {
+        throw new Error("Condition must be a function")
+      }
+
+      wrapConditionalStep(input, condition, handler)
+      this.handlers.set(ret.__step__, handler)
+
+      return refRet
+    }
 
     if (global[OrchestrationUtils.SymbolMedusaWorkflowComposerCondition]) {
       global[
@@ -308,10 +332,8 @@ function wrapConditionalStep(
  * @example
  * import {
  *   createStep,
- *   StepResponse,
- *   StepExecutionContext,
- *   WorkflowData
- * } from "@medusajs/workflows-sdk"
+ *   StepResponse
+ * } from "@medusajs/framework/workflows-sdk"
  *
  * interface CreateProductInput {
  *   title: string

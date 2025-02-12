@@ -4,8 +4,9 @@ import clsx from "clsx"
 import React from "react"
 import { Link, Tooltip } from "@/components"
 import { ExclamationCircle, PlaySolid } from "@medusajs/icons"
-import { GITHUB_ISSUES_PREFIX } from "@/constants"
+import { GITHUB_ISSUES_LINK } from "@/constants"
 import { CodeBlockCopyAction } from "./Copy"
+import { CodeBlockAskAiAction } from "./AskAi"
 
 export type CodeBlockActionsProps = {
   source: string
@@ -15,7 +16,7 @@ export type CodeBlockActionsProps = {
   inInnerCode?: boolean
   isCollapsed: boolean
   canShowApiTesting?: boolean
-  onApiTesting: React.Dispatch<React.SetStateAction<boolean>>
+  onApiTesting?: React.Dispatch<React.SetStateAction<boolean>>
   noReport?: boolean
   noCopy?: boolean
 }
@@ -74,6 +75,7 @@ export const CodeBlockActions = ({
           ]
         )}
       >
+        <CodeBlockAskAiAction source={source} inHeader={inHeader} />
         {canShowApiTesting && (
           <Tooltip
             text="Test API"
@@ -91,7 +93,7 @@ export const CodeBlockActions = ({
                 inHeader && "p-[4.5px]",
                 "cursor-pointer"
               )}
-              onClick={() => onApiTesting(true)}
+              onClick={() => onApiTesting?.(true)}
             >
               <PlaySolid className={clsx(iconClassName)} />
             </span>
@@ -109,9 +111,7 @@ export const CodeBlockActions = ({
             )}
           >
             <Link
-              href={`${GITHUB_ISSUES_PREFIX}&title=${encodeURIComponent(
-                `Docs(Code Issue): `
-              )}`}
+              href={GITHUB_ISSUES_LINK}
               target="_blank"
               className={clsx(
                 "bg-transparent border-none cursor-pointer rounded",

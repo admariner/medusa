@@ -3,16 +3,16 @@ import {
   updateReturnShippingMethodWorkflow,
 } from "@medusajs/core-flows"
 import {
-  ContainerRegistrationKeys,
-  remoteQueryObjectFromString,
-} from "@medusajs/utils"
-import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
-} from "../../../../../../../types/routing"
+} from "@medusajs/framework/http"
+import { AdminOrderPreview, HttpTypes } from "@medusajs/framework/types"
+import {
+  ContainerRegistrationKeys,
+  remoteQueryObjectFromString,
+} from "@medusajs/framework/utils"
 import { defaultAdminDetailsReturnFields } from "../../../../../returns/query-config"
 import { AdminPostExchangesShippingActionReqSchemaType } from "../../../../validators"
-import { HttpTypes } from "@medusajs/types"
 
 export const POST = async (
   req: AuthenticatedMedusaRequest<AdminPostExchangesShippingActionReqSchemaType>,
@@ -28,9 +28,8 @@ export const POST = async (
       variables: {
         id,
       },
-      fields: ["return_id"],
+      fields: ["id", "return_id"],
     }),
-    undefined,
     {
       throwIfKeyNotFound: true,
     }
@@ -52,13 +51,13 @@ export const POST = async (
         ...req.filterableFields,
       },
     },
-    fields: req.remoteQueryConfig.fields,
+    fields: req.queryConfig.fields,
   })
 
   const [orderExchange] = await remoteQuery(queryObject)
 
   res.json({
-    order_preview: result,
+    order_preview: result as unknown as AdminOrderPreview,
     exchange: orderExchange,
   })
 }
@@ -77,9 +76,8 @@ export const DELETE = async (
       variables: {
         id,
       },
-      fields: ["return_id"],
+      fields: ["id", "return_id"],
     }),
-    undefined,
     {
       throwIfKeyNotFound: true,
     }
@@ -105,7 +103,7 @@ export const DELETE = async (
   const [orderReturn] = await remoteQuery(queryObject)
 
   res.json({
-    order_preview: orderPreview,
+    order_preview: orderPreview as unknown as AdminOrderPreview,
     return: orderReturn,
   })
 }

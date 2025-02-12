@@ -66,6 +66,11 @@ export type TransactionStepsDefinition = {
   async?: boolean
 
   /**
+   * It flags where the step contains a sub transaction inside itself.
+   */
+  nested?: boolean
+
+  /**
    * It applies to "async" steps only, allowing them to run in the background and automatically complete without external intervention.
    * It is ideal for time-consuming tasks that will be complete after the execution, contrasting with standard "async" operations that require a response to be set in a later stage.
    */
@@ -106,11 +111,15 @@ export type TransactionModelOptions = {
 
   /**
    * If true, the state of the transaction will be persisted.
+   * 
+   * Learn more in [this documentation](https://docs.medusajs.com/learn/fundamentals/workflows/store-executions).
    */
   store?: boolean
 
   /**
-   * TBD
+   * The number of seconds that the workflow execution should be stored in the database.
+   * 
+   * Learn more in [this documentation](https://docs.medusajs.com/learn/fundamentals/workflows/store-executions).
    */
   retentionTime?: number
 
@@ -237,6 +246,8 @@ export type TransactionFlow = {
   transactionId: string
   metadata?: {
     eventGroupId?: string
+    parentIdempotencyKey?: string
+    sourcePath?: string
     [key: string]: unknown
   }
   hasAsyncSteps: boolean

@@ -5,14 +5,6 @@
  * description: Retrieve a list of regions. The regions can be filtered by fields such as `id`. The regions can also be sorted or paginated.
  * x-authenticated: true
  * parameters:
- *   - name: expand
- *     in: query
- *     description: Comma-separated relations that should be expanded in the returned data.
- *     required: false
- *     schema:
- *       type: string
- *       title: expand
- *       description: Comma-separated relations that should be expanded in the returned data.
  *   - name: fields
  *     in: query
  *     description: Comma-separated fields that should be included in the returned data. if a field is prefixed with `+` it will be added to the default fields, using `-` will remove it from the default
@@ -23,6 +15,8 @@
  *       title: fields
  *       description: Comma-separated fields that should be included in the returned data. if a field is prefixed with `+` it will be added to the default fields, using `-` will remove it from the default
  *         fields. without prefix it will replace the entire default fields.
+ *       externalDocs:
+ *         url: "#select-fields-and-relations"
  *   - name: offset
  *     in: query
  *     description: The number of items to skip when retrieving a list.
@@ -31,6 +25,8 @@
  *       type: number
  *       title: offset
  *       description: The number of items to skip when retrieving a list.
+ *       externalDocs:
+ *         url: "#pagination"
  *   - name: limit
  *     in: query
  *     description: Limit the number of items returned in the list.
@@ -39,6 +35,8 @@
  *       type: number
  *       title: limit
  *       description: Limit the number of items returned in the list.
+ *       externalDocs:
+ *         url: "#pagination"
  *   - name: order
  *     in: query
  *     description: The field to sort the data by. By default, the sort order is ascending. To change the order to descending, prefix the field name with `-`.
@@ -69,20 +67,6 @@
  *             type: string
  *             title: id
  *             description: A region's ID.
- *   - name: code
- *     in: query
- *     required: false
- *     schema:
- *       oneOf:
- *         - type: string
- *           title: code
- *           description: Filter by a currency code.
- *         - type: array
- *           description: Filter by currency codes.
- *           items:
- *             type: string
- *             title: code
- *             description: A currency code.
  *   - name: name
  *     in: query
  *     required: false
@@ -472,6 +456,20 @@
  *       items:
  *         type: object
  *       title: $or
+ *   - name: currency_code
+ *     in: query
+ *     required: false
+ *     schema:
+ *       oneOf:
+ *         - type: string
+ *           title: currency_code
+ *           description: The region's currency code.
+ *         - type: array
+ *           description: The region's currency code.
+ *           items:
+ *             type: string
+ *             title: currency_code
+ *             description: The currency code's details.
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -481,7 +479,7 @@
  *     label: cURL
  *     source: |-
  *       curl '{backend_url}/admin/regions' \
- *       -H 'x-medusa-access-token: {api_token}'
+ *       -H 'Authorization: Bearer {access_token}'
  * tags:
  *   - Regions
  * responses:

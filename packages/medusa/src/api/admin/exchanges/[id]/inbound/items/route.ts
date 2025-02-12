@@ -2,15 +2,15 @@ import { orderExchangeRequestItemReturnWorkflow } from "@medusajs/core-flows"
 import {
   ContainerRegistrationKeys,
   remoteQueryObjectFromString,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 
 import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
-} from "../../../../../../types/routing"
+} from "@medusajs/framework/http"
+import { HttpTypes } from "@medusajs/framework/types"
 import { defaultAdminDetailsReturnFields } from "../../../../returns/query-config"
 import { AdminPostExchangesReturnRequestItemsReqSchemaType } from "../../../validators"
-import { HttpTypes } from "@medusajs/types"
 
 export const POST = async (
   req: AuthenticatedMedusaRequest<AdminPostExchangesReturnRequestItemsReqSchemaType>,
@@ -26,9 +26,8 @@ export const POST = async (
       variables: {
         id,
       },
-      fields: ["return_id"],
+      fields: ["id", "return_id"],
     }),
-    undefined,
     {
       throwIfKeyNotFound: true,
     }
@@ -44,10 +43,11 @@ export const POST = async (
     },
   })
 
+  const returnId = result.order_change.return_id
   const queryObject = remoteQueryObjectFromString({
     entryPoint: "return",
     variables: {
-      id: exchange.return_id,
+      id: returnId,
     },
     fields: defaultAdminDetailsReturnFields,
   })
@@ -55,7 +55,7 @@ export const POST = async (
   const [orderReturn] = await remoteQuery(queryObject)
 
   res.json({
-    order_preview: result,
+    order_preview: result as unknown as HttpTypes.AdminOrderPreview,
     return: orderReturn,
   })
 }

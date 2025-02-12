@@ -1,7 +1,7 @@
 /**
  * @schema AdminCreatePromotionRule
  * type: object
- * description: The rule's rules.
+ * description: The promotion rule's details.
  * x-schemaName: AdminCreatePromotionRule
  * required:
  *   - operator
@@ -10,15 +10,15 @@
  * properties:
  *   operator:
  *     type: string
- *     description: The rule's operator.
+ *     description: The operator used to check whether the buy rule applies on a cart. For example, `eq` means that the cart's value for the specified attribute must match the specified value.
  *     enum:
+ *       - gte
+ *       - lte
  *       - gt
  *       - lt
  *       - eq
  *       - ne
  *       - in
- *       - lte
- *       - gte
  *   description:
  *     type: string
  *     title: description
@@ -26,18 +26,21 @@
  *   attribute:
  *     type: string
  *     title: attribute
- *     description: The rule's attribute.
+ *     description: The attribute to compare against when checking whether a promotion can be applied on a cart.
+ *     example: items.product.id
  *   values:
  *     oneOf:
  *       - type: string
  *         title: values
- *         description: The rule's values.
+ *         description: The attribute's value.
+ *         example: prod_123
  *       - type: array
- *         description: The rule's values.
+ *         description: The allowed attribute values.
  *         items:
  *           type: string
  *           title: values
- *           description: The value's values.
+ *           description: An attribute value.
+ *           example: prod_123
  * 
 */
 

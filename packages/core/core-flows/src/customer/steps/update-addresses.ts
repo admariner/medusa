@@ -2,39 +2,56 @@ import {
   FilterableCustomerAddressProps,
   ICustomerModuleService,
   UpdateCustomerAddressDTO,
-} from "@medusajs/types"
+} from "@medusajs/framework/types"
 import {
-  ModuleRegistrationName,
+  Modules,
   getSelectsAndRelationsFromObjectArray,
   promiseAll,
-} from "@medusajs/utils"
-import { StepResponse, createStep } from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/utils"
+import { StepResponse, createStep } from "@medusajs/framework/workflows-sdk"
 
+/**
+ * The data to update one or more customer addresses.
+ */
 export type UpdateCustomerAddresseStepInput = {
+  /**
+   * The filters to select the customer addresses to update.
+   */
   selector: FilterableCustomerAddressProps
+  /**
+   * The data to update the customer addresses with.
+   */
   update: UpdateCustomerAddressDTO
 }
 
 export const updateCustomerAddresseStepId = "update-customer-addresses"
 /**
  * This step updates one or more customer addresses.
+ * 
+ * @example
+ * const data = updateCustomerAddressesStep({
+ *   selector: {
+ *     customer_id: "cus_123"
+ *   },
+ *   update: {
+ *     country_code: "us"
+ *   }
+ * })
  */
 export const updateCustomerAddressesStep = createStep(
   updateCustomerAddresseStepId,
   async (data: UpdateCustomerAddresseStepInput, { container }) => {
-    const service = container.resolve<ICustomerModuleService>(
-      ModuleRegistrationName.CUSTOMER
-    )
+    const service = container.resolve<ICustomerModuleService>(Modules.CUSTOMER)
 
     const { selects, relations } = getSelectsAndRelationsFromObjectArray([
       data.update,
     ])
-    const prevCustomers = await service.listAddresses(data.selector, {
+    const prevCustomers = await service.listCustomerAddresses(data.selector, {
       select: selects,
       relations,
     })
 
-    const customerAddresses = await service.updateAddresses(
+    const customerAddresses = await service.updateCustomerAddresses(
       data.selector,
       data.update
     )
@@ -46,12 +63,12 @@ export const updateCustomerAddressesStep = createStep(
       return
     }
 
-    const service = container.resolve<ICustomerModuleService>(
-      ModuleRegistrationName.CUSTOMER
-    )
+    const service = container.resolve<ICustomerModuleService>(Modules.CUSTOMER)
 
     await promiseAll(
-      prevCustomerAddresses.map((c) => service.updateAddresses(c.id, { ...c }))
+      prevCustomerAddresses.map((c) =>
+        service.updateCustomerAddresses(c.id, { ...c })
+      )
     )
   }
 )

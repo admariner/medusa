@@ -12,7 +12,7 @@ export type AdminPostOrderEditsReqSchemaType = z.infer<
 
 export const AdminPostOrderEditsShippingReqSchema = z.object({
   shipping_option_id: z.string(),
-  custom_price: z.number().optional(),
+  custom_amount: z.number().optional(),
   description: z.string().optional(),
   internal_note: z.string().optional(),
   metadata: z.record(z.unknown()).optional(),
@@ -23,7 +23,7 @@ export type AdminPostOrderEditsShippingReqSchemaType = z.infer<
 >
 
 export const AdminPostOrderEditsShippingActionReqSchema = z.object({
-  custom_price: z.number().optional(),
+  custom_amount: z.number().nullish().optional(),
   internal_note: z.string().nullish().optional(),
   metadata: z.record(z.unknown()).nullish().optional(),
 })
@@ -37,8 +37,9 @@ export const AdminPostOrderEditsAddItemsReqSchema = z.object({
     z.object({
       variant_id: z.string(),
       quantity: z.number(),
-      unit_price: z.number().optional(),
-      internal_note: z.string().optional(),
+      unit_price: z.number().nullish(),
+      compare_at_unit_price: z.number().nullish(),
+      internal_note: z.string().nullish(),
       allow_backorder: z.boolean().optional(),
       metadata: z.record(z.unknown()).optional(),
     })
@@ -51,6 +52,8 @@ export type AdminPostOrderEditsAddItemsReqSchemaType = z.infer<
 
 export const AdminPostOrderEditsItemsActionReqSchema = z.object({
   quantity: z.number().optional(),
+  unit_price: z.number().nullish(),
+  compare_at_unit_price: z.number().nullish(),
   internal_note: z.string().nullish().optional(),
 })
 
@@ -60,6 +63,8 @@ export type AdminPostOrderEditsItemsActionReqSchemaType = z.infer<
 
 export const AdminPostOrderEditsUpdateItemQuantityReqSchema = z.object({
   quantity: z.number(),
+  unit_price: z.number().nullish(),
+  compare_at_unit_price: z.number().nullish(),
   internal_note: z.string().nullish().optional(),
 })
 

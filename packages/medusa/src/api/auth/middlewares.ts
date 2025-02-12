@@ -1,5 +1,11 @@
-import { MiddlewareRoute } from "@medusajs/framework"
-import { authenticate } from "../../utils/middlewares/authenticate-middleware"
+import {
+  authenticate,
+  MiddlewareRoute,
+  validateAndTransformBody,
+} from "@medusajs/framework/http"
+import { validateScopeProviderAssociation } from "./utils/validate-scope-provider-association"
+import { validateToken } from "./utils/validate-token"
+import { ResetPasswordRequest } from "./validators"
 
 export const authRoutesMiddlewares: MiddlewareRoute[] = [
   {
@@ -14,22 +20,40 @@ export const authRoutesMiddlewares: MiddlewareRoute[] = [
   },
   {
     method: ["POST"],
+    matcher: "/auth/token/refresh",
+    middlewares: [authenticate("*", "bearer", { allowUnregistered: true })],
+  },
+  {
+    method: ["POST"],
     matcher: "/auth/:actor_type/:auth_provider/callback",
-    middlewares: [],
+    middlewares: [validateScopeProviderAssociation()],
   },
   {
     method: ["POST"],
     matcher: "/auth/:actor_type/:auth_provider/register",
-    middlewares: [],
+    middlewares: [validateScopeProviderAssociation()],
   },
   {
     method: ["POST"],
     matcher: "/auth/:actor_type/:auth_provider",
-    middlewares: [],
+    middlewares: [validateScopeProviderAssociation()],
   },
   {
     method: ["GET"],
     matcher: "/auth/:actor_type/:auth_provider",
-    middlewares: [],
+    middlewares: [validateScopeProviderAssociation()],
+  },
+  {
+    method: ["POST"],
+    matcher: "/auth/:actor_type/:auth_provider/reset-password",
+    middlewares: [
+      validateScopeProviderAssociation(),
+      validateAndTransformBody(ResetPasswordRequest),
+    ],
+  },
+  {
+    method: ["POST"],
+    matcher: "/auth/:actor_type/:auth_provider/update",
+    middlewares: [validateScopeProviderAssociation(), validateToken()],
   },
 ]

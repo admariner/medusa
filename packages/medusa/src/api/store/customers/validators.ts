@@ -10,6 +10,7 @@ export const StoreCreateCustomer = z.object({
   first_name: z.string().nullish(),
   last_name: z.string().nullish(),
   phone: z.string().nullish(),
+  metadata: z.record(z.unknown()).nullish(),
 })
 
 export const StoreUpdateCustomer = z.object({
@@ -17,6 +18,7 @@ export const StoreUpdateCustomer = z.object({
   first_name: z.string().nullish(),
   last_name: z.string().nullish(),
   phone: z.string().nullish(),
+  metadata: z.record(z.unknown()).nullish(),
 })
 
 export const StoreGetCustomerAddressParams = createSelectParams()
@@ -50,7 +52,7 @@ export type StoreGetCustomerAddressParamsType = z.infer<
   typeof StoreGetCustomerAddressParams
 >
 export type StoreGetCustomerAddressesParamsType = z.infer<
-  typeof StoreCreateCustomerAddress
+  typeof StoreGetCustomerAddressesParams
 >
 export type StoreCreateCustomerAddressType = z.infer<
   typeof StoreCreateCustomerAddress

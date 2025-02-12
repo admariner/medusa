@@ -14,17 +14,19 @@ export type UseActiveOnScrollProps = {
   rootElm?: Document | HTMLElement
   enable?: boolean
   useDefaultIfNoActive?: boolean
+  maxLevel?: number
 }
 
 export const useActiveOnScroll = ({
   rootElm,
   enable = true,
   useDefaultIfNoActive = true,
+  maxLevel = 3,
 }: UseActiveOnScrollProps) => {
   const [items, setItems] = useState<ActiveOnScrollItem[]>([])
   const [activeItemId, setActiveItemId] = useState("")
   const { scrollableElement } = useScrollController()
-  const isBrowser = useIsBrowser()
+  const { isBrowser } = useIsBrowser()
   const pathname = usePathname()
   const root = useMemo(() => {
     if (!enable) {
@@ -40,12 +42,23 @@ export const useActiveOnScroll = ({
 
     return document
   }, [rootElm, isBrowser, enable])
+  const querySelector = useMemo(() => {
+    let selector = ""
+    for (let i = 2; i <= maxLevel; i++) {
+      if (i > 2) {
+        selector += `,`
+      }
+      selector += `h${i}`
+    }
+
+    return selector
+  }, [maxLevel])
   const getHeadingsInElm = useCallback(() => {
     if (!isBrowser || !enable) {
       return []
     }
 
-    return root?.querySelectorAll("h2,h3")
+    return root?.querySelectorAll(querySelector)
   }, [isBrowser, pathname, root, enable])
   const setHeadingItems = useCallback(() => {
     if (!enable) {
@@ -85,7 +98,21 @@ export const useActiveOnScroll = ({
     if (!enable) {
       return
     }
+    const rootBoundingRectElm =
+      root && "getBoundingClientRect" in root
+        ? root.getBoundingClientRect()
+        : root?.body.getBoundingClientRect()
+
+    if (
+      rootBoundingRectElm === undefined ||
+      (rootBoundingRectElm.top < 0 && rootBoundingRectElm.bottom < 0)
+    ) {
+      setActiveItemId("")
+      return
+    }
     const headings = getHeadingsInElm()
+    let selectedHeadingByHash: HTMLHeadingElement | undefined = undefined
+    const hash = location.hash.replace("#", "")
     let closestPositiveHeading: HTMLHeadingElement | undefined = undefined
     let closestNegativeHeading: HTMLHeadingElement | undefined = undefined
     let closestPositiveDistance = Infinity
@@ -93,10 +120,13 @@ export const useActiveOnScroll = ({
     const halfway = isElmWindow(scrollableElement)
       ? scrollableElement.innerHeight / 2
       : scrollableElement
-      ? scrollableElement.scrollHeight / 2
-      : 0
+        ? scrollableElement.scrollHeight / 2
+        : 0
 
     headings?.forEach((heading) => {
+      if (heading.id === hash) {
+        selectedHeadingByHash = heading as HTMLHeadingElement
+      }
       const headingDistance = heading.getBoundingClientRect().top
 
       if (headingDistance > 0 && headingDistance < closestPositiveDistance) {
@@ -111,28 +141,32 @@ export const useActiveOnScroll = ({
       }
     })
 
-    const negativeDistanceToHalfway = Math.abs(
-      halfway + closestNegativeDistance
-    )
-    const positiveDistanceToHalfway = Math.abs(
-      halfway - closestPositiveDistance
-    )
+    const negativeDistanceToHalfway = closestNegativeDistance
+      ? Math.abs(halfway + closestNegativeDistance)
+      : 0
+    const positiveDistanceToHalfway = closestPositiveDistance
+      ? Math.abs(halfway - closestPositiveDistance)
+      : 0
 
     const chosenClosest =
-      negativeDistanceToHalfway > positiveDistanceToHalfway
-        ? closestNegativeHeading
-        : closestPositiveHeading
+      !negativeDistanceToHalfway && !positiveDistanceToHalfway
+        ? undefined
+        : negativeDistanceToHalfway > positiveDistanceToHalfway
+          ? closestNegativeHeading
+          : closestPositiveHeading
 
     setActiveItemId(
       chosenClosest
         ? (chosenClosest as HTMLHeadingElement).id
-        : items.length
-        ? useDefaultIfNoActive
-          ? items[0].heading.id
-          : ""
-        : ""
+        : selectedHeadingByHash
+          ? (selectedHeadingByHash as HTMLHeadingElement).id
+          : items.length
+            ? useDefaultIfNoActive
+              ? items[0].heading.id
+              : ""
+            : ""
     )
-  }, [getHeadingsInElm, items, enable])
+  }, [getHeadingsInElm, items, enable, root])
 
   useEffect(() => {
     if (!scrollableElement || !enable) {

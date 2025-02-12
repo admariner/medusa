@@ -1,17 +1,38 @@
-import { UserDTO, UserWorkflow } from "@medusajs/types"
-import { UserWorkflowEvents } from "@medusajs/utils"
+import { UserDTO, UserWorkflow } from "@medusajs/framework/types"
+import { UserWorkflowEvents } from "@medusajs/framework/utils"
 import {
   WorkflowData,
   WorkflowResponse,
   createWorkflow,
   transform,
-} from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/workflows-sdk"
 import { emitEventStep } from "../../common/steps/emit-event"
 import { updateUsersStep } from "../steps"
 
 export const updateUsersWorkflowId = "update-users-workflow"
 /**
- * This workflow updates one or more users.
+ * This workflow updates one or more users. It's used by the
+ * [Update User Admin API Route](https://docs.medusajs.com/api/admin#users_postusersid).
+ * 
+ * You can use this workflow within your customizations or your own custom workflows, allowing you to
+ * update users within your custom flows.
+ * 
+ * @example
+ * const { result } = await updateUsersWorkflow(container)
+ * .run({
+ *   input: {
+ *     updates: [
+ *       {
+ *         id: "user_123",
+ *         first_name: "John"
+ *       }
+ *     ]
+ *   }
+ * })
+ * 
+ * @summary
+ * 
+ * Update one or more users.
  */
 export const updateUsersWorkflow = createWorkflow(
   updateUsersWorkflowId,

@@ -1,6 +1,6 @@
-import { CreateOrderDTO, IOrderModuleService } from "@medusajs/types"
-import { Modules } from "@medusajs/utils"
-import { moduleIntegrationTestRunner } from "medusa-test-utils"
+import { CreateOrderDTO, IOrderModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
+import { moduleIntegrationTestRunner } from "@medusajs/test-utils"
 
 jest.setTimeout(1000000)
 
@@ -21,6 +21,7 @@ moduleIntegrationTestRunner<IOrderModuleService>({
             product_description: "Description 1",
             product_subtitle: "Product Subtitle 1",
             product_type: "Type 1",
+            product_type_id: "type_1",
             product_collection: "Collection 1",
             product_handle: "handle1",
             variant_id: "variant1",
@@ -626,7 +627,7 @@ moduleIntegrationTestRunner<IOrderModuleService>({
             "items.detail.return_received_quantity",
             "shipping_methods.id",
           ],
-          relations: ["items", "items.detail"],
+          relations: ["items", "items.detail", "shipping_methods"],
         })
 
         serializedOrder = JSON.parse(JSON.stringify(getOrder))

@@ -1,12 +1,15 @@
-import { TransactionHandlerType, isDefined } from "@medusajs/utils"
-import { StepResponse } from "@medusajs/workflows-sdk"
+import {
+  isDefined,
+  Modules,
+  TransactionHandlerType,
+} from "@medusajs/framework/utils"
+import { StepResponse } from "@medusajs/framework/workflows-sdk"
 import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
-} from "../../../../../../types/routing"
+} from "@medusajs/framework/http"
 
-import { IWorkflowEngineService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
+import { IWorkflowEngineService } from "@medusajs/framework/types"
 import { AdminCreateWorkflowsAsyncResponseType } from "../../../validators"
 
 export const POST = async (
@@ -14,7 +17,7 @@ export const POST = async (
   res: MedusaResponse<{ success: boolean }>
 ) => {
   const workflowEngineService: IWorkflowEngineService = req.scope.resolve(
-    ModuleRegistrationName.WORKFLOW_ENGINE
+    Modules.WORKFLOW_ENGINE
   )
 
   const { workflow_id } = req.params

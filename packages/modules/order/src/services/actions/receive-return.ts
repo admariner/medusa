@@ -1,11 +1,11 @@
-import { Context, OrderTypes } from "@medusajs/types"
+import { Context, OrderTypes } from "@medusajs/framework/types"
 import {
   ChangeActionType,
   MathBN,
   OrderChangeType,
   ReturnStatus,
   promiseAll,
-} from "@medusajs/utils"
+} from "@medusajs/framework/utils"
 
 function createReturnItems(data) {
   return data.items.map((item) => ({
@@ -85,7 +85,7 @@ export async function receiveReturn(
     data.return_id,
     {
       select: ["id", "order_id"],
-      relations: ["items"],
+      relations: ["items", "items.item"],
     },
     sharedContext
   )

@@ -11,14 +11,6 @@
  *     required: true
  *     schema:
  *       type: string
- *   - name: expand
- *     in: query
- *     description: Comma-separated relations that should be expanded in the returned data.
- *     required: false
- *     schema:
- *       type: string
- *       title: expand
- *       description: Comma-separated relations that should be expanded in the returned data.
  *   - name: fields
  *     in: query
  *     description: Comma-separated fields that should be included in the returned data. if a field is prefixed with `+` it will be added to the default fields, using `-` will remove it from the default
@@ -29,30 +21,8 @@
  *       title: fields
  *       description: Comma-separated fields that should be included in the returned data. if a field is prefixed with `+` it will be added to the default fields, using `-` will remove it from the default
  *         fields. without prefix it will replace the entire default fields.
- *   - name: offset
- *     in: query
- *     description: The number of items to skip when retrieving a list.
- *     required: false
- *     schema:
- *       type: number
- *       title: offset
- *       description: The number of items to skip when retrieving a list.
- *   - name: limit
- *     in: query
- *     description: Limit the number of items returned in the list.
- *     required: false
- *     schema:
- *       type: number
- *       title: limit
- *       description: Limit the number of items returned in the list.
- *   - name: order
- *     in: query
- *     description: The field to sort the data by. By default, the sort order is ascending. To change the order to descending, prefix the field name with `-`.
- *     required: false
- *     schema:
- *       type: string
- *       title: order
- *       description: The field to sort the data by. By default, the sort order is ascending. To change the order to descending, prefix the field name with `-`.
+ *       externalDocs:
+ *         url: "#select-fields-and-relations"
  * security:
  *   - api_token: []
  *   - cookie_auth: []
@@ -76,8 +46,8 @@
  *           price_type:
  *             type: string
  *             description: >
- *               The type of the shipping option's price. If `calculated`, its price is retrieved by the 
- *               associated fulfillment provider during checkout. If `flat`, its price is set in the `prices` property.
+ *               The type of the shipping option's price. If `calculated`, its price is retrieved by the  associated fulfillment provider during checkout. If `flat`, its price is set in the `prices`
+ *               property.
  *             enum:
  *               - calculated
  *               - flat
@@ -93,9 +63,9 @@
  *             type: object
  *             description: The shipping option's type.
  *             required:
- *               - label
- *               - description
  *               - code
+ *               - description
+ *               - label
  *             properties:
  *               label:
  *                 type: string
@@ -213,7 +183,6 @@
  *                     attribute:
  *                       type: string
  *                       title: attribute
- *                       description: The rule's attribute.
  *                       description: The name of a property or table that the rule applies to.
  *                       example: customer_group
  *                     value:
@@ -234,7 +203,7 @@
  *     label: cURL
  *     source: |-
  *       curl -X POST '{backend_url}/admin/shipping-options/{id}' \
- *       -H 'x-medusa-access-token: {api_token}'
+ *       -H 'Authorization: Bearer {access_token}'
  * tags:
  *   - Shipping Options
  * responses:

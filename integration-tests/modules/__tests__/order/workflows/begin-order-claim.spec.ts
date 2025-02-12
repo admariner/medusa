@@ -3,6 +3,7 @@ import {
   createShippingOptionsWorkflow,
   orderClaimRequestItemReturnWorkflow,
 } from "@medusajs/core-flows"
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import {
   FulfillmentWorkflow,
   IOrderModuleService,
@@ -15,12 +16,10 @@ import {
 import {
   ClaimType,
   ContainerRegistrationKeys,
-  ModuleRegistrationName,
   Modules,
   RuleOperator,
   remoteQueryObjectFromString,
 } from "@medusajs/utils"
-import { medusaIntegrationTestRunner } from "medusa-test-utils"
 
 jest.setTimeout(500000)
 
@@ -28,18 +27,14 @@ const env = { MEDUSA_FF_MEDUSA_V2: true }
 const providerId = "manual_test-provider"
 
 async function prepareDataFixtures({ container }) {
-  const fulfillmentService = container.resolve(
-    ModuleRegistrationName.FULFILLMENT
-  )
-  const salesChannelService = container.resolve(
-    ModuleRegistrationName.SALES_CHANNEL
-  )
+  const fulfillmentService = container.resolve(Modules.FULFILLMENT)
+  const salesChannelService = container.resolve(Modules.SALES_CHANNEL)
   const stockLocationModule: IStockLocationService = container.resolve(
-    ModuleRegistrationName.STOCK_LOCATION
+    Modules.STOCK_LOCATION
   )
-  const productModule = container.resolve(ModuleRegistrationName.PRODUCT)
-  const pricingModule = container.resolve(ModuleRegistrationName.PRICING)
-  const inventoryModule = container.resolve(ModuleRegistrationName.INVENTORY)
+  const productModule = container.resolve(Modules.PRODUCT)
+  const pricingModule = container.resolve(Modules.PRICING)
+  const inventoryModule = container.resolve(Modules.INVENTORY)
 
   const shippingProfile = await fulfillmentService.createShippingProfiles({
     name: "test",
@@ -63,7 +58,7 @@ async function prepareDataFixtures({ container }) {
   })
 
   const regionService = container.resolve(
-    ModuleRegistrationName.REGION
+    Modules.REGION
   ) as IRegionModuleService
 
   const [region] = await regionService.createRegions([
@@ -191,7 +186,7 @@ async function prepareDataFixtures({ container }) {
         {
           attribute: "is_return",
           operator: RuleOperator.EQ,
-          value: '"true"',
+          value: "true",
         },
       ],
     }
@@ -237,9 +232,7 @@ async function prepareDataFixtures({ container }) {
 }
 
 async function createOrderFixture({ container, product }) {
-  const orderService: IOrderModuleService = container.resolve(
-    ModuleRegistrationName.ORDER
-  )
+  const orderService: IOrderModuleService = container.resolve(Modules.ORDER)
   let order = await orderService.createOrders({
     region_id: "test_region_id",
     email: "foo@bar.com",

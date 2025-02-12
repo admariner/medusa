@@ -4,13 +4,19 @@ import {
   JoinerServiceConfigAlias,
   ModuleJoinerConfig,
   RemoteExpandProperty,
+  RemoteJoinerOptions,
   RemoteJoinerQuery,
   RemoteNestedExpands,
 } from "@medusajs/types"
-
-import { RemoteJoinerOptions } from "@medusajs/types"
-import { MedusaError, deduplicate, isDefined, isString } from "@medusajs/utils"
-import GraphQLParser from "./graphql-ast"
+import {
+  deduplicate,
+  FilterOperatorMap,
+  GraphQLUtils,
+  isDefined,
+  isObject,
+  isString,
+  MedusaError,
+} from "@medusajs/utils"
 
 const BASE_PATH = "_root"
 
@@ -31,9 +37,21 @@ type InternalImplodeMapping = {
   isList?: boolean
 }
 
+type InternalParseExpandsParams = {
+  initialService: RemoteExpandProperty
+  query: RemoteJoinerQuery
+  serviceConfig: InternalJoinerServiceConfig
+  expands: RemoteJoinerQuery["expands"]
+  implodeMapping: InternalImplodeMapping[]
+  options?: RemoteJoinerOptions
+  initialData?: any[]
+}
+
 export class RemoteJoiner {
   private serviceConfigCache: Map<string, InternalJoinerServiceConfig> =
     new Map()
+
+  private entityMap: Map<string, Map<string, string>> = new Map()
 
   private static filterFields(
     data: any,
@@ -92,7 +110,18 @@ export class RemoteJoiner {
   }
 
   private static getNestedItems(items: any[], property: string): any[] {
-    return items.flatMap((item) => item?.[property])
+    const result: unknown[] = []
+    for (const item of items) {
+      const allValues = item?.[property] ?? []
+      const values = Array.isArray(allValues) ? allValues : [allValues]
+      for (const value of values) {
+        if (isDefined(value)) {
+          result.push(value)
+        }
+      }
+    }
+
+    return result
   }
 
   private static createRelatedDataMap(
@@ -122,21 +151,32 @@ export class RemoteJoiner {
     graphqlQuery: string,
     variables?: Record<string, unknown>
   ): RemoteJoinerQuery {
-    const parser = new GraphQLParser(graphqlQuery, variables)
+    const parser = new GraphQLUtils.GraphQLParser(graphqlQuery, variables)
     return parser.parseQuery()
   }
 
   constructor(
-    private serviceConfigs: ModuleJoinerConfig[],
+    serviceConfigs: ModuleJoinerConfig[],
     private remoteFetchData: RemoteFetchDataCallback,
     private options: {
       autoCreateServiceNameAlias?: boolean
+      entitiesMap?: Map<string, any>
     } = {}
   ) {
     this.options.autoCreateServiceNameAlias ??= true
+    if (this.options.entitiesMap) {
+      this.entityMap = GraphQLUtils.extractRelationsFromGQL(
+        this.options.entitiesMap
+      )
+    }
 
-    this.serviceConfigs = this.buildReferences(
-      JSON.parse(JSON.stringify(serviceConfigs))
+    this.buildReferences(
+      JSON.parse(JSON.stringify(serviceConfigs), (key, value) => {
+        if (key === "schema") {
+          return
+        }
+        return value
+      })
     )
   }
 
@@ -147,12 +187,15 @@ export class RemoteJoiner {
   private buildReferences(serviceConfigs: ModuleJoinerConfig[]) {
     const expandedRelationships: Map<
       string,
-      { fieldAlias; relationships: Map<string, JoinerRelationship> }
+      {
+        fieldAlias
+        relationships: Map<string, JoinerRelationship | JoinerRelationship[]>
+      }
     > = new Map()
 
     for (const service of serviceConfigs) {
       const service_ = service as Omit<ModuleJoinerConfig, "relationships"> & {
-        relationships?: Map<string, JoinerRelationship>
+        relationships?: Map<string, JoinerRelationship | JoinerRelationship[]>
       }
 
       if (this.serviceConfigCache.has(service_.serviceName!)) {
@@ -195,6 +238,7 @@ export class RemoteJoiner {
           for (const name of alias.name) {
             service_.alias.push({
               name,
+              entity: alias.entity,
               args: alias.args,
             })
           }
@@ -221,21 +265,33 @@ export class RemoteJoiner {
               ? { ...service_.args, ...alias.args }
               : undefined
 
-          service_.relationships?.set(alias.name as string, {
-            alias: alias.name as string,
+          const aliasName = alias.name as string
+          const rel = {
+            alias: aliasName,
+            entity: alias.entity,
             foreignKey: alias.name + "_id",
             primaryKey: "id",
             serviceName: service_.serviceName!,
             args,
-          })
-          this.cacheServiceConfig(
-            serviceConfigs,
-            undefined,
-            alias.name as string
-          )
+          }
+
+          if (service_.relationships?.has(aliasName)) {
+            const existing = service_.relationships.get(aliasName)!
+            const newRelation = Array.isArray(existing)
+              ? existing.concat(rel)
+              : [existing, rel]
+
+            service_.relationships?.set(aliasName, newRelation)
+          } else {
+            service_.relationships?.set(aliasName, rel)
+          }
+
+          this.cacheServiceConfig(serviceConfigs, { serviceAlias: alias })
         }
 
-        this.cacheServiceConfig(serviceConfigs, service_.serviceName)
+        this.cacheServiceConfig(serviceConfigs, {
+          serviceName: service_.serviceName,
+        })
       }
 
       for (const extend of service_.extends) {
@@ -247,10 +303,20 @@ export class RemoteJoiner {
         }
 
         const service_ = expandedRelationships.get(extend.serviceName)!
-        service_.relationships.set(
-          extend.relationship.alias,
-          extend.relationship
-        )
+
+        const aliasName = extend.relationship.alias
+        const rel = extend.relationship
+        if (service_.relationships?.has(aliasName)) {
+          const existing = service_.relationships.get(aliasName)!
+          const newRelation = Array.isArray(existing)
+            ? existing.concat(rel)
+            : [existing, rel]
+
+          service_.relationships?.set(aliasName, newRelation)
+        } else {
+          service_.relationships?.set(aliasName, rel)
+        }
+
         Object.assign(service_.fieldAlias ?? {}, extend.fieldAlias)
       }
     }
@@ -265,8 +331,19 @@ export class RemoteJoiner {
 
       const service_ = this.serviceConfigCache.get(serviceName)!
       relationships.forEach((relationship, alias) => {
-        service_.relationships!.set(alias, relationship)
+        const rel = relationship as JoinerRelationship
+        if (service_.relationships?.has(alias)) {
+          const existing = service_.relationships.get(alias)!
+          const newRelation = Array.isArray(existing)
+            ? existing.concat(rel)
+            : [existing, rel]
+
+          service_.relationships?.set(alias, newRelation)
+        } else {
+          service_.relationships?.set(alias, rel)
+        }
       })
+
       Object.assign(service_.fieldAlias!, fieldAlias ?? {})
 
       if (Object.keys(service_.fieldAlias!).length) {
@@ -287,10 +364,23 @@ export class RemoteJoiner {
     return serviceConfigs
   }
 
-  private getServiceConfig(
-    serviceName?: string,
+  private getServiceConfig({
+    serviceName,
+    serviceAlias,
+    entity,
+  }: {
+    serviceName?: string
     serviceAlias?: string
-  ): InternalJoinerServiceConfig | undefined {
+    entity?: string
+  }): InternalJoinerServiceConfig | undefined {
+    if (entity) {
+      const name = `entity_${entity}`
+      const serviceConfig = this.serviceConfigCache.get(name)
+      if (serviceConfig) {
+        return serviceConfig
+      }
+    }
+
     if (serviceAlias) {
       const name = `alias_${serviceAlias}`
       return this.serviceConfigCache.get(name)
@@ -300,27 +390,45 @@ export class RemoteJoiner {
   }
 
   private cacheServiceConfig(
-    serviceConfigs,
-    serviceName?: string,
-    serviceAlias?: string
+    serviceConfigs: ModuleJoinerConfig[],
+    params: {
+      serviceName?: string
+      serviceAlias?: JoinerServiceConfigAlias
+    }
   ): void {
+    const { serviceName, serviceAlias } = params
+
     if (serviceAlias) {
-      const name = `alias_${serviceAlias}`
+      const name = `alias_${serviceAlias.name}`
       if (!this.serviceConfigCache.has(name)) {
         let aliasConfig: JoinerServiceConfigAlias | undefined
         const config = serviceConfigs.find((conf) => {
           const aliases = conf.alias as JoinerServiceConfigAlias[]
-          const hasArgs = aliases?.find((alias) => alias.name === serviceAlias)
+          const hasArgs = aliases?.find(
+            (alias) => alias.name === serviceAlias.name
+          )
           aliasConfig = hasArgs
           return hasArgs
         })
 
         if (config) {
-          const serviceConfig = { ...config }
+          const serviceConfig = { ...config, entity: serviceAlias.entity }
           if (aliasConfig) {
             serviceConfig.args = { ...config?.args, ...aliasConfig?.args }
           }
-          this.serviceConfigCache.set(name, serviceConfig)
+          this.serviceConfigCache.set(
+            name,
+            serviceConfig as InternalJoinerServiceConfig
+          )
+
+          const entity = serviceAlias.entity
+          if (entity) {
+            const name = `entity_${entity}`
+            this.serviceConfigCache.set(
+              name,
+              serviceConfig as InternalJoinerServiceConfig
+            )
+          }
         }
       }
       return
@@ -328,23 +436,31 @@ export class RemoteJoiner {
 
     const config = serviceConfigs.find(
       (config) => config.serviceName === serviceName
-    )
+    ) as InternalJoinerServiceConfig
     this.serviceConfigCache.set(serviceName!, config)
   }
 
-  private async fetchData(
-    expand: RemoteExpandProperty,
-    pkField: string,
-    ids?: (unknown | unknown[])[],
-    relationship?: any,
+  private async fetchData(params: {
+    expand: RemoteExpandProperty
+    pkField: string
+    ids?: (unknown | unknown[])[]
+    relationship?: any
     options?: RemoteJoinerOptions
-  ): Promise<{
+  }): Promise<{
     data: unknown[] | { [path: string]: unknown }
     path?: string
   }> {
-    let uniqueIds = Array.isArray(ids) ? ids : ids ? [ids] : undefined
+    const { expand, pkField, ids, relationship, options } = params
 
-    if (uniqueIds) {
+    let uniqueIds: unknown[] | undefined
+    if (ids != null) {
+      const isIdsUsingOperatorMap =
+        isObject(ids) &&
+        Object.keys(ids).some((key) => !!FilterOperatorMap[key])
+      uniqueIds = isIdsUsingOperatorMap ? ids : Array.isArray(ids) ? ids : [ids]
+    }
+
+    if (uniqueIds && Array.isArray(uniqueIds)) {
       const isCompositeKey = Array.isArray(uniqueIds[0])
       if (isCompositeKey) {
         const seen = new Set()
@@ -361,15 +477,16 @@ export class RemoteJoiner {
       uniqueIds = uniqueIds.filter((id) => isDefined(id))
     }
 
+    let pkFieldAdjusted = pkField
     if (relationship) {
-      pkField = relationship.inverse
+      pkFieldAdjusted = relationship.inverse
         ? relationship.foreignKey.split(".").pop()!
         : relationship.primaryKey
     }
 
     const response = await this.remoteFetchData(
       expand,
-      pkField,
+      pkFieldAdjusted,
       uniqueIds,
       relationship
     )
@@ -377,16 +494,20 @@ export class RemoteJoiner {
     const isObj = isDefined(response.path)
     let resData = isObj ? response.data[response.path!] : response.data
 
-    resData = Array.isArray(resData) ? resData : [resData]
+    resData = isDefined(resData)
+      ? Array.isArray(resData)
+        ? resData
+        : [resData]
+      : []
 
-    this.checkIfKeysExist(
+    this.checkIfKeysExist({
       uniqueIds,
       resData,
       expand,
-      pkField,
+      pkField: pkFieldAdjusted,
       relationship,
-      options
-    )
+      options,
+    })
 
     const filteredDataArray = resData.map((data: any) =>
       RemoteJoiner.filterFields(data, expand.fields, expand.expands)
@@ -401,14 +522,17 @@ export class RemoteJoiner {
     return response
   }
 
-  private checkIfKeysExist(
-    uniqueIds: unknown[] | undefined,
-    resData: any[],
-    expand: RemoteExpandProperty,
-    pkField: string,
-    relationship?: any,
+  private checkIfKeysExist(params: {
+    uniqueIds: unknown[] | undefined
+    resData: any[]
+    expand: RemoteExpandProperty
+    pkField: string
+    relationship?: any
     options?: RemoteJoinerOptions
-  ) {
+  }) {
+    const { uniqueIds, resData, expand, pkField, relationship, options } =
+      params
+
     if (
       !(
         isDefined(uniqueIds) &&
@@ -435,7 +559,7 @@ export class RemoteJoiner {
 
     if (notFound.size > 0) {
       const entityName =
-        expand.serviceConfig.args?.entity ??
+        expand.serviceConfig.entity ??
         expand.serviceConfig.args?.methodSuffix ??
         expand.serviceConfig.serviceName
 
@@ -446,11 +570,13 @@ export class RemoteJoiner {
     }
   }
 
-  private handleFieldAliases(
-    items: any[],
-    parsedExpands: Map<string, RemoteExpandProperty>,
+  private handleFieldAliases(params: {
+    items: any[]
+    parsedExpands: Map<string, RemoteExpandProperty>
     implodeMapping: InternalImplodeMapping[]
-  ) {
+  }) {
+    const { items, parsedExpands, implodeMapping } = params
+
     const getChildren = (item: any, prop: string) => {
       if (Array.isArray(item)) {
         return item.flatMap((currentItem) => currentItem[prop])
@@ -526,12 +652,14 @@ export class RemoteJoiner {
     }
   }
 
-  private async handleExpands(
-    items: any[],
-    parsedExpands: Map<string, RemoteExpandProperty>,
-    implodeMapping: InternalImplodeMapping[] = [],
+  private async handleExpands(params: {
+    items: any[]
+    parsedExpands: Map<string, RemoteExpandProperty>
+    implodeMapping?: InternalImplodeMapping[]
     options?: RemoteJoinerOptions
-  ): Promise<void> {
+  }): Promise<void> {
+    const { items, parsedExpands, implodeMapping = [], options } = params
+
     if (!parsedExpands) {
       return
     }
@@ -552,85 +680,142 @@ export class RemoteJoiner {
       }
 
       if (nestedItems.length > 0) {
-        await this.expandProperty(
-          nestedItems,
-          expand.parentConfig!,
+        await this.expandProperty({
+          items: nestedItems,
+          parentServiceConfig: expand.parentConfig!,
           expand,
-          options
-        )
+          options,
+        })
       }
     }
 
-    this.handleFieldAliases(items, parsedExpands, implodeMapping)
+    this.handleFieldAliases({ items, parsedExpands, implodeMapping })
   }
 
-  private async expandProperty(
-    items: any[],
-    parentServiceConfig: InternalJoinerServiceConfig,
-    expand?: RemoteExpandProperty,
+  private getEntityRelationship(params: {
+    parentServiceConfig: InternalJoinerServiceConfig
+    property: string
+    entity?: string
+  }): JoinerRelationship {
+    const { parentServiceConfig, property, entity } = params
+
+    const propEntity = entity ?? parentServiceConfig?.entity
+    const rel = parentServiceConfig?.relationships?.get(property)
+
+    if (Array.isArray(rel)) {
+      if (!propEntity) {
+        return rel[0]
+      }
+
+      const entityRel = rel.find((r) => r.entity === propEntity)
+      if (entityRel) {
+        return entityRel
+      }
+
+      // If entity is not found, return the relationship where the primary key matches
+      const serviceEntity = this.getServiceConfig({
+        entity: propEntity,
+      })!
+
+      return rel.find((r) => serviceEntity.primaryKeys.includes(r.primaryKey))!
+    }
+
+    return rel as JoinerRelationship
+  }
+
+  private async expandProperty(params: {
+    items: any[]
+    parentServiceConfig: InternalJoinerServiceConfig
+    expand?: RemoteExpandProperty
     options?: RemoteJoinerOptions
-  ): Promise<void> {
+  }): Promise<void> {
+    const { items, parentServiceConfig, expand, options } = params
+
     if (!expand) {
       return
     }
 
-    const relationship = parentServiceConfig?.relationships?.get(
-      expand.property
-    )
+    const relationship = this.getEntityRelationship({
+      parentServiceConfig,
+      property: expand.property,
+      entity: expand.entity,
+    })
 
-    if (relationship) {
-      await this.expandRelationshipProperty(
-        items,
-        expand,
-        relationship,
-        options
-      )
+    if (!relationship) {
+      return
     }
+
+    await this.expandRelationshipProperty({
+      items,
+      expand,
+      relationship,
+      options,
+    })
   }
 
-  private async expandRelationshipProperty(
-    items: any[],
-    expand: RemoteExpandProperty,
-    relationship: JoinerRelationship,
+  private async expandRelationshipProperty(params: {
+    items: any[]
+    expand: RemoteExpandProperty
+    relationship: JoinerRelationship
     options?: RemoteJoinerOptions
-  ): Promise<void> {
+  }): Promise<void> {
+    const { items, expand, relationship, options } = params
+
     const field = relationship.inverse
       ? relationship.primaryKey
       : relationship.foreignKey.split(".").pop()!
     const fieldsArray = field.split(",")
 
-    const idsToFetch: any[] = []
+    const idsToFetch: Set<any> = new Set()
 
+    const requestedFields = new Set(expand.fields ?? [])
+    const fieldsById = new Map<string, string[]>()
     items.forEach((item) => {
       const values = fieldsArray.map((field) => item?.[field])
 
-      if (values.length === fieldsArray.length && !item?.[relationship.alias]) {
-        if (fieldsArray.length === 1) {
-          if (!idsToFetch.includes(values[0])) {
-            idsToFetch.push(values[0])
+      if (values.length === fieldsArray.length) {
+        if (item?.[relationship.alias]) {
+          for (const field of requestedFields.values()) {
+            if (field in item[relationship.alias]) {
+              requestedFields.delete(field)
+              fieldsById.delete(field)
+            } else {
+              if (!fieldsById.has(field)) {
+                fieldsById.set(field, [])
+              }
+
+              fieldsById
+                .get(field)!
+                .push(fieldsArray.length === 1 ? values[0] : values)
+            }
           }
         } else {
-          // composite key
-          const valuesString = values.join(",")
-
-          if (!idsToFetch.some((id) => id.join(",") === valuesString)) {
-            idsToFetch.push(values)
+          if (fieldsArray.length === 1) {
+            idsToFetch.add(values[0])
+          } else {
+            idsToFetch.add(values)
           }
         }
       }
     })
 
-    if (idsToFetch.length === 0) {
+    for (const values of fieldsById.values()) {
+      values.forEach((val) => {
+        idsToFetch.add(val)
+      })
+    }
+
+    if (idsToFetch.size === 0) {
       return
     }
 
-    const relatedDataArray = await this.fetchData(
+    const relatedDataArray = await this.fetchData({
       expand,
-      field,
-      idsToFetch,
+      pkField: field,
+      ids: Array.from(idsToFetch),
       relationship,
-      options
-    )
+      options,
+    })
 
     const joinFields = relationship.inverse
       ? relationship.foreignKey.split(",")
@@ -646,11 +831,30 @@ export class RemoteJoiner {
     )
 
     items.forEach((item) => {
-      if (!item || item[relationship.alias]) {
+      if (!item) {
         return
       }
 
       const itemKey = fieldsArray.map((field) => item[field]).join(",")
+
+      if (item[relationship.alias]) {
+        if (Array.isArray(item[field])) {
+          for (let i = 0; i < item[relationship.alias].length; i++) {
+            const it = item[relationship.alias][i]
+            item[relationship.alias][i] = Object.assign(
+              it,
+              relatedDataMap[it[relationship.primaryKey]]
+            )
+          }
+          return
+        }
+
+        item[relationship.alias] = Object.assign(
+          item[relationship.alias],
+          relatedDataMap[itemKey]
+        )
+        return
+      }
 
       if (Array.isArray(item[field])) {
         item[relationship.alias] = item[field].map((id) => {
@@ -675,41 +879,57 @@ export class RemoteJoiner {
   }
 
   private parseExpands(
-    initialService: RemoteExpandProperty,
-    query: RemoteJoinerQuery,
-    serviceConfig: InternalJoinerServiceConfig,
-    expands: RemoteJoinerQuery["expands"],
-    implodeMapping: InternalImplodeMapping[],
-    options?: RemoteJoinerOptions
+    params: InternalParseExpandsParams
   ): Map<string, RemoteExpandProperty> {
-    const parsedExpands = this.parseProperties(
+    const {
       initialService,
       query,
       serviceConfig,
       expands,
       implodeMapping,
-      options
-    )
+      options,
+      initialData,
+    } = params
+
+    const { parsedExpands, aliasRealPathMap } = this.parseProperties({
+      initialService,
+      query,
+      serviceConfig,
+      expands,
+      implodeMapping,
+    })
+
+    if (initialData?.length) {
+      this.createFilterFromInitialData({
+        initialData: options?.initialData as any,
+        parsedExpands,
+        aliasRealPathMap,
+      })
+    }
 
     const groupedExpands = this.groupExpands(parsedExpands)
 
     return groupedExpands
   }
 
-  private parseProperties(
-    initialService: RemoteExpandProperty,
-    query: RemoteJoinerQuery,
-    serviceConfig: InternalJoinerServiceConfig,
-    expands: RemoteJoinerQuery["expands"],
-    implodeMapping: InternalImplodeMapping[],
-    options?: RemoteJoinerOptions
-  ): Map<string, RemoteExpandProperty> {
+  private parseProperties(params: {
+    initialService: RemoteExpandProperty
+    query: RemoteJoinerQuery
+    serviceConfig: InternalJoinerServiceConfig
+    expands: RemoteJoinerQuery["expands"]
+    implodeMapping: InternalImplodeMapping[]
+  }): {
+    parsedExpands: Map<string, RemoteExpandProperty>
+    aliasRealPathMap: Map<string, string[]>
+  } {
+    const { initialService, query, serviceConfig, expands, implodeMapping } =
+      params
+
     const aliasRealPathMap = new Map<string, string[]>()
     const parsedExpands = new Map<string, any>()
     parsedExpands.set(BASE_PATH, initialService)
 
     const forwardArgumentsOnPath: string[] = []
-
     for (const expand of expands || []) {
       const properties = expand.property.split(".")
       const currentPath: string[] = []
@@ -718,7 +938,6 @@ export class RemoteJoiner {
 
       for (const prop of properties) {
         const fieldAlias = currentServiceConfig.fieldAlias ?? {}
-
         if (fieldAlias[prop]) {
           const aliasPath = [BASE_PATH, ...currentPath, prop].join(".")
 
@@ -736,16 +955,26 @@ export class RemoteJoiner {
           })
 
           currentAliasPath.push(prop)
-
           currentServiceConfig = lastServiceConfig
-
           continue
         }
 
         const fullPath = [BASE_PATH, ...currentPath, prop].join(".")
         const fullAliasPath = [BASE_PATH, ...currentAliasPath, prop].join(".")
 
-        const relationship = currentServiceConfig.relationships?.get(prop)
+        let entity = currentServiceConfig.entity
+        if (entity) {
+          const completePath = fullPath.split(".")
+          for (let i = 1; i < completePath.length; i++) {
+            entity = this.getEntity({ entity, prop: completePath[i] }) ?? entity
+          }
+        }
+
+        const relationship = this.getEntityRelationship({
+          parentServiceConfig: currentServiceConfig,
+          property: prop,
+          entity,
+        })
 
         const isCurrentProp =
           fullPath === BASE_PATH + "." + expand.property ||
@@ -757,7 +986,6 @@ export class RemoteJoiner {
         if (relationship) {
           const parentExpand =
             parsedExpands.get([BASE_PATH, ...currentPath].join(".")) || query
-
           if (parentExpand) {
             const parRelField = relationship.inverse
               ? relationship.primaryKey
@@ -777,9 +1005,10 @@ export class RemoteJoiner {
             fields = fields.concat(relField.split(","))
           }
 
-          currentServiceConfig = this.getServiceConfig(
-            relationship.serviceName
-          )!
+          currentServiceConfig = this.getServiceConfig({
+            serviceName: relationship.serviceName,
+            entity: relationship.entity,
+          })!
 
           if (!currentServiceConfig) {
             throw new Error(
@@ -802,6 +1031,7 @@ export class RemoteJoiner {
           parsedExpands.set(fullPath, {
             property: prop,
             serviceConfig: currentServiceConfig,
+            entity: entity,
             fields,
             args: isAliasMapping
               ? forwardArgumentsOnPath.includes(fullPath)
@@ -830,7 +1060,11 @@ export class RemoteJoiner {
       }
     }
 
-    return parsedExpands
+    return { parsedExpands, aliasRealPathMap }
+  }
+
+  private getEntity({ entity, prop }: { entity: string; prop: string }) {
+    return this.entityMap.get(entity)?.get(prop)
   }
 
   private parseAlias({
@@ -860,7 +1094,6 @@ export class RemoteJoiner {
       return parsedExpands.get(fullPath).serviceConfig
     }
 
-    // remove alias from fields
     const parentPath = [BASE_PATH, ...currentPath].join(".")
     const parentExpands = parsedExpands.get(parentPath)
     parentExpands.fields = parentExpands.fields?.filter(
@@ -911,10 +1144,31 @@ export class RemoteJoiner {
 
     const partialPath: string[] = []
     for (const partial of path.split(".")) {
-      const relationship = currentServiceConfig.relationships?.get(partial)
+      const completePath = [
+        BASE_PATH,
+        ...currentPath.concat(partialPath),
+        partial,
+      ]
+      const parentPath = completePath.slice(0, -1).join(".")
+
+      let entity = serviceConfig.entity
+      if (entity) {
+        for (let i = 1; i < completePath.length; i++) {
+          entity = this.getEntity({ entity, prop: completePath[i] }) ?? entity
+        }
+      }
+
+      const relationship = this.getEntityRelationship({
+        parentServiceConfig: currentServiceConfig,
+        property: partial,
+        entity,
+      })
 
       if (relationship) {
-        currentServiceConfig = this.getServiceConfig(relationship.serviceName)!
+        currentServiceConfig = this.getServiceConfig({
+          serviceName: relationship.serviceName,
+          entity: relationship.entity,
+        })!
 
         if (!currentServiceConfig) {
           throw new Error(
@@ -923,17 +1177,11 @@ export class RemoteJoiner {
         }
       }
 
-      const completePath = [
-        BASE_PATH,
-        ...currentPath.concat(partialPath),
-        partial,
-      ]
-      const parentPath = completePath.slice(0, -1).join(".")
-
       partialPath.push(partial)
       parsedExpands.set(completePath.join("."), {
         property: partial,
         serviceConfig: currentServiceConfig,
+        entity: entity,
         parent: parentPath,
         parentConfig: parsedExpands.get(parentPath).serviceConfig,
       })
@@ -965,7 +1213,6 @@ export class RemoteJoiner {
           break
         }
 
-        // Merge the current expand into its parent
         const nestedKeys = path.split(".").slice(parentPath.split(".").length)
         let targetExpand = parentExpand as Omit<
           RemoteExpandProperty,
@@ -990,14 +1237,214 @@ export class RemoteJoiner {
     return mergedExpands
   }
 
+  private createFilterFromInitialData({
+    initialData,
+    parsedExpands,
+    aliasRealPathMap,
+  }: {
+    initialData: any[]
+    parsedExpands: Map<string, RemoteExpandProperty>
+    aliasRealPathMap: Map<string, string[]>
+  }): void {
+    if (!initialData.length) {
+      return
+    }
+
+    const getPkValues = ({
+      initialData,
+      serviceConfig,
+      relationship,
+    }: {
+      initialData: any[]
+      serviceConfig: InternalJoinerServiceConfig
+      relationship?: JoinerRelationship
+    }): Record<string, any> => {
+      if (!initialData.length || !relationship || !serviceConfig) {
+        return {}
+      }
+
+      const primaryKeys = relationship.primaryKey
+        ? relationship.primaryKey.split(",")
+        : serviceConfig.primaryKeys
+
+      const filter: Record<string, any> = {}
+
+      // Collect IDs for the current level, considering composed keys
+      primaryKeys.forEach((key) => {
+        filter[key] = Array.from(
+          new Set(initialData.map((dt) => dt[key]).filter(isDefined))
+        )
+      })
+
+      return filter
+    }
+
+    const parsedSegment = new Map<string, any>()
+
+    const aliasReversePathMap = new Map<string, string>(
+      Array.from(aliasRealPathMap).map(([path, realPath]) => [
+        realPath.join("."),
+        path,
+      ])
+    )
+
+    for (let [path, expand] of parsedExpands.entries()) {
+      const serviceConfig = expand.serviceConfig
+      const relationship =
+        this.getEntityRelationship({
+          parentServiceConfig: expand.parentConfig!,
+          property: expand.property,
+        }) ?? serviceConfig.relationships?.get(serviceConfig.serviceName)
+
+      if (!serviceConfig || !relationship) {
+        continue
+      }
+
+      let aliasToPath: string | null = null
+      if (aliasReversePathMap.has(path)) {
+        aliasToPath = path
+        path = aliasReversePathMap.get(path)!
+      }
+
+      const pathSegments = path.split(".")
+      let relevantInitialData = initialData
+      let fullPath: string[] = []
+
+      for (const segment of pathSegments) {
+        fullPath.push(segment)
+        if (segment === BASE_PATH) {
+          continue
+        }
+
+        const pathStr = fullPath.join(".")
+        if (parsedSegment.has(pathStr)) {
+          relevantInitialData = parsedSegment.get(pathStr)
+          continue
+        }
+
+        relevantInitialData =
+          RemoteJoiner.getNestedItems(relevantInitialData, segment) ?? []
+
+        parsedSegment.set(pathStr, relevantInitialData)
+
+        if (!relevantInitialData.length) {
+          break
+        }
+      }
+
+      if (!relevantInitialData.length) {
+        continue
+      }
+
+      const queryPath = expand.parent === "" ? BASE_PATH : aliasToPath ?? path
+      const filter = getPkValues({
+        initialData: relevantInitialData,
+        serviceConfig,
+        relationship,
+      })
+
+      if (!Object.keys(filter).length) {
+        continue
+      }
+
+      const parsed = parsedExpands.get(queryPath)!
+      parsed.args ??= []
+      parsed.args.push({
+        name: "filters",
+        value: filter,
+      })
+    }
+  }
+
+  private mergeInitialData({
+    items,
+    initialData,
+    serviceConfig,
+    path,
+    expands,
+    relationship,
+  }: {
+    items: any[]
+    initialData: any[]
+    serviceConfig: InternalJoinerServiceConfig
+    path: string
+    expands?: RemoteNestedExpands
+    relationship?: JoinerRelationship
+  }) {
+    if (!initialData.length || !relationship) {
+      return items
+    }
+
+    const primaryKeys = relationship?.primaryKey.split(",") || [
+      serviceConfig.primaryKeys[0],
+    ]
+    const expandKeys = Object.keys(expands ?? {})
+
+    const initialDataIndexMap = new Map(
+      initialData.map((dt, index) => [
+        primaryKeys.map((key) => dt[key]).join(","),
+        index,
+      ])
+    )
+    const itemMap = new Map(
+      items.map((item) => [primaryKeys.map((key) => item[key]).join(","), item])
+    )
+
+    const orderedMergedItems = new Array(initialData.length)
+    for (const [key, index] of initialDataIndexMap.entries()) {
+      const iniData = initialData[index]
+      const item = itemMap.get(key)
+
+      if (!item) {
+        orderedMergedItems[index] = iniData
+        continue
+      }
+
+      // Only merge properties that are not relations
+      const shallowProperty = { ...iniData }
+      for (const key of expandKeys) {
+        const isRel = !!this.getEntityRelationship({
+          parentServiceConfig: serviceConfig,
+          property: key,
+        })
+        if (isRel) {
+          delete shallowProperty[key]
+        }
+      }
+
+      Object.assign(item, shallowProperty)
+      orderedMergedItems[index] = item
+    }
+
+    if (expands) {
+      for (const expand of expandKeys) {
+        this.mergeInitialData({
+          items: items.flatMap((dt) => dt[expand] ?? []),
+          initialData: initialData
+            .flatMap((dt) => dt[expand] ?? [])
+            .filter(isDefined),
+          serviceConfig,
+          path: `${path}.${expand}`,
+          expands: expands[expand]?.expands,
+          relationship: this.getEntityRelationship({
+            parentServiceConfig: serviceConfig,
+            property: expand,
+          }),
+        })
+      }
+    }
+
+    return orderedMergedItems
+  }
+
   async query(
     queryObj: RemoteJoinerQuery,
     options?: RemoteJoinerOptions
   ): Promise<any> {
-    const serviceConfig = this.getServiceConfig(
-      queryObj.service,
-      queryObj.alias
-    )
+    const serviceConfig = this.getServiceConfig({
+      serviceName: queryObj.service,
+      serviceAlias: queryObj.alias,
+    })
 
     if (!serviceConfig) {
       if (queryObj.alias) {
@@ -1007,52 +1454,150 @@ export class RemoteJoiner {
       throw new Error(`Service "${queryObj.service}" was not found.`)
     }
 
-    let pkName = serviceConfig.primaryKeys[0]
-    const primaryKeyArg = queryObj.args?.find((arg) => {
-      const inc = serviceConfig.primaryKeys.includes(arg.name)
-      if (inc) {
-        pkName = arg.name
-      }
-      return inc
-    })
-    const otherArgs = queryObj.args?.filter(
-      (arg) => !serviceConfig.primaryKeys.includes(arg.name)
-    )
+    const iniDataArray = options?.initialData
+      ? Array.isArray(options.initialData)
+        ? options.initialData
+        : [options.initialData]
+      : []
 
     const implodeMapping: InternalImplodeMapping[] = []
-    const parsedExpands = this.parseExpands(
-      {
+    const parseExpandsConfig: InternalParseExpandsParams = {
+      initialService: {
         property: "",
         parent: "",
-        serviceConfig: serviceConfig,
+        serviceConfig,
+        entity: serviceConfig.entity,
         fields: queryObj.fields,
-        args: otherArgs,
       },
-      queryObj,
+      query: queryObj,
       serviceConfig,
-      queryObj.expands!,
-      implodeMapping
-    )
+      expands: queryObj.expands!,
+      implodeMapping,
+      options,
+      initialData: iniDataArray,
+    }
 
+    const parsedExpands = this.parseExpands(parseExpandsConfig)
     const root = parsedExpands.get(BASE_PATH)!
 
-    const response = await this.fetchData(
-      root,
-      pkName,
-      primaryKeyArg?.value,
-      undefined,
-      options
-    )
+    const { primaryKeyArg, otherArgs, pkName } = gerPrimaryKeysAndOtherFilters({
+      serviceConfig,
+      queryObj,
+    })
 
-    const data = response.path ? response.data[response.path!] : response.data
+    if (otherArgs) {
+      parseExpandsConfig.initialService.args = otherArgs
+    }
 
-    await this.handleExpands(
-      Array.isArray(data) ? data : [data],
+    if (options?.throwIfKeyNotFound) {
+      if (primaryKeyArg?.value == undefined) {
+        if (!primaryKeyArg) {
+          throw new MedusaError(
+            MedusaError.Types.NOT_FOUND,
+            `${
+              serviceConfig.entity ?? serviceConfig.serviceName
+            }: Primary key(s) [${serviceConfig.primaryKeys.join(
+              ", "
+            )}] not found in filters`
+          )
+        }
+
+        throw new MedusaError(
+          MedusaError.Types.NOT_FOUND,
+          `${
+            serviceConfig.entity ?? serviceConfig.serviceName
+          }: Value for primary key ${primaryKeyArg.name} not found in filters`
+        )
+      }
+    }
+
+    const response = await this.fetchData({
+      expand: root,
+      pkField: pkName,
+      ids: primaryKeyArg?.value,
+      options,
+    })
+
+    let data = response.path ? response.data[response.path!] : response.data
+    const isDataArray = Array.isArray(data)
+
+    data = isDataArray ? data : [data]
+
+    if (options?.initialData) {
+      data = this.mergeInitialData({
+        items: data,
+        initialData: iniDataArray,
+        serviceConfig,
+        path: BASE_PATH,
+        expands: parsedExpands.get(BASE_PATH)?.expands,
+        relationship: serviceConfig.relationships?.get(
+          serviceConfig.serviceName
+        ) as JoinerRelationship,
+      })
+
+      delete options?.initialData
+    }
+
+    await this.handleExpands({
+      items: data,
       parsedExpands,
       implodeMapping,
-      options
-    )
+      options,
+    })
+
+    const retData = isDataArray ? data : data[0]
+    if (response.path) {
+      response.data[response.path] = retData
+    } else {
+      response.data = retData
+    }
 
     return response.data
+  }
+}
+
+function gerPrimaryKeysAndOtherFilters({ serviceConfig, queryObj }): {
+  primaryKeyArg: { name: string; value: any } | undefined
+  otherArgs: { name: string; value: any }[] | undefined
+  pkName: string
+} {
+  let pkName = serviceConfig.primaryKeys[0]
+  let primaryKeyArg = queryObj.args?.find((arg) => {
+    const include = serviceConfig.primaryKeys.includes(arg.name)
+    if (include) {
+      pkName = arg.name
+    }
+    return include
+  })
+
+  let otherArgs = queryObj.args?.filter(
+    (arg) => !serviceConfig.primaryKeys.includes(arg.name)
+  )
+
+  if (!primaryKeyArg) {
+    const filters =
+      queryObj.args?.find((arg) => arg.name === "filters")?.value ?? {}
+
+    const primaryKeyFilter = Object.keys(filters).find((key) => {
+      return serviceConfig.primaryKeys.includes(key)
+    })
+
+    if (primaryKeyFilter) {
+      pkName = primaryKeyFilter
+      primaryKeyArg = {
+        name: primaryKeyFilter,
+        value: filters[primaryKeyFilter],
+      }
+
+      delete filters[primaryKeyFilter]
+    }
+  }
+
+  otherArgs = otherArgs?.length ? otherArgs : undefined
+
+  return {
+    primaryKeyArg,
+    otherArgs,
+    pkName,
   }
 }
